@@ -13,7 +13,7 @@ function bolt(o){rounded(-7,-15,14,31,2,metal(-7,0,14,31),'#333');poly([[-12,-17
 const types=['socket','socket','socket','socket','socket','wrench','wrench','screwdriver','pliers','ratchet','extension','bolt','nut','screw','meter'];function makeObj(type,x,y,extra={}){return {type,x,y,a:rr(-3.1,3.1),size:pick([7,8,9,10,11,12,13,14,15,17,19]),deep:rnd()<.36,len:rr(125,165),phillips:rnd()<.5,color:pick(['#b72725','#e7a82e','#294e9d']),moved:false,...extra}}const art={};
 const assetNames=['socket10','socket8','socket9','socket11','socket12','socket13','socket14','socket15','socket16','socket17','socket18','socket19','deep10','ratchet','pliers','phillips','flathead','bolt','screw','nut','wrench','meter'];
 let imagesReady=0;
-assetNames.forEach(name=>{let img=new Image();art[name]=img;img.onload=()=>{imagesReady++;if(!playing||objects.length)draw()};img.onerror=()=>{console.warn('Missing image',name)};img.src='assets/'+name+'.png'});
+assetNames.forEach(name=>{let img=new Image();art[name]=img;img.onload=()=>{imagesReady++;if(!playing||objects.length)draw()};img.onerror=()=>{console.warn('Missing image',name)};img.src=name+'.png'});
 function artFor(o){if(o.type==='socket')return o.deep&&o.size===10?'deep10':'socket'+o.size;
 if(o.type==='screwdriver')return o.phillips?'phillips':'flathead';
 return o.type}

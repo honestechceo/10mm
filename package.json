@@ -5,13 +5,16 @@
   "description": "Where's My 10MM?! iOS packaging",
   "scripts": {
     "build:web": "node scripts/prepare-web.mjs",
+    "ios:assets": "capacitor-assets generate --ios",
     "ios:prepare": "npm run build:web && npx cap sync ios"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.0",
+    "@capacitor/haptics": "^7.0.0",
     "@capacitor/ios": "^7.4.0"
   },
   "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
     "@capacitor/cli": "^7.4.0"
   }
 }

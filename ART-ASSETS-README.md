@@ -1,7 +1,15 @@
-# V10.14 illustrated sprites
+# Art assets (V11.0)
 
-The game now prefers raster sprite files for the finish sedans and tools, with the existing SVG sprites as fallbacks. To activate the new art, extract `10mm_art_assets.zip` from the ChatGPT conversation and upload its `.webp` files into the repository root on this PR branch before merging. GitHub's connected text-file editor cannot upload binary WebP files, so these images are **not yet included in the PR**.
+| File | Used for |
+|---|---|
+| `garage-art-1/2/3.jpg` | Scrolling garage backgrounds. Brand badges (Ford oval, Chevy bowtie, Jeep script) were painted out for App Store trademark safety. |
+| `car-*.webp` | Finish-line sedans (5 colors). Grille badge painted out. |
+| `tool-*.webp` | Obstacle sprites. Cleaned of the grey "ghost box" halos and rotated to lie flat; obstacle hitboxes in `TOOL_SIZE` (index.html) match these proportions. |
+| `obstacle-*.svg`, `finish-car-detail-*.svg` | Fallbacks if a raster sprite fails to load. |
+| `socket-character-v2.svg` | Hero socket (in game, title screen, app icon). |
+| `assets/icon-only.png` | 1024×1024 App Store icon (no transparency). |
+| `assets/splash.png`, `assets/splash-dark.png` | 2732×2732 launch screen. |
 
-Files: `car-blue.webp`, `car-red.webp`, `car-silver.webp`, `car-black.webp`, `car-white.webp`, `ratchet.webp`, `pliers.webp`, `phillips.webp`, `flathead.webp`, `wrench.webp`, `socket.webp`, `bolt.webp`, `nut.webp`.
+`assets/` is turned into the iOS icon set and launch screen by `npx capacitor-assets generate --ios` during the Codemagic build. To change the icon, replace `assets/icon-only.png` with another 1024×1024 PNG without transparency.
 
-The source sheet is a generated illustration, and the extracted sprites are approximations. Review the transparency and edge quality on an iPhone before shipping.
+Still worth a look before the App Store: the red SUV in the backgrounds keeps its 7-slot grille shape, and the finish sedans are clearly modeled on one real car. The badges are gone, but fully original vehicle art is the safest choice before public release.

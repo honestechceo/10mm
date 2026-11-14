@@ -1,29 +1,41 @@
-# Where's My 10MM?! — TestFlight preparation (no Mac required)
+# Where's My 10MM?! — TestFlight checklist (no Mac needed)
 
-This branch prepares the existing HTML game for iOS with Capacitor and a Codemagic cloud Mac. It does **not** upload or publish the game by itself.
+The game ships as an iOS app via Capacitor, built on a Codemagic cloud Mac. Each push of the `ios-testflight` workflow builds, signs, and uploads to TestFlight.
 
-## First: merge and build
+## One-time setup
 
-1. Merge this PR into main.
-2. Create a Codemagic account at https://codemagic.io and connect the GitHub repository `honestechceo/10mm`.
-3. In Apple Developer / App Store Connect, reserve the app's bundle identifier `com.honestech.wheresmy10mm` (change it in both configuration files if unavailable).
-4. In App Store Connect, create an app record for the iOS app using that exact bundle ID.
-5. In App Store Connect → Users and Access → Integrations → App Store Connect API, generate a **dedicated** key for Codemagic with the required permissions. Download its private .p8 file once; keep it private. Do not commit keys, certificates, passwords, or provisioning profiles to GitHub.
-6. In Codemagic → Team integrations → Developer Portal, add the API key with its Issuer ID and Key ID. Configure **automatic iOS signing** for the bundle ID.
-7. Run the `ios-testflight` workflow. Check the build logs and IPA artifact. Cloud build and signing must succeed before any TestFlight upload.
-8. After a signed build works, configure Codemagic App Store Connect publishing, then upload the IPA. Apple will process it before TestFlight availability.
+1. **Apple Developer Program** — paid membership ($99/yr) on your Apple ID.
+2. **Bundle ID** — developer.apple.com → Certificates, IDs & Profiles → Identifiers → **+** → App IDs → `com.honestech.wheresmy10mm`. (If you use a different ID, change it in `capacitor.config.json` and both places in `codemagic.yaml`.)
+3. **App record** — App Store Connect → Apps → **+** → New App → iOS, name "Where's My 10MM?!", pick that bundle ID, SKU anything (e.g. `10mm-001`).
+4. **API key** — App Store Connect → Users and Access → Integrations → App Store Connect API → **+**, role **App Manager**. Download the `.p8` (only downloadable once). Note the Issuer ID and Key ID. Never put the `.p8` in GitHub.
+5. **Codemagic** — sign in at codemagic.io with GitHub, add the `honestechceo/10mm` repo.
+6. **Codemagic key** — Team settings → Team integrations → Developer Portal → Manage keys → add the key. **Name it `codemagic`** (the yaml looks it up by that name). Paste the Issuer ID and Key ID, and upload the `.p8`.
+7. Start the **ios-testflight** workflow on `main`.
 
-## Before external testers
+## What every build does automatically
 
-- Replace temporary app icon and launch screen with final artwork.
-- Confirm every game asset is in the repository (the web packager copies root-level web assets into `www`).
-- Test touch controls, audio, rotation/orientation, level persistence, restart and scoring on a real iPhone.
-- Provide the privacy details, age rating, description and other required App Store Connect metadata.
-- Apple's external TestFlight testing may require Beta App Review.
+- Generates the app icon and launch screen from `assets/`
+- Locks the app to portrait, hides the status bar
+- Sets `ITSAppUsesNonExemptEncryption = NO` (no export-compliance prompt)
+- Sets version `1.0.0` with a new build number every run (`BUILD_NUMBER + 100`)
+- Signs with automatic App Store signing and uploads to TestFlight
 
-## Important
+Bump `APP_VERSION` in `codemagic.yaml` when you want a new version number (1.0.1, 1.1.0…).
 
-- `capacitor.config.json` uses a **proposed** bundle ID, not an Apple-reserved ID.
-- The cloud workflow has not been executed or validated with your Apple account.
-- No private Apple keys belong in GitHub.
-- The first build may need adjustments for Xcode / Codemagic versions and app icons.
+## After the first upload
+
+- Apple processes the build for about 10–30 minutes. Then it appears under the app → TestFlight.
+- **Internal testers** (up to 100 people on your App Store Connect team) can install right away.
+- **External testers** (anyone with an email or public link) need a quick Beta App Review. Fill in TestFlight → Test Information first: beta description, feedback email, contact info.
+- **App Privacy**: the game collects nothing (progress is stored only on the phone). Answer "Data Not Collected."
+
+## Test on a real iPhone
+
+- [ ] Icon and launch screen look right
+- [ ] Jump buttons respond instantly, no text-select or zoom on long-press
+- [ ] Sound effects and music play with the Silent switch off; Settings toggles work
+- [ ] Vibration fires on jump, crash, and level complete
+- [ ] Swiping home mid-level pauses the game; RESUME continues it
+- [ ] Level select, Reset progress, Difficulty, and the One-big-button layout all work
+- [ ] Progress survives force-quitting the app
+- [ ] Nothing hides under the notch or the home bar

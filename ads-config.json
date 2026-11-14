@@ -1,0 +1,11 @@
+{
+  "_readme": "Ads + Remove Ads settings for the iPhone app. Until you paste your real AdMob IDs, Google's TEST ads show (safe to tap). Keep testMode true for TestFlight; set it to false only for the App Store release.",
+  "testMode": true,
+  "admobAppId": "ca-app-pub-3940256099942544~1458002511",
+  "interstitialId": "ca-app-pub-3940256099942544/4411468910",
+  "rewardedId": "ca-app-pub-3940256099942544/1712485313",
+  "removeAdsProductId": "com.honestech.wheresmy10mm.removeads",
+  "interstitialEveryCrashes": 3,
+  "interstitialMinSeconds": 60,
+  "noAdsBeforeLevel": 4
+}

@@ -43,6 +43,11 @@ p["UISupportedInterfaceOrientations~ipad"] = ["UIInterfaceOrientationPortrait"]
 p["UIRequiresFullScreen"] = True
 p["UIStatusBarHidden"] = True
 p["UIViewControllerBasedStatusBarAppearance"] = False
+# ads (AdMob): app ID, Apple's tracking prompt text, Google's ad network ID
+ads = json.loads((ROOT / "ads-config.json").read_text())
+p["GADApplicationIdentifier"] = ads["admobAppId"]
+p["NSUserTrackingUsageDescription"] = "This lets the free version show ads that are more relevant to you."
+p["SKAdNetworkItems"] = [{"SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork"}]
 with open(plist_path, "wb") as f:
     plistlib.dump(p, f)
 

@@ -6,7 +6,7 @@
 | `car-*.webp` | Finish-line sedans (5 colors). Grille badge painted out. |
 | `tool-*.webp` | Obstacle sprites. Cleaned of the grey "ghost box" halos and rotated to lie flat; obstacle hitboxes in `TOOL_SIZE` (index.html) match these proportions. |
 | `obstacle-*.svg`, `finish-car-detail-*.svg` | Fallbacks if a raster sprite fails to load. |
-| `socket-character-v2.svg` | Hero socket (in game, title screen, app icon). |
+| `socket-character.svg` | Hero socket (in game, title screen, app icon). |
 | `assets/icon-only.png` | 1024×1024 App Store icon, "MISSING 10MM" poster (no transparency). |
 | `assets/splash.png`, `assets/splash-dark.png` | 2732×2732 launch screen. |
 

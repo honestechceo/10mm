@@ -1,0 +1,33 @@
+workflows:
+  ios-testflight:
+    name: Where's My 10MM — TestFlight
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      node: 22
+      xcode: latest
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.honestech.wheresmy10mm
+      vars:
+        BUNDLE_ID: "com.honestech.wheresmy10mm"
+    scripts:
+      - name: Install dependencies and package game
+        script: |
+          npm install
+          npm run build:web
+      - name: Generate and sync Capacitor iOS project
+        script: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Configure signing
+        script: |
+          xcode-project use-profiles
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa --workspace ios/App/App.xcworkspace --scheme App
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+    # Enable the App Store Connect integration in Codemagic and
+    # configure publishing only after the first signed build succeeds.

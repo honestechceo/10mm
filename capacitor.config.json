@@ -1,0 +1,8 @@
+{
+  "appId": "com.honestech.wheresmy10mm",
+  "appName": "Where's My 10MM?!",
+  "webDir": "www",
+  "server": {
+    "iosScheme": "capacitor"
+  }
+}

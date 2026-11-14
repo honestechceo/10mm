@@ -4,5 +4,10 @@
   "webDir": "www",
   "server": {
     "iosScheme": "capacitor"
+  },
+  "backgroundColor": "#071526",
+  "ios": {
+    "backgroundColor": "#071526",
+    "scrollEnabled": false
   }
 }

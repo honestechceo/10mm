@@ -92,7 +92,7 @@ function saveSettings(){try{localStorage.setItem('tenmm-settings',JSON.stringify
 function applyLayout(){document.body.classList.toggle('one-button',settings.layout==='one');$('jump').textContent=settings.layout==='one'?'TAP TO JUMP':'JUMP'}
 function setArt(x){const el=$('menuArt');if(x==='hero'){el.innerHTML='<img src="socket-character-v2.svg" alt="The runaway 10mm socket">'}else{el.textContent=x}}
 function hidePanels(){$('opts').classList.remove('on');$('levels').classList.remove('on')}
-function buzz(kind){if(!settings.haptics)return;try{const H=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.Haptics;if(H){if(kind==='success')H.notification({type:'SUCCESS'});else H.impact({style:kind==='heavy'?'HEAVY':kind==='medium'?'MEDIUM':'LIGHT'})}else if(navigator.vibrate){navigator.vibrate(kind==='heavy'?60:kind==='success'?[30,40,30]:12)}}catch(e){}}
+function buzz(kind){if(!settings.haptics)return;try{const C=window.Capacitor,native=!!(C&&typeof C.isNativePlatform==='function'&&C.isNativePlatform());const H=native&&typeof C.registerPlugin==='function'?(window.__hap=window.__hap||C.registerPlugin('Haptics')):null;if(H){(kind==='success'?H.notification({type:'SUCCESS'}):H.impact({style:kind==='heavy'?'HEAVY':kind==='medium'?'MEDIUM':'LIGHT'})).catch(()=>{})}else if(navigator.vibrate){navigator.vibrate(kind==='heavy'?60:kind==='success'?[30,40,30]:12)}}catch(e){}}
 // Background music: a short procedural garage loop (no audio files to ship or license).
 let musicTimer=0,musicStep=0,musicNext=0,musicGain=null;
 const BASS=[45,45,52,45,48,48,43,43],LEAD=[69,0,72,0,76,74,72,0,67,0,71,0,74,72,71,0];

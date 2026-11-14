@@ -1,41 +1,45 @@
-# Where's My 10MM?! — TestFlight checklist (no Mac needed)
+# Where's My 10MM?! — TestFlight
 
-The game ships as an iOS app via Capacitor, built on a Codemagic cloud Mac. Each push of the `ios-testflight` workflow builds, signs, and uploads to TestFlight.
+The iPhone app builds on **GitHub's Macs** with `.github/workflows/ios.yml`, the same setup as the PPI-App repo. No Codemagic, no Mac needed.
 
 ## One-time setup
 
-1. **Apple Developer Program** — paid membership ($99/yr) on your Apple ID.
-2. **Bundle ID** — developer.apple.com → Certificates, IDs & Profiles → Identifiers → **+** → App IDs → `com.honestech.wheresmy10mm`. (If you use a different ID, change it in `capacitor.config.json` and both places in `codemagic.yaml`.)
-3. **App record** — App Store Connect → Apps → **+** → New App → iOS, name "Where's My 10MM?!", pick that bundle ID, SKU anything (e.g. `10mm-001`).
-4. **API key** — App Store Connect → Users and Access → Integrations → App Store Connect API → **+**, role **App Manager**. Download the `.p8` (only downloadable once). Note the Issuer ID and Key ID. Never put the `.p8` in GitHub.
-5. **Codemagic** — sign in at codemagic.io with GitHub, add the `honestechceo/10mm` repo.
-6. **Codemagic key** — Team settings → Team integrations → Developer Portal → Manage keys → add the key. **Name it `codemagic`** (the yaml looks it up by that name). Paste the Issuer ID and Key ID, and upload the `.p8`.
-7. Start the **ios-testflight** workflow on `main`.
+1. **App record**: in App Store Connect (https://appstoreconnect.apple.com/apps), click **+** → New App → iOS. Name it "Where's My 10MM?!", choose bundle ID `com.honestech.wheresmy10mm`, and enter any SKU (e.g. `10mm-001`).
+   If that bundle ID isn't in the list yet, run the workflow once first. The first signed run registers the ID automatically, and the run fails at the upload step because the app record doesn't exist yet. Then create the app record and run the workflow again.
+2. **Secrets**: in this repo, go to Settings → Secrets and variables → Actions → New repository secret. Add the **same four values you used in PPI-App**:
+   - `APPLE_TEAM_ID`
+   - `ASC_KEY_ID`
+   - `ASC_ISSUER_ID`
+   - `ASC_KEY_P8` (the full text of the AuthKey .p8 file)
 
-## What every build does automatically
+   Using the same key matters: it lets this build reuse PPI-App's App Store certificate instead of making a new one.
+3. **Run it**: Actions → **iPhone app** → Run workflow. After that, every push to `main` that changes the game builds and uploads automatically.
 
-- Generates the app icon and launch screen from `assets/`
-- Locks the app to portrait, hides the status bar
-- Sets `ITSAppUsesNonExemptEncryption = NO` (no export-compliance prompt)
-- Sets version `1.0.0` with a new build number every run (`BUILD_NUMBER + 100`)
-- Signs with automatic App Store signing and uploads to TestFlight
+## What every build does
 
-Bump `APP_VERSION` in `codemagic.yaml` when you want a new version number (1.0.1, 1.1.0…).
+- Generates the Xcode project and sets the app ID, version, and build number (`100 + run number`, so it's always new)
+- Makes it iPhone only, portrait only, full screen, with no status bar and the home-screen name "10MM?!"
+- Sets `ITSAppUsesNonExemptEncryption = NO`, so there's no "Missing Compliance" prompt
+- Uses `assets/icon-only.png` for the app icon and `assets/splash.png` for the launch screen
+- Signs with the shared certificate and a "10MM App Store (GitHub)" profile, then uploads to TestFlight
+
+Pull requests only run an unsigned simulator build, to check that the app compiles.
+
+Change `APP_VERSION` in the workflow when you want a new version number.
 
 ## After the first upload
 
-- Apple processes the build for about 10–30 minutes. Then it appears under the app → TestFlight.
-- **Internal testers** (up to 100 people on your App Store Connect team) can install right away.
-- **External testers** (anyone with an email or public link) need a quick Beta App Review. Fill in TestFlight → Test Information first: beta description, feedback email, contact info.
-- **App Privacy**: the game collects nothing (progress is stored only on the phone). Answer "Data Not Collected."
+- The build appears in App Store Connect → TestFlight after Apple processes it (about 5–20 minutes).
+- Internal testers can install it right away. External testers need Beta App Review.
+- App Privacy: choose "Data Not Collected". Progress is saved only on the phone.
 
 ## Test on a real iPhone
 
-- [ ] Icon and launch screen look right
-- [ ] Jump buttons respond instantly, no text-select or zoom on long-press
-- [ ] Sound effects and music play with the Silent switch off; Settings toggles work
-- [ ] Vibration fires on jump, crash, and level complete
-- [ ] Swiping home mid-level pauses the game; RESUME continues it
-- [ ] Level select, Reset progress, Difficulty, and the One-big-button layout all work
+- [ ] The icon and launch screen look right
+- [ ] Jump responds instantly, and long-pressing doesn't select text or zoom
+- [ ] Sound and music play when the Silent switch is off, and the Settings toggles work
+- [ ] The phone vibrates on jump, crash, and level complete
+- [ ] Swiping home mid-level pauses the game, and RESUME continues it
+- [ ] Level select, Reset progress, Difficulty, and the One-button layout all work
 - [ ] Progress survives force-quitting the app
-- [ ] Nothing hides under the notch or the home bar
+- [ ] Nothing is hidden under the notch or the home bar

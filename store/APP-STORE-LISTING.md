@@ -48,5 +48,23 @@ Upload `iphone-6.9-1.jpg` … `iphone-6.9-5.jpg` (1320 × 2868) under **iPhone 6
 - Description: Removes the full-screen ads. Thank you for supporting the game!
 - Review screenshot: Settings screen showing the Remove ads row
 
-## App Review notes
-The app shows Google AdMob test ads in TestFlight builds. After a crash, an optional rewarded ad ("WATCH AD: KEEP GOING") lets the player continue. A full-screen ad shows about every 3rd retry, starting at level 4. "Remove Ads" is a non-consumable purchase in Settings, and Settings also has "Restore purchase". No account or login is needed.
+## App Review Information (App Store Connect → your version → App Review Information)
+- **Sign-in required:** No (uncheck "Sign-in required")
+- **Contact:** your name, phone, email
+- **Attachment:** upload `WheresMy10MM-app-review.mp4` (gameplay demo)
+
+**Notes (paste this):**
+
+Where's My 10MM?! is a one-tap runner game. No account or login is needed.
+
+HOW TO PLAY: Tap PLAY ADVENTURE, then LET'S PLAY (or SKIP INTRO). Tap JUMP to jump, tap again in the air to double-jump, and tap quickly a third time to fly. Avoid the tools on the floor, the overhead magnet and the grabbing glove, and reach the goal at the end of each level (roll under the car, land on the tool cart, workbench or engine, or jump into the open drawer). LEVEL SELECT on the main menu opens any unlocked level.
+
+IN-APP PURCHASE: "Remove Ads" (com.honestech.wheresmy10mm.removeads), non-consumable, $1.99. Buy it in Settings > Remove ads. Restore it in Settings > Restore purchase. It turns off the full-screen ads.
+
+ADS: Google AdMob. A full-screen ad can appear about every 3rd retry, starting at level 4. After a crash there is an optional rewarded ad ("WATCH AD: KEEP GOING"). On first launch the app shows Google's consent form where required and Apple's App Tracking Transparency prompt. Ad choices can be changed in Settings > Ad privacy.
+
+COINS AND SOCKET SHOP: coins are earned in-game only and spent on cosmetic socket finishes. They cannot be bought with real money.
+
+DATA: progress is saved on the device and backed up to the user's own iCloud key-value storage. There is no account and no server. Privacy policy: https://honestechceo.github.io/10mm/privacy.html
+
+A gameplay demo video is attached.

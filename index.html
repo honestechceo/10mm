@@ -80,7 +80,7 @@ body.one-button #jumpLeft{display:none}body.one-button #pause{grid-area:pause;mi
 .loot-hud span{display:flex;align-items:center;gap:5px}.ico{width:20px;height:20px;flex:none}
 .lvhead{grid-column:1/-1;text-align:left;font-size:12px;font-weight:900;letter-spacing:2px;color:#ffcb43;margin:8px 2px 0}
 .shop{display:none;grid-template-columns:repeat(2,1fr);gap:8px;margin:4px 0 12px;max-height:50dvh;overflow:auto;padding:2px}.shop.on{display:grid}.skin{background:#22323f;border:2px solid #3e5266;border-radius:14px;padding:8px 6px;text-align:center;color:#d4e0e8;font-weight:800;font-size:13px}.skin .tag{display:inline-block;margin-top:4px;background:#e8343e;color:#fff;font-size:10px;font-weight:900;letter-spacing:.5px;padding:2px 7px;border-radius:8px}.skin.eq{border-color:#ffcb43;box-shadow:0 0 0 2px #ffcb4355 inset}.skin img{width:100%;max-width:120px;height:auto;display:block;margin:2px auto 4px}.panel .skin button{min-height:36px;margin:6px 0 0;font-size:13px;padding:0 6px;width:100%}.skin button.own{background:#455b70;color:#fff}.skin button.buy{background:#ffcb43;color:#1a2630}.skin button.no{background:#33424f;color:#8aa0b2}
-</style></head><body><main><header><h1>WHERE'S MY 10MM?!</h1><small>THE GREAT SOCKET ESCAPE • V13.2</small></header><div class="stats"><div>LEVEL<strong id="level">1 / 200</strong></div><div>DISTANCE<strong id="distance">0%</strong></div><div>BEST<strong id="best">1</strong></div></div><div class="loot-hud"><span><img class="ico" src="coin.webp" alt=""> COINS <b id="coinsCount">0</b></span><span><svg class="ico" viewBox="0 0 24 24"><polygon points="12,1.5 15,8.6 22.7,9.3 16.9,14.4 18.6,22 12,18 5.4,22 7.1,14.4 1.3,9.3 9,8.6" fill="#ffcb43" stroke="#b97a08" stroke-width="1.4" stroke-linejoin="round"/></svg> SCORE <b id="scoreCount">0</b></span></div><div class="speed-meter" aria-label="Speed gained by clearing obstacles"><span>SPEED <b id="speedLabel">1.00×</b></span><div class="speed-track"><div id="speedFill"></div></div></div><section class="stage"><canvas id="scene" width="600" height="610" aria-label="Rolling socket obstacle game"></canvas><p id="tip" aria-live="polite">Tap twice for a double jump. Collect power-ups!</p></section><div class="buttons"><button id="jumpLeft" aria-label="Jump with left hand">JUMP</button><button id="pause" class="secondary">PAUSE</button><button id="restart" class="secondary">RETRY</button><button id="jump" aria-label="Jump with right hand">JUMP</button></div></main><div class="overlay" id="overlay"><div class="panel"><div class="eyebrow" id="eyebrow">THE GREAT SOCKET ESCAPE</div><div class="art" id="menuArt">10mm</div><h2 id="message">WHERE’S MY 10MM?!</h2><p id="details">What if the 10mm socket wasn’t lost… what if it was escaping?</p><div class="opts" id="opts"></div><div class="levels" id="levels"></div><div class="shop" id="shop"></div><button id="go">PLAY ADVENTURE</button><button id="menuExtra" class="sub">HOW TO PLAY</button><button id="menuShop" class="sub">SOCKET SHOP</button><button id="menuLevels" class="sub">LEVEL SELECT</button><button id="menuSettings" class="ghost">SETTINGS</button></div></div><script>
+</style></head><body><main><header><h1>WHERE'S MY 10MM?!</h1><small>THE GREAT SOCKET ESCAPE • V13.3</small></header><div class="stats"><div>LEVEL<strong id="level">1 / 200</strong></div><div>DISTANCE<strong id="distance">0%</strong></div><div>BEST<strong id="best">1</strong></div></div><div class="loot-hud"><span><img class="ico" src="coin.webp" alt=""> COINS <b id="coinsCount">0</b></span><span><svg class="ico" viewBox="0 0 24 24"><polygon points="12,1.5 15,8.6 22.7,9.3 16.9,14.4 18.6,22 12,18 5.4,22 7.1,14.4 1.3,9.3 9,8.6" fill="#ffcb43" stroke="#b97a08" stroke-width="1.4" stroke-linejoin="round"/></svg> SCORE <b id="scoreCount">0</b></span></div><div class="speed-meter" aria-label="Speed gained by clearing obstacles"><span>SPEED <b id="speedLabel">1.00×</b></span><div class="speed-track"><div id="speedFill"></div></div></div><section class="stage"><canvas id="scene" width="600" height="610" aria-label="Rolling socket obstacle game"></canvas><p id="tip" aria-live="polite">Tap twice for a double jump. Collect power-ups!</p></section><div class="buttons"><button id="jumpLeft" aria-label="Jump with left hand">JUMP</button><button id="pause" class="secondary">PAUSE</button><button id="restart" class="secondary">RETRY</button><button id="jump" aria-label="Jump with right hand">JUMP</button></div></main><div class="overlay" id="overlay"><div class="panel"><div class="eyebrow" id="eyebrow">THE GREAT SOCKET ESCAPE</div><div class="art" id="menuArt">10mm</div><h2 id="message">WHERE’S MY 10MM?!</h2><p id="details">What if the 10mm socket wasn’t lost… what if it was escaping?</p><div class="opts" id="opts"></div><div class="levels" id="levels"></div><div class="shop" id="shop"></div><button id="go">PLAY ADVENTURE</button><button id="menuExtra" class="sub">HOW TO PLAY</button><button id="menuShop" class="sub">SOCKET SHOP</button><button id="menuLevels" class="sub">LEVEL SELECT</button><button id="menuSettings" class="ghost">SETTINGS</button></div></div><script>
 'use strict';
 const canvas=document.getElementById('scene'),ctx=canvas.getContext('2d'),W=600,H=460,ground=373,$=id=>document.getElementById(id);
 const garageScenes=['garage-art-1.jpg','garage-art-2.jpg','garage-art-3.jpg'].map(src=>{const im=new Image();im.onload=()=>{if(state!=='running')render()};im.src=src;return im});
@@ -206,8 +206,46 @@ let musicTimer=0,musicStep=0,musicNext=0,musicGain=null;
 const BASS=[45,45,52,45,48,48,43,43],LEAD=[69,0,72,0,76,74,72,0,67,0,71,0,74,72,71,0];
 function midi(n){return 440*Math.pow(2,(n-69)/12)}
 function note(freq,t,dur,type,vol){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.type=type;o.frequency.setValueAtTime(freq,t);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+.015);g.gain.exponentialRampToValueAtTime(.0001,t+dur);o.connect(g).connect(musicGain);o.start(t);o.stop(t+dur+.02)}
-function startMusic(){if(!settings.music)return;audioReady();if(!audioCtx||musicTimer)return;if(!musicGain){musicGain=audioCtx.createGain();musicGain.connect(audioCtx.destination)}musicGain.gain.setValueAtTime(.55,audioCtx.currentTime);const beat=60/132/2;musicNext=audioCtx.currentTime+.05;musicTimer=setInterval(()=>{if(!audioCtx)return;while(musicNext<audioCtx.currentTime+.25){if(musicStep%2===0)note(midi(BASS[(musicStep/2|0)%8]),musicNext,beat*1.6,'square',.035);const l=LEAD[musicStep%16];if(l&&musicStep%64>=32)note(midi(l),musicNext,beat*.9,'triangle',.03);if(musicStep%4===2)note(1800,musicNext,.03,'square',.006);musicNext+=beat;musicStep++}},90)}
-function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=0}if(musicGain&&audioCtx){try{musicGain.gain.setValueAtTime(.0001,audioCtx.currentTime)}catch(e){}}}
+// ---- Original chiptune soundtrack (composed for this game) ----
+const NOTE_IX={C:0,'C#':1,Db:1,D:2,'D#':3,Eb:3,E:4,F:5,'F#':6,Gb:6,G:7,'G#':8,Ab:8,A:9,'A#':10,Bb:10,B:11};
+function nm(t){const m=t.match(/^([A-G][#b]?)(\d)$/);return m?12*(+m[2]+1)+NOTE_IX[m[1]]:0}
+// a bar is 16 sixteenth-steps: a note starts it, '.' holds, '_' is a rest
+function bar(str){const out=[];let cur=null;for(const tk of str.trim().split(/\s+/)){if(tk==='.'){if(cur)cur.len++;out.push(null)}else if(tk==='_'){cur=null;out.push(null)}else{cur={n:nm(tk),len:1};out.push(cur)}}while(out.length<16)out.push(null);return out}
+const CHORD={Am:[57,60,64],F:[53,57,60],C:[48,52,55],G:[55,59,62],Dm:[50,53,57],E:[52,56,59],Bb:[46,50,53],A:[45,49,52],Em:[52,55,59],B:[47,51,54]};
+const SONGS={
+ level:{bpm:140,chords:'Am F C G Am F C G Dm Am F E Dm Am F E',drums:'beat',lead:[
+  'E5 _ A5 _ G5 _ E5 _ D5 _ E5 . . . _ _','C5 _ D5 _ E5 _ F5 _ E5 _ D5 _ C5 . . .','G4 _ C5 _ E5 _ G5 _ F5 _ E5 _ D5 _ C5 _','D5 . . . B4 _ G4 _ B4 _ D5 _ G5 . . .',
+  'E5 _ A5 _ G5 _ E5 _ D5 _ E5 . . . _ _','A5 _ G5 _ F5 _ E5 _ D5 _ C5 _ D5 . . .','E5 _ G5 _ C6 . . . B5 _ G5 _ E5 _ G5 _','D5 . . . . . . . E5 _ G#5 _ B5 _ E6 _',
+  'F5 . . . E5 _ D5 _ A4 . . . D5 _ F5 _','E5 . . . C5 _ A4 _ E4 . . . A4 _ C5 _','A5 . . . G5 _ F5 _ C5 . . . F5 _ A5 _','G#5 . . . B5 . . . E6 . . . D6 _ B5 _',
+  'A5 _ F5 _ D5 _ F5 _ A5 _ D6 _ C6 _ A5 _','C6 _ A5 _ E5 _ A5 _ C6 _ E6 _ D6 _ C6 _','B5 . . . A5 _ G5 _ F5 . . . E5 _ D5 _','E5 . . . . . . . _ _ _ _ _ _ _ _'],
+  bass:[0,null,12,null,0,null,12,null,0,null,12,null,0,null,7,null],arp:true},
+ title:{bpm:108,chords:'Dm Dm Bb A Dm Dm Bb A',drums:'soft',lead:[
+  'D5 _ _ F5 _ _ A5 _ G#5 _ A5 _ _ _ _ _','D6 _ _ C6 _ _ A5 _ F5 _ G5 _ A5 _ _ _','F5 _ _ D5 _ _ Bb4 _ D5 _ F5 _ Bb5 . . .','A5 _ G5 _ F5 _ E5 _ C#5 . . . A4 _ _ _',
+  'D5 _ _ F5 _ _ A5 _ G#5 _ A5 _ _ _ _ _','D6 _ _ E6 _ _ F6 _ E6 _ D6 _ A5 _ _ _','G5 _ _ F5 _ _ D5 _ F5 _ Bb5 _ D6 . . .','C#6 . . . A5 . . . E5 . . . C#5 . . .'],
+  bass:[0,null,null,12,null,null,7,null,0,null,null,12,null,null,10,null],arp:false},
+ bonus:{bpm:156,chords:'Em Em C B Em Em C B',drums:'tense',lead:[
+  'B5 _ B5 _ _ _ B5 _ C6 _ B5 _ A5 _ G5 _','F#5 _ G5 _ A5 _ B5 _ E5 . . . _ _ _ _','C6 _ C6 _ _ _ C6 _ D6 _ C6 _ B5 _ A5 _','G5 _ F#5 _ E5 _ D#5 _ F#5 . . . B5 . . .',
+  'E6 _ D6 _ B5 _ G5 _ E5 _ G5 _ B5 _ D6 _','C6 . . . B5 _ A5 _ G5 . . . F#5 _ E5 _','E5 _ G5 _ C6 _ E6 _ D6 _ C6 _ B5 _ A5 _','B5 . . . . . . . D#6 . . . F#6 . . .'],
+  bass:[0,0,12,0,0,10,0,12,0,0,12,0,0,7,0,10],arp:false}
+};
+for(const k in SONGS){const s=SONGS[k];s.bars=s.lead.map(bar);s.ch=s.chords.split(' ')}
+let musicSong='level',musicKey=0,noiseBuf=null;
+function noise(t,dur,vol,hp){if(!noiseBuf){noiseBuf=audioCtx.createBuffer(1,audioCtx.sampleRate*.3,audioCtx.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1}const s=audioCtx.createBufferSource(),f=audioCtx.createBiquadFilter(),g=audioCtx.createGain();s.buffer=noiseBuf;f.type='highpass';f.frequency.value=hp;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+dur);s.connect(f).connect(g).connect(musicGain);s.start(t);s.stop(t+dur+.02)}
+function kick(t,vol){const o=audioCtx.createOscillator(),g=audioCtx.createGain();o.frequency.setValueAtTime(150,t);o.frequency.exponentialRampToValueAtTime(42,t+.12);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.connect(g).connect(musicGain);o.start(t);o.stop(t+.18)}
+function playStep(song,step,t,sx){const b=step>>4,i=step&15,barN=b%song.bars.length,root=CHORD[song.ch[barN%song.ch.length]],k=musicKey;
+ const L=song.bars[barN][i];if(L)note(midi(L.n+k),t,sx*L.len*.92,'square',.026);
+ const bs=song.bass[i];if(bs!==null)note(midi(root[0]-12+bs+k),t,sx*.85,'triangle',.07);
+ if(song.arp&&i%2===0)note(midi(root[(i/2)%3]+12+k),t,sx*.7,'square',.009);
+ if(song.drums==='beat'){if(i===0||i===6||i===8||i===11)kick(t,.16);if(i===4||i===12)noise(t,.12,.07,1200);if(i%2===0)noise(t,.03,.025,7000)}
+ else if(song.drums==='soft'){if(i===0||i===8)kick(t,.1);if(i===4||i===12)noise(t,.05,.03,3000);if(i%4===2)noise(t,.025,.015,8000)}
+ else if(song.drums==='tense'){if(i%4===0)kick(t,.13);if(i===12)noise(t,.1,.06,1500);noise(t,.02,.02,9000)}}
+function startMusic(which){if(!settings.music)return;audioReady();if(!audioCtx)return;which=which||'level';
+ const key=which==='level'?[0,2,-2,3,5,-3,1,-5][themeIndex(level)%8]:0;
+ if(musicTimer&&musicSong===which&&musicKey===key)return;if(musicTimer){clearInterval(musicTimer);musicTimer=0}
+ musicSong=which;musicKey=key;if(!musicGain){musicGain=audioCtx.createGain();musicGain.connect(audioCtx.destination)}musicGain.gain.cancelScheduledValues(audioCtx.currentTime);musicGain.gain.setValueAtTime(.6,audioCtx.currentTime);
+ const song=SONGS[which],bpm=song.bpm+(which==='level'?Math.min(16,level*.08):0),sx=60/bpm/4;musicStep=0;musicNext=audioCtx.currentTime+.06;
+ musicTimer=setInterval(()=>{if(!audioCtx)return;while(musicNext<audioCtx.currentTime+.25){playStep(song,musicStep,musicNext,sx);musicNext+=sx;musicStep++}},60)}
+function stopMusic(){if(musicTimer){clearInterval(musicTimer);musicTimer=0}if(musicGain&&audioCtx){try{musicGain.gain.cancelScheduledValues(audioCtx.currentTime);musicGain.gain.setValueAtTime(.0001,audioCtx.currentTime)}catch(e){}}}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){if(state==='running')$('pause').onclick();stopMusic();if(audioCtx&&audioCtx.state==='running')audioCtx.suspend().catch(()=>{})}});
 let settingsFrom='menu',resetArmed=false;
 function showSettings(){if(state==='paused'||state==='menu')settingsFrom=state;state='settings';resetArmed=false;$('overlay').classList.remove('hidden');$('levels').classList.remove('on');setArt('gear');$('eyebrow').textContent='SETTINGS';$('message').textContent='GAME OPTIONS';$('details').textContent='Sound plays through the ringer. If you hear nothing, check the Silent switch and volume.';$('menuExtra').style.display='none';$('menuSettings').style.display='none';$('menuLevels').style.display='none';$('menuShop').style.display='none';$('go').textContent='BACK';$('go').onclick=()=>{hidePanels();if(settingsFrom==='paused'){state='running';$('pause').onclick()}else showMenu()};renderOptions();$('opts').classList.add('on')}
@@ -242,7 +280,7 @@ let bonus=null;
 function bonusIntro(done){const n=level/10,secs=Math.max(10,22-n);popup('BONUS ROUND!','The 10mm is hiding in a messy tool drawer. Find it in '+secs+' seconds! Other sockets look alike, so check the size. Wrong taps cost time.','START',()=>runBonus(done),'toolbox');$('eyebrow').textContent='BONUS ROUND '+n+' OF 20'}
 function bonusRand(a,b){return a+Math.random()*(b-a)}
 function runBonus(done){
-  hidePanels();$('overlay').classList.add('hidden');stopMusic();state='bonus';
+  hidePanels();$('overlay').classList.add('hidden');stopMusic();state='bonus';startMusic('bonus');
   const n=level/10,secs=Math.max(10,22-n),count=Math.min(40,22+2*n),decoys=Math.min(10,1+n);
   const box=$('bonus'),dr=$('drawer');box.classList.remove('hidden');dr.innerHTML='';dr.className='drawer';
   const W=dr.clientWidth,H=dr.clientHeight,cols=W>H?6:4,rows=Math.ceil(count/cols),cw=W/cols,ch=H/rows,base=Math.max(52,Math.min(cw*1.05,ch*1.6)),items=[],slots=[];for(let r=0;r<rows;r++)for(let c=0;c<cols;c++)slots.push([(c+.5)*cw,(r+.5)*ch]);
@@ -257,7 +295,7 @@ function runBonus(done){
   for(const it of items){it.im.style.zIndex=it.z;dr.append(it.im)}
   let left=secs*1000,last=performance.now(),over=false;
   const pop=(x,y,txt,good)=>{const p=document.createElement('div');p.className='bpop'+(good?' good':'');p.textContent=txt;p.style.left=Math.max(4,Math.min(W-150,x-20))+'px';p.style.top=(y-30)+'px';dr.append(p);setTimeout(()=>p.remove(),800)};
-  const finish=(won)=>{if(over)return;over=true;cancelAnimationFrame(bonus&&bonus.raf);dr.onpointerdown=null;
+  const finish=(won)=>{if(over)return;over=true;stopMusic();cancelAnimationFrame(bonus&&bonus.raf);dr.onpointerdown=null;
     if(won){target.im.classList.add('bfound');target.im.style.zIndex=998}
     setTimeout(()=>{box.classList.add('hidden');bonusResult(won,left/1000,done)},won?1300:900)};
   dr.onpointerdown=e=>{if(over)return;e.preventDefault();const r=dr.getBoundingClientRect(),x=e.clientX-r.left-dr.clientLeft,y=e.clientY-r.top-dr.clientTop;
@@ -289,11 +327,11 @@ function showHome(intro){
   $('hCoins').textContent=totalCoins;$('hBest').textContent=best;$('hBonus').textContent=bw;
   const v=(document.querySelector('header small')||{}).textContent||'';$('hVer').textContent=(v.split('•')[1]||'').trim();
   const lv=Math.max(best,level);$('hPlay').textContent=best>1?'CONTINUE • LEVEL '+lv:'PLAY';
-  const run=fn=>()=>{audioReady();hideHome();fn()};
+  const run=fn=>()=>{audioReady();stopMusic();hideHome();fn()};
   $('hPlay').onclick=run(()=>{level=lv;if(!storySeen)showStory();else if(!tutorialSeen)showTutorial();else start()});
   $('hLevels').onclick=run(showLevels);$('hShop').onclick=run(showShop);$('hSettings').onclick=run(showSettings);$('hHow').onclick=run(showTutorial);
   $('overlay').classList.add('hidden');
-  const toHome=()=>{h.onpointerdown=null;h.className='home'};
+  const toHome=()=>{h.onpointerdown=null;h.className='home';startMusic('title')};
   if(!intro){toHome();return}
   h.className='intro';$('hTap').classList.remove('on');
   const at=(ms,f)=>homeTimers.push(setTimeout(f,ms));
@@ -301,7 +339,7 @@ function showHome(intro){
   at(1350,()=>sfx('grab'));
   at(2000,()=>{h.classList.add('t1');sfx('win');buzz('light')});
   at(2600,()=>$('hTap').classList.add('on'));
-  h.onpointerdown=e=>{e.preventDefault();audioReady();if(!h.classList.contains('t1')){h.classList.add('t1','t2');homeTimers.forEach(clearTimeout);homeTimers=[];$('hTap').classList.add('on');return}toHome()};
+  h.onpointerdown=e=>{e.preventDefault();audioReady();startMusic('title');if(!h.classList.contains('t1')){h.classList.add('t1','t2');homeTimers.forEach(clearTimeout);homeTimers=[];$('hTap').classList.add('on');return}toHome()};
 }
 </script><script>
 function showReady(){const r=$('ready');$('rTheme').textContent=themeOf(level).name.toUpperCase();$('rLevel').textContent='LEVEL '+level;$('rGoal').textContent=$('tip').textContent;r.classList.remove('hidden');

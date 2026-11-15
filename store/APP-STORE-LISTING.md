@@ -63,7 +63,9 @@ IN-APP PURCHASE: "Remove Ads" (com.honestech.wheresmy10mm.removeads), non-consum
 
 ADS: Google AdMob. A full-screen ad can appear about every 3rd retry, starting at level 4. After a crash there is an optional rewarded ad ("WATCH AD: KEEP GOING"). On first launch the app shows Google's consent form where required and Apple's App Tracking Transparency prompt. Ad choices can be changed in Settings > Ad privacy.
 
-COINS AND SOCKET SHOP: coins are earned in-game only and spent on cosmetic socket finishes. They cannot be bought with real money.
+BONUS ROUNDS: after every 10th level there is a timed bonus round. Find and tap the 10mm socket in a tool drawer before time runs out. Winning gives coins and points, and winning 3 or 6 bonus rounds unlocks two extra socket finishes.
+
+COINS AND SOCKET SHOP: coins are earned in-game only and spent on cosmetic socket finishes. Coins cannot be bought with real money.
 
 DATA: progress is saved on the device and backed up to the user's own iCloud key-value storage. There is no account and no server. Privacy policy: https://honestechceo.github.io/10mm/privacy.html
 

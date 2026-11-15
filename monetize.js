@@ -89,11 +89,18 @@
       if (paying) return { ok: false, msg: '', skip: true };
       paying = true;
       try {
-        await Store.restorePurchases();
-        const { purchases } = await Store.getPurchases({ productType: 'inapp' });
-        const has = (purchases || []).some(p => (p.productIdentifier || p.productId) === cfg.removeAdsProductId);
-        if (has) setNoAds(true);
-        return { ok: has, msg: has ? 'Purchase restored. Ads removed.' : 'No previous purchase found for this Apple ID.' };
+        // Apple's sync can fail (or be cancelled) even when the purchase is already on this iPhone,
+        // so always check what this Apple ID owns afterwards
+        let syncErr = null;
+        try { await Store.restorePurchases(); } catch (e) { syncErr = e; }
+        let has = false;
+        try {
+          const { purchases } = await Store.getPurchases({ productType: 'inapp' });
+          has = (purchases || []).some(p => (p.productIdentifier || p.productId) === cfg.removeAdsProductId);
+        } catch (e) { if (!syncErr) syncErr = e; }
+        if (has) { setNoAds(true); return { ok: true, msg: 'Purchase restored. Ads removed.' }; }
+        if (syncErr) return { ok: false, msg: 'Could not reach the App Store. Try again.' };
+        return { ok: false, msg: 'No previous purchase found for this Apple ID.' };
       } catch (e) { return { ok: false, msg: 'Could not reach the App Store. Try again.' }; }
       finally { paying = false; payDoneAt = Date.now(); }
     },

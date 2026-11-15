@@ -9,7 +9,7 @@ const forApp = process.argv.includes('--app');
 await rm(dest, { recursive: true, force: true });
 await mkdir(dest, { recursive: true });
 const extensions = new Set(['.html', '.svg', '.webp', '.png', '.jpg', '.jpeg', '.gif', '.css', '.js', '.mp3', '.wav', '.ogg', '.json']);
-const skip = new Set(['package.json', 'package-lock.json', 'capacitor.config.json']);
+const skip = new Set(['package.json', 'package-lock.json', 'capacitor.config.json', 'privacy.html', 'support.html']);
 let count = 0;
 for (const entry of await readdir(root, { withFileTypes: true })) {
   if (!entry.isFile()) continue;

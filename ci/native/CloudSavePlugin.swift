@@ -21,8 +21,9 @@ public class CloudSavePlugin: CAPPlugin, CAPBridgedPlugin {
         // ubiquityIdentityToken is nil when iCloud Drive is switched off, but key-value saves still work then,
         // so also accept a successful sync of the key-value store
         let entitled = (Bundle.main.object(forInfoDictionaryKey: "TenmmICloud") as? Bool) ?? false
-        let signedIn = FileManager.default.ubiquityIdentityToken != nil || store.synchronize()
-        call.resolve(["available": entitled && signedIn])
+        let token = FileManager.default.ubiquityIdentityToken != nil
+        let sync = store.synchronize()
+        call.resolve(["available": entitled && (token || sync), "entitled": entitled, "token": token, "sync": sync])
     }
 
     @objc func get(_ call: CAPPluginCall) {

@@ -161,6 +161,25 @@ def main():
         bundle_id = api("POST", "/bundleIds", {"data": {"type": "bundleIds", "attributes": {"identifier": BUNDLE, "name": "Wheres My 10MM", "platform": "IOS"}}})["data"]["id"]
         print(f"::notice::Signing: registered the app ID {BUNDLE}. Create the app in App Store Connect with this ID if you haven't yet.")
 
+    # 1b. iCloud (key-value storage) for cloud saves. If Apple refuses, build without it instead of failing.
+    icloud = False
+    try:
+        req = urllib.request.Request(API + f"/bundleIds/{bundle_id}/bundleIdCapabilities", headers={"Authorization": "Bearer " + jwt()})
+        with urllib.request.urlopen(req, timeout=60) as r:
+            caps = [c["attributes"].get("capabilityType") for c in json.loads(r.read()).get("data", [])]
+        if "ICLOUD" not in caps:
+            body = {"data": {"type": "bundleIdCapabilities", "attributes": {"capabilityType": "ICLOUD", "settings": [
+                {"key": "ICLOUD_VERSION", "options": [{"key": "XCODE_6"}]}]},
+                "relationships": {"bundleId": {"data": {"type": "bundleIds", "id": bundle_id}}}}}
+            req = urllib.request.Request(API + "/bundleIdCapabilities", method="POST", data=json.dumps(body).encode(),
+                                         headers={"Authorization": "Bearer " + jwt(), "Content-Type": "application/json"})
+            urllib.request.urlopen(req, timeout=60).read()
+            print("::notice::Signing: turned on iCloud for the app ID (cloud saves)")
+        icloud = True
+    except Exception as e:
+        detail = e.read().decode(errors="replace")[:400] if hasattr(e, "read") else str(e)
+        print(f"::warning::iCloud couldn't be turned on for the app ID, so this build saves on the phone only. {detail}")
+
     # 2. the Apple Distribution certificate: reuse ours if Apple still has it, otherwise make it (once)
     key = TMP / "dist.key"
     key_pem, modulus = signing_key_pem(open(KEY_PATH, "rb").read().strip())
@@ -217,6 +236,7 @@ def main():
 
     with open(os.environ["GITHUB_ENV"], "a") as f:
         f.write(f"PROFILE_NAME={PROFILE_NAME}\nPROFILE_UUID={uid}\nSIGN_KEYCHAIN={kc}\n")
+        f.write(f"ICLOUD_OK={'1' if icloud else '0'}\n")
     print(f"Signing ready: certificate {cert_id}, profile {PROFILE_NAME} ({uid})")
 
 

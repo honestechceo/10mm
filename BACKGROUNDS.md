@@ -13,7 +13,7 @@ Every 25 levels, the socket escapes to a new location:
 | 151–175 | Pit Lane | `bg-pitlane.jpg` |
 | 176–200 | Snowy Roadside | `bg-snow.jpg` |
 
-Until a file is uploaded, that location uses the garage art with a color tint (sunset, night, dust, snow) as a stand-in. When you upload the file, it replaces the stand-in automatically, with no code changes.
+All 8 locations now have art. Car badges and lettering were painted out of the parking garage, dealership and snowy roadside images. If one of these files is ever missing, the game falls back to the garage art with a color tint. To swap a scene, upload a new image with the same file name.
 
 ## How to make one
 

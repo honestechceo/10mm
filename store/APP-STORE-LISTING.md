@@ -25,7 +25,7 @@ WHERE'S MY 10MM?! puts you in control of the runaway socket. Roll across the sho
 • NEW HAZARDS in every location: bouncing basketballs, rolling tires, runaway shopping carts, speeding pit jacks, snowballs and more
 • SIMPLE ONE-TAP CONTROLS: tap to jump, double-tap for more height, triple-tap to fly
 • POWER-UPS: shield, slow-mo, speed boost, coin magnet and spring
-• SOCKET SHOP: spend your coins on new finishes like Junkyard Rust, Black Impact, Candy Red, 24K Gold and Neon Blue
+• SOCKET SHOP: spend your coins on new finishes like Junkyard Rust, 24K Gold and Neon Blue, plus holiday finishes (Santa, Jack-o-Lantern, Shamrock and more) that go half price in season
 • Pick-up-and-play levels that last about a minute
 • Easy, Normal and Hard difficulty, plus one-button and two-button layouts
 

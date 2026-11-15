@@ -58,6 +58,17 @@ jobs:
           ruby -e "require 'xcodeproj'" 2>/dev/null || sudo gem install xcodeproj --no-document
           ruby ci/add_native.rb
           npx cap sync ios
+          # Capacitor 8 loads native plugins from packageClassList; add the game's own iCloud plugin there too
+          python3 - <<'PY'
+          import json
+          p = 'ios/App/App/capacitor.config.json'
+          c = json.load(open(p))
+          lst = c.setdefault('packageClassList', [])
+          if 'CloudSavePlugin' not in lst:
+              lst.append('CloudSavePlugin')
+          json.dump(c, open(p, 'w'), indent=2)
+          print('packageClassList:', lst)
+          PY
       - name: Signed upload or check build?
         id: mode
         run: |

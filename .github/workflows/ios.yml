@@ -55,6 +55,8 @@ jobs:
           echo "BUILD=$BUILD" >> "$GITHUB_ENV"
           npx cap add ios
           python3 ci/ios_setup.py "$BUNDLE_ID" "$APP_VERSION" "$BUILD"
+          ruby -e "require 'xcodeproj'" 2>/dev/null || sudo gem install xcodeproj --no-document
+          ruby ci/add_native.rb
           npx cap sync ios
       - name: Signed upload or check build?
         id: mode
@@ -107,6 +109,23 @@ jobs:
               nb = nb.replace("buildSettings = {", f'buildSettings = {{\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = {team};\n\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{prof}";', 1)
               s = s.replace(b, nb)
           open(p, "w").write(s)
+          # iCloud cloud saves, when signing.py could turn iCloud on for the app ID
+          if os.environ.get("ICLOUD_OK") == "1":
+              ent = "ios/App/App/App.entitlements"
+              open(ent, "w").write("""<?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>com.apple.developer.ubiquity-kvstore-identifier</key><string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
+          </dict></plist>""")
+              s = open(p).read()
+              for b in [b for b in re.findall(r"buildSettings = \{[^{}]*\}", s) if "INFOPLIST_FILE = App/Info.plist;" in b]:
+                  s = s.replace(b, b.replace("buildSettings = {", "buildSettings = {\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;", 1))
+              open(p, "w").write(s)
+              import plistlib
+              ip = "ios/App/App/Info.plist"; d = plistlib.load(open(ip, "rb")); d["TenmmICloud"] = True; plistlib.dump(d, open(ip, "wb"))
+              print("iCloud cloud saves: on")
+          else:
+              print("iCloud cloud saves: off (saves stay on the phone)")
           PY
           echo "Version $APP_VERSION ($BUILD)"
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \

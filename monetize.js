@@ -6,7 +6,7 @@
   const NATIVE = !!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() && typeof C.registerPlugin === 'function');
   const AdMob = NATIVE ? C.registerPlugin('AdMob') : null;
   const Store = NATIVE ? C.registerPlugin('NativePurchases') : null;
-  let cfg = null, ready = false, rewardedReady = false, interReady = false, crashes = 0, lastInter = 0, price = '$1.99', busy = false;
+  let cfg = null, ready = false, rewardedReady = false, interReady = false, crashes = 0, lastInter = 0, price = '$1.99', busy = false, paying = false, payDoneAt = 0;
   const NOADS_KEY = 'tenmm-noads';
   const noAds = () => { try { return localStorage.getItem(NOADS_KEY) === 'yes'; } catch (e) { return false; } };
   const setNoAds = (v) => { try { localStorage.setItem(NOADS_KEY, v ? 'yes' : 'no'); } catch (e) {} };
@@ -71,16 +71,23 @@
       try { const r = await AdMob.showRewardVideoAd(); busy = false; rewardedReady = false; loadRewarded(); return !!r; }
       catch (e) { busy = false; rewardedReady = false; loadRewarded(); return false; }
     },
+    get paying() { return paying; },
     async buyRemoveAds() {
       if (!NATIVE) return { ok: false, msg: 'Purchases work in the iPhone app.' };
+      // only one purchase sheet at a time, and ignore stray taps right after it closes
+      if (paying || Date.now() - payDoneAt < 1500) return { ok: false, msg: '', skip: true };
+      paying = true;
       try {
         const t = await Store.purchaseProduct({ productIdentifier: cfg.removeAdsProductId, productType: 'inapp', quantity: 1 });
         if (t && (t.transactionId || t.productIdentifier)) { setNoAds(true); return { ok: true, msg: 'Ads removed. Thank you!' }; }
         return { ok: false, msg: 'Purchase not completed.' };
-      } catch (e) { return { ok: false, msg: 'Purchase cancelled or not available.' }; }
+      } catch (e) { return { ok: false, msg: 'Purchase cancelled. No charge was made.' }; }
+      finally { paying = false; payDoneAt = Date.now(); }
     },
     async restore() {
       if (!NATIVE) return { ok: false, msg: 'Restore works in the iPhone app.' };
+      if (paying) return { ok: false, msg: '', skip: true };
+      paying = true;
       try {
         await Store.restorePurchases();
         const { purchases } = await Store.getPurchases({ productType: 'inapp' });
@@ -88,6 +95,7 @@
         if (has) setNoAds(true);
         return { ok: has, msg: has ? 'Purchase restored. Ads removed.' : 'No previous purchase found for this Apple ID.' };
       } catch (e) { return { ok: false, msg: 'Could not reach the App Store. Try again.' }; }
+      finally { paying = false; payDoneAt = Date.now(); }
     },
     privacy() { if (NATIVE && ready) AdMob.showPrivacyOptionsForm().catch(() => {}); }
   };

@@ -43,7 +43,7 @@
       } catch (e) {}
       try {
         const { purchases } = await Store.getPurchases({ productType: 'inapp' });
-        if ((purchases || []).some(p => p.productIdentifier === cfg.removeAdsProductId)) setNoAds(true);
+        if ((purchases || []).some(p => (p.productIdentifier || p.productId) === cfg.removeAdsProductId)) setNoAds(true);
       } catch (e) {}
     } catch (e) {}
   }
@@ -91,7 +91,7 @@
       try {
         await Store.restorePurchases();
         const { purchases } = await Store.getPurchases({ productType: 'inapp' });
-        const has = (purchases || []).some(p => p.productIdentifier === cfg.removeAdsProductId);
+        const has = (purchases || []).some(p => (p.productIdentifier || p.productId) === cfg.removeAdsProductId);
         if (has) setNoAds(true);
         return { ok: has, msg: has ? 'Purchase restored. Ads removed.' : 'No previous purchase found for this Apple ID.' };
       } catch (e) { return { ok: false, msg: 'Could not reach the App Store. Try again.' }; }

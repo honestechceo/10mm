@@ -1,6 +1,6 @@
 {
-  "_readme": "Real AdMob IDs are in. testMode true = the plugin shows Google TEST ads (safe for TestFlight). Set testMode to false only for the App Store release build.",
-  "testMode": true,
+  "_readme": "LIVE ads (App Store release). Don't tap ads in your own builds - AdMob can ban the account. Set testMode true for test builds.",
+  "testMode": false,
   "admobAppId": "ca-app-pub-2360844519786473~3928252585",
   "interstitialId": "ca-app-pub-2360844519786473/2631482786",
   "rewardedId": "ca-app-pub-2360844519786473/7668187049",

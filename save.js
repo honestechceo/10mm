@@ -50,7 +50,7 @@
 
   (async function restore() {
     let cloudOn = false;
-    try { cloudOn = !!(await Cloud.available()).available; } catch (e) {}
+    try { const a = await Cloud.available(); cloudOn = !!a.available; window.SaveSync.why = 'entitled ' + a.entitled + ', token ' + a.token + ', sync ' + a.sync; } catch (e) { window.SaveSync.why = 'plugin: ' + ((e && (e.code || e.message)) || e); }
     window.SaveSync.cloud = cloudOn;
     window.SaveSync.status = cloudOn ? 'iCloud' : 'This iPhone';
     const local = { t: num(ls.getItem('tenmm-savetime')), data: snapshot() };

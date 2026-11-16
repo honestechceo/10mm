@@ -17,7 +17,7 @@ const BONUS_AR = {
 let bonus = null;
 function bonusIntro(done) {
   const n = level / 10,
-    secs = Math.max(10, 22 - n);
+    secs = Math.max(10, 20 - n);
   popup(
     "BONUS ROUND!",
     "The 10mm is hiding in a messy tool drawer. Find it in " +
@@ -39,9 +39,9 @@ function runBonus(done) {
   state = "bonus";
   startMusic("bonus");
   const n = level / 10,
-    secs = Math.max(10, 22 - n),
-    count = Math.min(40, 22 + 2 * n),
-    decoys = Math.min(10, 1 + n);
+    secs = Math.max(10, 20 - n),
+    count = Math.min(46, 28 + 2 * n),
+    decoys = Math.min(14, 3 + n);
   const box = $("bonus"),
     dr = $("drawer");
   box.classList.remove("hidden");
@@ -103,14 +103,14 @@ function runBonus(done) {
     add(
       "socket-decoy-" + BONUS_DECOYS[i % BONUS_DECOYS.length] + ".webp",
       "decoy",
-      base * bonusRand(0.55, 0.7),
+      base * bonusRand(0.46, 0.58),
       1.2,
     );
   }
   const target = add(
     "socket-find-10.webp",
     "target",
-    base * bonusRand(0.55, 0.7),
+    base * bonusRand(0.46, 0.58),
     1.2,
   );
   items.sort(() => Math.random() - 0.5);
@@ -120,10 +120,10 @@ function runBonus(done) {
   // keep the 10mm findable: nothing may sit on top of its middle
   const cx = target.x + target.w / 2,
     cy = target.y + target.h / 2;
-  const tx0 = target.x + target.w * 0.2,
-    tx1 = target.x + target.w * 0.8,
-    ty0 = target.y + target.h * 0.2,
-    ty1 = target.y + target.h * 0.8;
+  const tx0 = target.x + target.w * 0.38,
+    tx1 = target.x + target.w * 0.62,
+    ty0 = target.y + target.h * 0.4,
+    ty1 = target.y + target.h * 0.6;
   for (const it of items)
     if (
       it !== target &&
@@ -174,12 +174,9 @@ function runBonus(done) {
     const r = dr.getBoundingClientRect(),
       x = e.clientX - r.left - dr.clientLeft,
       y = e.clientY - r.top - dr.clientTop;
-    if (
-      x > target.x + target.w * 0.1 &&
-      x < target.x + target.w * 0.9 &&
-      y > target.y + target.h * 0.08 &&
-      y < target.y + target.h * 0.92
-    ) {
+    const tdx = x - (target.x + target.w / 2),
+      tdy = y - (target.y + target.h / 2);
+    if (tdx * tdx + tdy * tdy < (Math.max(target.w, target.h) * 0.62) ** 2) {
       sfx("win");
       buzz("success");
       pop(x, y, "FOUND IT!", true);

@@ -463,7 +463,7 @@
     return api;
   }
   function runSort(done, secs) {
-    const api = bonusShell("BONUS: SOCKET SORT", "Tap smallest to biggest: 8mm → 14mm", secs, done), dr = api.dr;
+    const api = bonusShell("BONUS: SOCKET SORT", "NEXT: tap the 8mm", secs, done), dr = api.dr;
     const W2 = dr.clientWidth, H2 = dr.clientHeight, sizes = [8, 9, 10, 11, 12, 13, 14];
     const cols = 3, rows = 3, cw = W2 / cols, ch = H2 / rows, slots = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push([c, r]);
@@ -477,8 +477,8 @@
       im.onpointerdown = (e) => {
         e.preventDefault(); if (api.over) return;
         const rr = dr.getBoundingClientRect(), x = e.clientX - rr.left, y = e.clientY - rr.top;
-        if (sz === sizes[next]) { next++; sfx("power"); buzz("light"); im.style.opacity = ".25"; im.style.pointerEvents = "none"; api.pop(x, y, sz + "mm", true); if (next === sizes.length) { sfx("win"); buzz("success"); api.finish(true); } }
-        else api.penalty(2000, x, y);
+        if (sz === sizes[next]) { next++; sfx("power"); buzz("light"); im.style.opacity = ".25"; im.style.pointerEvents = "none"; api.pop(x, y, sz + "mm ✓", true); if (next === sizes.length) { sfx("win"); buzz("success"); api.finish(true); } else $("bSub").textContent = "NEXT: tap the " + sizes[next] + "mm"; }
+        else { api.penalty(2000, x, y); api.pop(x, y + 34, "Tap " + sizes[next] + "mm next!"); }
       };
       dr.append(im);
     });

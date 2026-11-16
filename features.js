@@ -1,5 +1,5 @@
 // Where's My 10MM?! — update 2 features:
-// daily challenge + streak, daily gift, 3-star levels, upgrades, WD-40 + torque rocket power-ups,
+// daily challenge + streak, daily gift, 3-star levels, upgrades, penetrating oil + torque rocket power-ups,
 // double-coins ad, boss levels, endless mode, extra bonus games, share card.
 // Hooks into game.js through the global FX object.
 "use strict";
@@ -51,6 +51,7 @@
 
   // ---------- power-ups ----------
   let slick = 0, rocket = 0;
+  const oilSprite = new Image(); oilSprite.src = "power-oil.webp";
 
   // ---------- boss ----------
   let boss = null;
@@ -133,13 +134,14 @@
     coinBonus() { const l = upLvl("lucky"); return l && Math.random() < l * 0.1 ? 1 : 0; },
     powerMul() { return 1 + upLvl("power") * 0.2; },
     isNewPower(t) { return t === "wd40" || t === "rocket"; },
+    powerSprite(t) { return t === "wd40" && oilSprite.complete && oilSprite.naturalWidth ? oilSprite : null; },
     pickup(t, pm) {
       if (t === "wd40") { slick = 240 * pm; return true; }
       if (t === "rocket") { rocket = 150 * pm; return true; }
       return false;
     },
     pickupText(t) {
-      return t === "wd40" ? "WD-40! Slide right through tools, and the glove can't grip you!" : t === "rocket" ? "TORQUE ROCKET! Blast over everything!" : "";
+      return t === "wd40" ? "PENETRATING OIL! Slide right through tools, and the glove can't grip you!" : t === "rocket" ? "TORQUE ROCKET! Blast over everything!" : "";
     },
     drawPowerIcon(t) {
       if (t === "wd40") {

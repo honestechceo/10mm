@@ -38,21 +38,29 @@
     if (!el) { el = document.createElement("div"); el.id = "hid"; document.body.append(el); }
     el.className = "";
     el.innerHTML = '<div class="bhead"><div>HIDDEN 10MM<small>Find every item on the list</small></div><div id="hTime">0</div></div><div class="bbar"><i id="hBar"></i></div>' +
-      '<div class="hview" id="hView"><div class="hworld" id="hWorld"></div><button id="hHint">HINT -5s</button><div class="hzoom">Pinch to zoom</div></div><div class="hlist" id="hList"></div>';
+      '<div class="hview" id="hView"><div class="hworld" id="hWorld"></div><div class="hzoom">Pinch to zoom</div></div><div class="hlist" id="hList"></div>';
     const view = $("hView"), world = $("hWorld");
+    const others = findable.slice().sort(() => Math.random() - 0.5).slice(0, finds - 1);
+    const want = ["ten", ...others];
+    const list = $("hList"), slotsByKey = {};
+    want.forEach((k) => {
+      const d = document.createElement("div");
+      d.innerHTML = '<img src="' + (k === "ten" ? "socket-find-10.webp" : ART[k]) + '" alt=""><em>' + (k === "ten" ? "10MM SOCKET" : NAMES[k]) + "</em>";
+      if (k === "ten") d.className = "ten";
+      slotsByKey[k] = d; list.append(d);
+    });
+    const hb = document.createElement("button"); hb.id = "hHint"; hb.textContent = "HINT -5s"; list.append(hb);
     const bgSrc = "bg-" + themeOf(level).key + ".jpg";
     const VH = view.clientHeight, VW = view.clientWidth;
     // the scene is the location art, full height of the view and wider than the screen
     const H0 = VH, W0 = Math.max(VW * 1.6, H0 * 1.5);
     world.style.cssText = "width:" + W0 + "px;height:" + H0 + "px;background:url(" + bgSrc + ") center/cover";
-    const base = H0 * 0.085;
+    const base = H0 * 0.072;
 
     // what to find
-    const others = findable.slice().sort(() => Math.random() - 0.5).slice(0, finds - 1);
-    const want = ["ten", ...others].sort((a, b) => (a === "ten" ? -1 : b === "ten" ? 1 : 0));
     const clutterKinds = Object.keys(ART).filter((k) => !others.includes(k));
     const items = [];
-    const cols = Math.ceil(Math.sqrt((W0 / H0) * 120)), rows = Math.ceil(120 / cols), cw = W0 / cols, ch = H0 / rows, slots = [];
+    const cols = Math.ceil(Math.sqrt((W0 / H0) * 260)), rows = Math.ceil(260 / cols), cw = W0 / cols, ch = H0 / rows, slots = [];
     for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) slots.push([(c + 0.5) * cw, (r + 0.5) * ch]);
     slots.sort(() => Math.random() - 0.5);
     const add = (key, src, mul) => {
@@ -69,7 +77,7 @@
     };
     const targets = want.map((k) => add(k, k === "ten" ? "socket-find-10.webp" : ART[k], k === "ten" ? 0.5 : 0.75));
     targets.forEach((t) => (t.find = true));
-    const clutter = Math.min(130, 80 + level / 4);
+    const clutter = Math.min(320, 230 + level / 2);
     for (let i = 0; i < clutter; i++) { const k = pick(clutterKinds); add(k, ART[k], k.startsWith("d") ? 0.5 : 0.75); }
     items.sort(() => Math.random() - 0.5).forEach((it, i) => (it.z = i + 1));
     // a found item must stay findable: nothing may cover its middle
@@ -79,19 +87,12 @@
     }
     for (const it of items) { it.im.style.zIndex = it.z; world.append(it.im); }
 
-    // list at the bottom
-    const list = $("hList");
-    targets.forEach((t) => {
-      const d = document.createElement("div");
-      d.innerHTML = '<img src="' + t.im.src + '" alt=""><em>' + (t.key === "ten" ? "10MM SOCKET" : NAMES[t.key]) + "</em>";
-      if (t.key === "ten") d.className = "ten";
-      t.slot = d; list.append(d);
-    });
+    targets.forEach((t) => (t.slot = slotsByKey[t.key]));
 
     // pan + pinch zoom
     let sc = 1, tx = -(W0 - VW) / 2, ty = 0;
     const MAXS = 3;
-    const clamp = () => { tx = Math.min(0, Math.max(VW - W0 * sc, tx)); ty = Math.min(0, Math.max(VH - H0 * sc, ty)); };
+    const clamp = () => { const VW = view.clientWidth, VH = view.clientHeight; tx = Math.min(0, Math.max(VW - W0 * sc, tx)); ty = Math.min(0, Math.max(VH - H0 * sc, ty)); };
     const apply = () => { clamp(); world.style.transform = "translate(" + tx + "px," + ty + "px) scale(" + sc + ")"; };
     apply();
     const pts = new Map();

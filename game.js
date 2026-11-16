@@ -519,7 +519,7 @@ function audioReady() {
   if (!soundOn && !settings.music) return;
   try {
     audioCtx =
-      audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      audioCtx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
     if (audioCtx.state !== "running")
       audioCtx
         .resume()
@@ -532,7 +532,8 @@ function audioReady() {
 function sfx(type) {
   if (!soundOn) return;
   audioReady();
-  if (!audioCtx) return;
+  // a paused audio engine would play this late (after it wakes up), so skip it instead
+  if (!audioCtx || audioCtx.state !== "running") return;
   const now = audioCtx.currentTime;
   const sounds = {
     jump: [[430, 660, 0.12, "sine"]],

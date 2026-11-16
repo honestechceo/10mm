@@ -2006,7 +2006,8 @@ function drawEscapeTrail() {
   ctx.restore();
 }
 function render() {
-  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  // mirror levels flip the whole scene left-to-right
+  ctx.setTransform(window.mirrorOn ? -1 : 1, 0, 0, 1, window.mirrorOn ? W : 0, 0);
   ctx.clearRect(0, 0, W, CH);
   ctx.translate(0, OFF);
   drawGarageBackground();

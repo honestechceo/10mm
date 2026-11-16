@@ -458,8 +458,9 @@
   // ---------- extra bonus games ----------
   const baseBonusIntro = bonusIntro;
   bonusIntro = function (done) {
-    const n = level / 10, kind = ["find", "sort", "match"][(n - 1) % 3];
+    const n = level / 10, kind = ["find", "sort", "match", "hidden"][(n - 1) % 4];
     if (kind === "find") return baseBonusIntro(done);
+    if (kind === "hidden" && window.runHiddenIntro) return runHiddenIntro(done);
     const secs = kind === "sort" ? Math.max(8, 15 - Math.floor(n / 3)) : Math.max(20, 34 - n);
     popup("BONUS ROUND!", kind === "sort" ? "SOCKET SORT: tap the sockets from smallest to biggest (8mm up to 14mm) in " + secs + " seconds. Wrong taps cost time." : "TOOL MATCH: flip the cards and find all 6 pairs of tools in " + secs + " seconds.", "START", () => (kind === "sort" ? runSort : runMatch)(done, secs), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF 20";

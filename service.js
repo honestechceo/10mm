@@ -14,13 +14,14 @@
     ragred: { name: "Red shop rag", img: "svc-rag-red.webp", kind: "tool" },
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
     lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
+    piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
     filter: { name: "Oil filter", img: "svc-filter.webp", kind: "part" },
     oil: { name: "Jug of motor oil", img: "svc-oil-full.webp", kind: "part" },
     brakes: { name: "Rotor & brake pads", img: "svc-brakes-new.webp", kind: "part" },
   };
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
-    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "brakes"], secs: 45 },
+    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brakes"], secs: 50 },
   };
 
   const load = () => { try { return JSON.parse(localStorage.getItem("tenmm-garage")) || {}; } catch (e) { return {}; } };
@@ -144,6 +145,7 @@
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
     { say: "Loosen the lug nuts and take the wheel off", use: "lugwrench", scene: "car", next: "svc-car-jack.webp" },
     { say: "Unbolt the caliper", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
+    { say: "Push the caliper piston back in", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston pushed back. Room for the thick new pads!") },
     { say: "Install the new rotor & pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
     { say: "Bolt the caliper back on", use: "ratchet", scene: "svc-brakes-new.webp" },
     { say: "Put the wheel back on and tighten the lug nuts", use: "lugwrench", scene: "svc-car-jack.webp", next: "car" },

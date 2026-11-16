@@ -2059,7 +2059,7 @@ function render() {
     if (p.taken) continue;
     let px = p.x - scroll;
     if (px < -30 || px > W + 30) continue;
-    const ps = window.FX && FX.isNewPower(p.type) ? null : powerSprites[
+    const ps = window.FX && FX.isNewPower(p.type) ? FX.powerSprite(p.type) : powerSprites[
         ["shield", "slow", "boost", "magnet"].includes(p.type)
           ? p.type
           : "spring"

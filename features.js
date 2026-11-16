@@ -52,6 +52,8 @@
   // ---------- power-ups ----------
   let slick = 0, rocket = 0;
   const oilSprite = new Image(); oilSprite.src = "power-oil.webp";
+  const rocketSprite = new Image(); rocketSprite.src = "power-rocket.webp";
+  const ready = (im) => im.complete && im.naturalWidth;
 
   // ---------- boss ----------
   let boss = null;
@@ -134,7 +136,7 @@
     coinBonus() { const l = upLvl("lucky"); return l && Math.random() < l * 0.1 ? 1 : 0; },
     powerMul() { return 1 + upLvl("power") * 0.2; },
     isNewPower(t) { return t === "wd40" || t === "rocket"; },
-    powerSprite(t) { return t === "wd40" && oilSprite.complete && oilSprite.naturalWidth ? oilSprite : null; },
+    powerSprite(t) { const im = t === "wd40" ? oilSprite : t === "rocket" ? rocketSprite : null; return im && ready(im) ? im : null; },
     pickup(t, pm) {
       if (t === "wd40") { slick = 240 * pm; return true; }
       if (t === "rocket") { rocket = 150 * pm; return true; }
@@ -157,9 +159,20 @@
         ctx.fillStyle = "#ffd23f"; ctx.beginPath(); ctx.moveTo(-9, 8); ctx.lineTo(-15, 15); ctx.lineTo(-5, 12); ctx.fill();
       }
     },
-    drawWorld() { if (boss) drawBoss(); },
+    drawWorld() {
+      if (boss) drawBoss();
+      if (rocket > 0 && ready(rocketSprite)) {
+        // ride the torque rocket: art points up-right, so turn it to point forward
+        ctx.save();
+        ctx.translate(player.x - 30, player.y + 34 + Math.sin(frames * 0.5) * 1.5);
+        ctx.rotate(0.84);
+        const h = 175, w = h * rocketSprite.naturalWidth / rocketSprite.naturalHeight;
+        ctx.drawImage(rocketSprite, -w / 2, -h / 2, w, h);
+        ctx.restore();
+      }
+    },
     drawOver() {
-      if (rocket > 0) {
+      if (rocket > 0 && !ready(rocketSprite)) {
         ctx.save();
         for (let k = 0; k < 3; k++) {
           ctx.globalAlpha = 0.75 - k * 0.2;

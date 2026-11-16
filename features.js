@@ -458,7 +458,8 @@
   // ---------- extra bonus games ----------
   const baseBonusIntro = bonusIntro;
   bonusIntro = function (done) {
-    const n = level / 10, kind = ["find", "sort", "match", "hidden"][(n - 1) % 4];
+    const n = level / 10, kind = ["find", "sort", "match", "hidden", "drain"][(n - 1) % 5];
+    if (kind === "drain" && window.runDrainIntro) return runDrainIntro(done);
     if (kind === "find") return baseBonusIntro(done);
     if (kind === "hidden" && window.runHiddenIntro) return runHiddenIntro(done);
     const secs = kind === "sort" ? Math.max(8, 15 - Math.floor(n / 3)) : Math.max(20, 34 - n);

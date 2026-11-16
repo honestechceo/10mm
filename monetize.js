@@ -14,7 +14,24 @@
   const silence = () => { try { window.stopMusic && window.stopMusic(); } catch (e) {} };
 
   async function loadInter() { if (!ready || noAds()) return; try { interReady = false; await AdMob.prepareInterstitial(opt(cfg.interstitialId)); interReady = true; } catch (e) { interReady = false; } }
-  async function loadRewarded() { if (!ready) return; try { rewardedReady = false; await AdMob.prepareRewardVideoAd(opt(cfg.rewardedId)); rewardedReady = true; } catch (e) { rewardedReady = false; } }
+  let rewardLoading = null, lastRewardResult = '';
+  function loadRewarded() {
+    if (!ready) return Promise.resolve(false);
+    if (rewardLoading) return rewardLoading;
+    rewardedReady = false;
+    rewardLoading = AdMob.prepareRewardVideoAd(opt(cfg.rewardedId)).then(() => { rewardedReady = true; return true; })
+      .catch(() => { rewardedReady = false; setTimeout(loadRewarded, 15000); return false; })
+      .finally(() => { rewardLoading = null; });
+    return rewardLoading;
+  }
+  // reward events tell us whether the player watched to the end, closed early, or the ad failed to show
+  let rewardEarned = false;
+  function listenRewards() {
+    try {
+      AdMob.addListener('onRewardedVideoAdReward', () => { rewardEarned = true; });
+      AdMob.addListener('onRewardedVideoAdFailedToShow', () => { lastRewardResult = 'failed'; });
+    } catch (e) {}
+  }
 
   async function initAds() {
     try {
@@ -29,7 +46,7 @@
         if (t && t.status === 'notDetermined') await AdMob.requestTrackingAuthorization();
       } catch (e) {}
       ready = true;
-      loadRewarded(); loadInter();
+      listenRewards(); loadRewarded(); loadInter();
     } catch (e) { ready = false; }
   }
 
@@ -59,7 +76,7 @@
     native: NATIVE,
     get price() { return price; },
     get adsRemoved() { return noAds(); },
-    get canContinue() { return NATIVE && ready && rewardedReady; },
+    get canContinue() { return NATIVE && ready && (rewardedReady || !!rewardLoading); },
     // after a crash: called when the player taps TRY AGAIN; shows a full-screen ad now and then
     async beforeRetry(level) {
       crashes++;
@@ -72,11 +89,19 @@
       interReady = false; busy = false; loadInter();
     },
     // optional rewarded ad: resolves true if the player earned the reward
+    get lastRewardResult() { return lastRewardResult; },
     async watchToContinue() {
-      if (!this.canContinue || busy) return false;
-      busy = true; silence();
-      try { const r = await AdMob.showRewardVideoAd(); busy = false; rewardedReady = false; loadRewarded(); return !!r; }
-      catch (e) { busy = false; rewardedReady = false; loadRewarded(); return false; }
+      if (!NATIVE || !ready || busy) { lastRewardResult = 'failed'; return false; }
+      // not loaded yet (e.g. right after the last one): give it a few seconds
+      if (!rewardedReady) await Promise.race([loadRewarded(), new Promise(r => setTimeout(r, 4000))]);
+      if (!rewardedReady) { lastRewardResult = 'loading'; return false; }
+      busy = true; silence(); rewardEarned = false; lastRewardResult = '';
+      let r = null;
+      try { r = await AdMob.showRewardVideoAd(); } catch (e) { lastRewardResult = 'failed'; }
+      busy = false; rewardedReady = false; loadRewarded();
+      const ok = rewardEarned || !!(r && (r.amount !== undefined || r.type));
+      if (!ok && !lastRewardResult) lastRewardResult = 'closed';
+      return ok;
     },
     get paying() { return paying; },
     async buyRemoveAds() {

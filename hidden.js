@@ -50,10 +50,11 @@
       slotsByKey[k] = d; list.append(d);
     });
     const hb = document.createElement("button"); hb.id = "hHint"; hb.textContent = "HINT -5s"; list.append(hb);
-    const bgSrc = "bg-" + themeOf(level).key + ".jpg";
+    const key = themeOf(level).key, n = Math.round(level / 10);
+    const bgSrc = "ho-" + ({ junkyard: "junkyard", partsstore: "partsstore", pitlane: "pitlane" }[key] || ["garage", "garage2", "garage3"][n % 3]) + ".jpg";
     const VH = view.clientHeight, VW = view.clientWidth;
     // the scene is the location art, full height of the view and wider than the screen
-    const H0 = VH, W0 = Math.max(VW * 1.6, H0 * 1.5);
+    const H0 = VH, W0 = Math.max(VW * 1.4, H0 * 1.5);
     world.style.cssText = "width:" + W0 + "px;height:" + H0 + "px;background:url(" + bgSrc + ") center/cover";
     const base = H0 * 0.072;
 
@@ -77,7 +78,7 @@
     };
     const targets = want.map((k) => add(k, k === "ten" ? "socket-find-10.webp" : ART[k], k === "ten" ? 0.5 : 0.75));
     targets.forEach((t) => (t.find = true));
-    const clutter = Math.min(320, 230 + level / 2);
+    const clutter = Math.min(240, 170 + level / 3);
     for (let i = 0; i < clutter; i++) { const k = pick(clutterKinds); add(k, ART[k], k.startsWith("d") ? 0.5 : 0.75); }
     items.sort(() => Math.random() - 0.5).forEach((it, i) => (it.z = i + 1));
     // a found item must stay findable: nothing may cover its middle

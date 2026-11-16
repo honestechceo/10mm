@@ -141,11 +141,11 @@
   const BRAKE_STEPS = [
     { say: "Put on your gloves", use: "gloves", scene: "car" },
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Take the wheel off", use: "wrenches", scene: "svc-brakes-worn.webp", after: (s) => s.label("Worn out! Metal on metal.") },
-    { say: "Unbolt the caliper", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.wait("Pulling the old rotor and pads…", 1200) },
-    { say: "Install the new rotor & pads", use: "brakes", consume: "brakes", scene: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
+    { say: "Take the wheel off", use: "wrenches", scene: "car", next: "svc-car-jack.webp" },
+    { say: "Unbolt the caliper", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
+    { say: "Install the new rotor & pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
     { say: "Bolt the caliper back on", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "Put the wheel back on", use: "wrenches", scene: "car", after: (s) => s.lift(true) },
+    { say: "Put the wheel back on", use: "wrenches", scene: "svc-car-jack.webp", next: "car" },
     { say: "Lower the car", use: "jack", scene: "car", after: (s) => s.lift(false) },
     { say: "Pump the brake pedal 3 times", pump: 3, scene: "car" },
   ];

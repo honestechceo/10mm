@@ -607,7 +607,9 @@
     head.innerHTML = '<div class="ph">GET MORE COINS</div>';
     packs.forEach((p, i) => {
       const b = document.createElement("button");
-      b.innerHTML = '<img src="coin.webp" alt=""><b>' + p.coins.toLocaleString() + "</b><small>" + (i === 2 ? "BEST VALUE" : i === 1 ? "POPULAR" : "") + "</small><em>" + p.price + "</em>";
+      const art = ["small", "medium", "large"][i] || "small";
+      b.className = "pk-" + art;
+      b.innerHTML = '<img src="pack-' + art + '.webp" alt=""><b>' + p.coins.toLocaleString() + " COINS</b><small>" + (i === 2 ? "BEST VALUE" : i === 1 ? "POPULAR" : "") + "</small><em>" + p.price + "</em>";
       b.onclick = async () => {
         const r = await Monetize.buyCoins(p.id);
         if (r.skip) return;

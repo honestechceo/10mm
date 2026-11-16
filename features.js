@@ -78,10 +78,28 @@
     endlessNext = to;
   }
 
+  // ---------- mirror levels: the scene is flipped, so keep canvas text readable ----------
+  window.mirrorOn = false;
+  const isMirror = () => (runMode === "adventure" && level >= 7 && level % 10 === 7) || (runMode === "daily" && today() % 3 === 0);
+  for (const fn of ["fillText", "strokeText"]) {
+    const orig = ctx[fn];
+    ctx[fn] = function (t, x, y, ...rest) {
+      if (!window.mirrorOn) return orig.call(this, t, x, y, ...rest);
+      this.save();
+      this.translate(x, y);
+      this.scale(-1, 1);
+      const a = this.textAlign;
+      this.textAlign = a === "left" || a === "start" ? "right" : a === "right" || a === "end" ? "left" : a;
+      orig.call(this, t, 0, 0, ...rest);
+      this.restore();
+    };
+  }
+
   // ---------- FX hooks used by game.js ----------
   const FX = (window.FX = {
     levelBuilt() {
       slick = 0; rocket = 0; boss = null; secondUsed = false;
+      window.mirrorOn = isMirror();
       coinsInLevel = coins.length;
       if (runMode === "endless") {
         world = 9e9;
@@ -209,6 +227,7 @@
     decorateLevelButton(b, n) {
       const st = LS.get("tenmm-stars", {})[n] || 0;
       if (n % 25 === 0) b.classList.add("boss");
+      if (n >= 7 && n % 10 === 7) b.classList.add("mirror");
       if (st) { const i = document.createElement("i"); i.textContent = "★".repeat(st); b.append(i); }
     },
   });
@@ -517,19 +536,21 @@
     if (runMode === "endless") $("tip").textContent = "ENDLESS: run as far as you can! Best " + LS.get("tenmm-endless-best", 0) + " m";
     else if (runMode === "daily") { createLevelTip(); }
     else if (boss) $("tip").textContent = "BOSS LEVEL: the BIG 12 is coming! Double-jump over it when it charges.";
+    if (window.mirrorOn) $("tip").textContent = "MIRROR LEVEL! " + $("tip").textContent;
   };
   function createLevelTip() {
     const g = goalMode;
     $("tip").textContent = "GOAL: " + (g === "drawer" ? "jump into the open drawer" : g === "engine" ? "land in the engine bay" : g === "bench" ? "land on the workbench" : g === "shelf" ? "land on the tool cart" : "roll under the " + destinations[(level - 1) % 4].toLowerCase());
   }
   const baseShowMenu = showMenu;
-  showMenu = function () { leaveMode(); baseShowMenu(); };
+  showMenu = function () { leaveMode(); window.mirrorOn = false; baseShowMenu(); };
   const baseShowReady = showReady;
   showReady = function () {
     baseShowReady();
     if (runMode === "endless") { $("rLevel").textContent = "ENDLESS"; $("rGoal").textContent = "Run as far as you can. Best: " + LS.get("tenmm-endless-best", 0) + " m"; }
     if (runMode === "daily") { $("rLevel").textContent = "DAILY"; $("rTheme").textContent = "DAILY CHALLENGE • " + themeOf(level).name; }
     if (boss) { $("rTheme").textContent = "BOSS LEVEL • " + themeOf(level).name; }
+    if (window.mirrorOn) { $("rTheme").textContent = "MIRROR LEVEL • " + $("rTheme").textContent; $("rGoal").textContent = "Everything is flipped: you're running the other way! " + $("rGoal").textContent; }
   };
   window.Feature = { debug: () => ({ boss, rocket, slick, bossImg: bossSprite.naturalWidth }), mode: () => runMode, startDaily, startEndless, showUpgrades, share, giftCheck, dailyState, today, isDailyDone: () => dailyState().last === today(), endlessBest: () => LS.get("tenmm-endless-best", 0), starsTotal: () => Object.values(LS.get("tenmm-stars", {})).reduce((a, b) => a + b, 0) };
 })();

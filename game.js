@@ -475,8 +475,8 @@ function crash(title, desc, _, __, art) {
     $("menuExtra").onclick = async () => {
       const ok = await Monetize.watchToContinue();
       if (!ok) {
-        $("details").textContent = "Ad not available right now. Tap TRY AGAIN.";
-        $("menuExtra").style.display = "none";
+        $("details").textContent = window.rewardMsg ? rewardMsg() : "Ad not available right now. Tap TRY AGAIN.";
+        if (!(window.Monetize && ["closed", "loading"].includes(Monetize.lastRewardResult))) $("menuExtra").style.display = "none";
         return;
       }
       continued = true;

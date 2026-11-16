@@ -212,6 +212,7 @@
       if (st) { const i = document.createElement("i"); i.textContent = "★".repeat(st); b.append(i); }
     },
   });
+  window.rewardMsg = () => { const r = window.Monetize ? Monetize.lastRewardResult : ""; return r === "closed" ? "The ad was closed early, so no reward. Watch to the end." : r === "loading" ? "The ad is still loading. Try again in a few seconds." : "Ad not available right now. Try again later."; };
   const escapeText = (t) => t.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   function starsFor() {
     const r = coinsInLevel ? runCoins / coinsInLevel : 1;
@@ -226,10 +227,9 @@
     btn.style.display = "";
     btn.textContent = "WATCH AD: DOUBLE COINS (+" + n + ")";
     btn.onclick = async () => {
-      btn.onclick = null;
       const ok = await Monetize.watchToContinue();
-      if (ok) { addCoins(n); toast("+" + n + " coins! Doubled.", true); btn.style.display = "none"; }
-      else { btn.textContent = "AD NOT AVAILABLE RIGHT NOW"; }
+      if (ok) { btn.onclick = null; addCoins(n); toast("+" + n + " coins! Doubled.", true); btn.style.display = "none"; }
+      else toast(window.rewardMsg ? rewardMsg() : "Ad not available right now.", false);
     };
   }
 

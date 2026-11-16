@@ -400,13 +400,18 @@ function showReady() {
   $("rLevel").textContent = "LEVEL " + level;
   $("rGoal").textContent = $("tip").textContent;
   r.classList.remove("hidden");
+  // start on finger lift: iPhone only lets sound start on touchend/click, so music and effects begin right away
   r.onpointerdown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  r.onpointerup = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (state !== "ready") return;
     r.classList.add("hidden");
-    r.onpointerdown = null;
-    audioReady();
+    r.onpointerup = null;
+    unlockAudio();
     state = "running";
     last = 0;
     startMusic();
@@ -448,7 +453,7 @@ function unlockAudio() {
     src.start(0);
   } catch (e) {}
 }
-["touchend", "click", "keydown"].forEach((ev) =>
+["touchend", "pointerup", "click", "keydown"].forEach((ev) =>
   document.addEventListener(ev, unlockAudio, { capture: true, passive: true }),
 );
 document.addEventListener("visibilitychange", () => {

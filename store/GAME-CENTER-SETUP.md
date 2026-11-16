@@ -37,9 +37,9 @@ For every achievement: Hidden = No, Achievable more than once = No. The "Pre-ear
 
 | Reference name | Product ID | Price | Display name | Description |
 |---|---|---|---|---|
-| 500 Coins | `com.honestech.wheresmy10mm.coins500` | $0.99 | 500 Coins | 500 coins for socket finishes and upgrades. |
-| 1,500 Coins | `com.honestech.wheresmy10mm.coins1500` | $1.99 | 1,500 Coins | 1,500 coins for socket finishes and upgrades. |
-| 5,000 Coins | `com.honestech.wheresmy10mm.coins5000` | $4.99 | 5,000 Coins | 5,000 coins for socket finishes and upgrades. |
+| 400 Coins | `com.honestech.wheresmy10mm.coins.small` | $0.99 | 400 Coins | 400 coins for socket finishes and upgrades. |
+| 1,000 Coins | `com.honestech.wheresmy10mm.coins.medium` | $1.99 | 1,000 Coins | 1,000 coins for socket finishes and upgrades. |
+| 3,000 Coins | `com.honestech.wheresmy10mm.coins.large` | $4.99 | 3,000 Coins | 3,000 coins for socket finishes and upgrades. |
 
 Each needs a review screenshot (use a screenshot of the Socket Shop) and must be added to the 1.1 version under **In-App Purchases** when you submit.
 

@@ -10,16 +10,16 @@
   "noAdsBeforeLevel": 4,
   "coinPacks": [
     {
-      "id": "com.honestech.wheresmy10mm.coins500",
-      "coins": 500
+      "id": "com.honestech.wheresmy10mm.coins.small",
+      "coins": 400
     },
     {
-      "id": "com.honestech.wheresmy10mm.coins1500",
-      "coins": 1500
+      "id": "com.honestech.wheresmy10mm.coins.medium",
+      "coins": 1000
     },
     {
-      "id": "com.honestech.wheresmy10mm.coins5000",
-      "coins": 5000
+      "id": "com.honestech.wheresmy10mm.coins.large",
+      "coins": 3000
     }
   ]
 }

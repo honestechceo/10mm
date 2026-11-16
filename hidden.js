@@ -10,7 +10,7 @@
     cone: "tool-cone.webp", tire: "tool-tire.webp", wetsign: "tool-wetsign.webp", ball: "tool-ball.webp",
     gloves: "svc-gloves.webp", funnel: "svc-funnel.webp", filter: "svc-filter.webp", oiljug: "svc-oil-full.webp",
     ragblue: "svc-rag-blue.webp", ragred: "svc-rag-red.webp", flexratchet: "svc-ratchet.webp", wrenches: "svc-wrenches.webp",
-    brakes: "svc-brakes-new.webp", pan: "svc-pan.webp", oilcan: "power-oil.webp", torque: "power-rocket.webp",
+    brakes: "svc-brakes-new.webp", lugwrench: "svc-lugwrench.webp", pan: "svc-pan.webp", oilcan: "power-oil.webp", torque: "power-rocket.webp",
     shield: "power-shield.webp", stopwatch: "power-slow.webp", spring: "power-spring.webp", magnet: "power-magnet.webp", coin: "coin.webp",
     d8: "socket-decoy-8.webp", d9: "socket-decoy-9.webp", d11: "socket-decoy-11.webp", d12: "socket-decoy-12.webp", d13: "socket-decoy-13.webp", d14: "socket-decoy-14.webp",
   };
@@ -18,7 +18,7 @@
     wrench: "Wrench", ratchet: "Ratchet", phillips: "Phillips screwdriver", flathead: "Flathead", prybar: "Pry bar", bolt: "Bolt", nut: "Nut", screw: "Screw",
     meter: "Multimeter", flashlight: "Flashlight", jack: "Bottle jack", floorjack: "Floor jack", drainpan: "Drain pan", cone: "Cone", tire: "Tire", wetsign: "Wet floor sign",
     ball: "Basketball", gloves: "Gloves", funnel: "Funnel", filter: "Oil filter", oiljug: "Oil jug", ragblue: "Blue rag", ragred: "Red rag", flexratchet: "Flex ratchet",
-    wrenches: "Wrench set", brakes: "Brake rotor", pan: "Spill pan", oilcan: "Penetrating oil", torque: "Torque rocket", shield: "Shield", stopwatch: "Stopwatch",
+    wrenches: "Wrench set", brakes: "Brake rotor", lugwrench: "Lug wrench", pan: "Spill pan", oilcan: "Penetrating oil", torque: "Torque rocket", shield: "Shield", stopwatch: "Stopwatch",
     spring: "Spring", magnet: "Magnet", coin: "Coin",
   };
   const SIZE = { tire: 1.25, floorjack: 1.5, cone: 1.1, wetsign: 1.15, brakes: 1.3, oiljug: 1.05, pan: 1.3, drainpan: 1.3, nut: 0.6, bolt: 0.7, screw: 0.7, coin: 0.55, wrenches: 1.1 };

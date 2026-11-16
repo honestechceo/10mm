@@ -1,11 +1,25 @@
 {
-  "_readme": "LIVE ads (App Store release). Don't tap ads in your own builds - AdMob can ban the account. Set testMode true for test builds.",
-  "testMode": false,
+  "_readme": "testMode true = Google TEST ads (safe for TestFlight). Set testMode false only for the App Store release build.",
+  "testMode": true,
   "admobAppId": "ca-app-pub-2360844519786473~3928252585",
   "interstitialId": "ca-app-pub-2360844519786473/2631482786",
   "rewardedId": "ca-app-pub-2360844519786473/7668187049",
   "removeAdsProductId": "com.honestech.wheresmy10mm.removeads",
   "interstitialEveryCrashes": 3,
   "interstitialMinSeconds": 60,
-  "noAdsBeforeLevel": 4
+  "noAdsBeforeLevel": 4,
+  "coinPacks": [
+    {
+      "id": "com.honestech.wheresmy10mm.coins500",
+      "coins": 500
+    },
+    {
+      "id": "com.honestech.wheresmy10mm.coins1500",
+      "coins": 1500
+    },
+    {
+      "id": "com.honestech.wheresmy10mm.coins5000",
+      "coins": 5000
+    }
+  ]
 }

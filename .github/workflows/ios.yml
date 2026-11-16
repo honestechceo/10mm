@@ -25,7 +25,7 @@ concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: true
 env:
-  APP_VERSION: "1.0"
+  APP_VERSION: "1.1"
   BUNDLE_ID: com.honestech.wheresmy10mm
 jobs:
   build:
@@ -64,8 +64,9 @@ jobs:
           p = 'ios/App/App/capacitor.config.json'
           c = json.load(open(p))
           lst = c.setdefault('packageClassList', [])
-          if 'CloudSavePlugin' not in lst:
-              lst.append('CloudSavePlugin')
+          for name in ('CloudSavePlugin', 'GameCenterPlugin'):
+              if name not in lst:
+                  lst.append(name)
           json.dump(c, open(p, 'w'), indent=2)
           print('packageClassList:', lst)
           PY
@@ -120,23 +121,24 @@ jobs:
               nb = nb.replace("buildSettings = {", f'buildSettings = {{\n\t\t\t\tCODE_SIGN_STYLE = Manual;\n\t\t\t\tDEVELOPMENT_TEAM = {team};\n\t\t\t\tCODE_SIGN_IDENTITY = "Apple Distribution";\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "{prof}";', 1)
               s = s.replace(b, nb)
           open(p, "w").write(s)
-          # iCloud cloud saves, when signing.py could turn iCloud on for the app ID
+          # iCloud cloud saves and Game Center, when signing.py could turn them on for the app ID
+          import plistlib
+          ents, ip = {}, "ios/App/App/Info.plist"
+          info = plistlib.load(open(ip, "rb"))
           if os.environ.get("ICLOUD_OK") == "1":
-              ent = "ios/App/App/App.entitlements"
-              open(ent, "w").write("""<?xml version="1.0" encoding="UTF-8"?>
-          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-          <plist version="1.0"><dict>
-          <key>com.apple.developer.ubiquity-kvstore-identifier</key><string>$(TeamIdentifierPrefix)$(CFBundleIdentifier)</string>
-          </dict></plist>""")
+              ents["com.apple.developer.ubiquity-kvstore-identifier"] = "$(TeamIdentifierPrefix)$(CFBundleIdentifier)"
+              info["TenmmICloud"] = True
+          if os.environ.get("GAMECENTER_OK") == "1":
+              ents["com.apple.developer.game-center"] = True
+              info["TenmmGameCenter"] = True
+          plistlib.dump(info, open(ip, "wb"))
+          if ents:
+              plistlib.dump(ents, open("ios/App/App/App.entitlements", "wb"))
               s = open(p).read()
               for b in [b for b in re.findall(r"buildSettings = \{[^{}]*\}", s) if "INFOPLIST_FILE = App/Info.plist;" in b]:
                   s = s.replace(b, b.replace("buildSettings = {", "buildSettings = {\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;", 1))
               open(p, "w").write(s)
-              import plistlib
-              ip = "ios/App/App/Info.plist"; d = plistlib.load(open(ip, "rb")); d["TenmmICloud"] = True; plistlib.dump(d, open(ip, "wb"))
-              print("iCloud cloud saves: on")
-          else:
-              print("iCloud cloud saves: off (saves stay on the phone)")
+          print("iCloud cloud saves:", "on" if os.environ.get("ICLOUD_OK") == "1" else "off", "| Game Center:", "on" if os.environ.get("GAMECENTER_OK") == "1" else "off")
           PY
           echo "Version $APP_VERSION ($BUILD)"
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \

@@ -322,7 +322,7 @@ function showHome(intro) {
   } catch (e) {}
   $("hCoins").textContent = totalCoins;
   $("hBest").textContent = best;
-  $("hBonus").textContent = bw;
+  $("hStars").textContent = window.Feature ? Feature.starsTotal() : 0;
   const v = (document.querySelector("header small") || {}).textContent || "";
   $("hVer").textContent = (v.split("•")[1] || "").trim();
   const lv = Math.max(best, level);
@@ -343,11 +343,26 @@ function showHome(intro) {
   $("hShop").onclick = run(showShop);
   $("hSettings").onclick = run(showSettings);
   $("hHow").onclick = run(showTutorial);
+  if (window.Feature) {
+    const dd = Feature.isDailyDone(), ds = Feature.dailyState();
+    $("hDaily").className = dd ? "done" : "";
+    $("hDailySub").textContent = dd ? "Done! Streak " + ds.streak + " • back tomorrow" : ds.streak && ds.last === Feature.today() - 1 ? "Keep your " + ds.streak + "-day streak!" : "New level every day";
+    $("hDaily").onclick = run(Feature.startDaily);
+    const el = best >= 26;
+    $("hEndless").className = el ? "" : "locked";
+    $("hEndlessSub").textContent = el ? "Best: " + Feature.endlessBest() + " m" : "Beat level 25 to unlock";
+    $("hEndless").onclick = el ? run(Feature.startEndless) : () => toast("Beat level 25 to unlock Endless mode!", false);
+    $("hUpg").onclick = run(Feature.showUpgrades);
+    $("hShare").onclick = () => Feature.share("level", best);
+    $("hGC").style.display = window.GC && GC.on ? "" : "none";
+    $("hGC").onclick = () => GC.show("leaderboards");
+  }
   $("overlay").classList.add("hidden");
   const toHome = () => {
     h.onpointerdown = null;
     h.className = "home";
     startMusic("title");
+    if (window.Feature) Feature.giftCheck();
   };
   if (!intro) {
     toHome();

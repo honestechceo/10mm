@@ -6,7 +6,7 @@
   const NATIVE = !!(C && typeof C.isNativePlatform === 'function' && C.isNativePlatform() && typeof C.registerPlugin === 'function');
   const AdMob = NATIVE ? C.registerPlugin('AdMob') : null;
   const Store = NATIVE ? C.registerPlugin('NativePurchases') : null;
-  let cfg = null, ready = false, rewardedReady = false, interReady = false, crashes = 0, lastInter = 0, price = '$1.99', busy = false, paying = false, payDoneAt = 0;
+  let cfg = null, coinPrices = {}, ready = false, rewardedReady = false, interReady = false, crashes = 0, lastInter = 0, price = '$1.99', busy = false, paying = false, payDoneAt = 0;
   const NOADS_KEY = 'tenmm-noads';
   const noAds = () => { try { return localStorage.getItem(NOADS_KEY) === 'yes'; } catch (e) { return false; } };
   const setNoAds = (v) => { try { localStorage.setItem(NOADS_KEY, v ? 'yes' : 'no'); } catch (e) {} };
@@ -40,6 +40,13 @@
       try {
         const { products } = await Store.getProducts({ productIdentifiers: [cfg.removeAdsProductId], productType: 'inapp' });
         if (products && products[0] && products[0].priceString) price = products[0].priceString;
+      } catch (e) {}
+      try {
+        const ids = (cfg.coinPacks || []).map(p => p.id);
+        if (ids.length) {
+          const { products } = await Store.getProducts({ productIdentifiers: ids, productType: 'inapp' });
+          for (const pr of products || []) coinPrices[pr.identifier || pr.productIdentifier] = pr.priceString;
+        }
       } catch (e) {}
       try {
         const { purchases } = await Store.getPurchases({ productType: 'inapp' });
@@ -102,6 +109,26 @@
         if (syncErr) return { ok: false, msg: 'Could not reach the App Store. Try again.' };
         return { ok: false, msg: 'No previous purchase found for this Apple ID.' };
       } catch (e) { return { ok: false, msg: 'Could not reach the App Store. Try again.' }; }
+      finally { paying = false; payDoneAt = Date.now(); }
+    },
+    // consumable coin packs: [{id, coins, price}] only once the App Store knows them
+    get coinPacks() { return (cfg && cfg.coinPacks || []).filter(p => coinPrices[p.id]).map(p => ({ ...p, price: coinPrices[p.id] })); },
+    async buyCoins(id) {
+      if (!NATIVE) return { ok: false, msg: 'Coin packs are in the iPhone app.' };
+      if (paying || Date.now() - payDoneAt < 1500) return { ok: false, msg: '', skip: true };
+      const pack = (cfg.coinPacks || []).find(p => p.id === id);
+      if (!pack) return { ok: false, msg: 'Not available.' };
+      paying = true;
+      try {
+        const t = await Store.purchaseProduct({ productIdentifier: id, productType: 'inapp', quantity: 1 });
+        if (t && (t.transactionId || t.productIdentifier)) {
+          const seen = JSON.parse(localStorage.getItem('tenmm-coin-tx') || '[]');
+          if (t.transactionId && seen.includes(t.transactionId)) return { ok: false, msg: 'Already added.' };
+          if (t.transactionId) { seen.push(t.transactionId); localStorage.setItem('tenmm-coin-tx', JSON.stringify(seen.slice(-50))); }
+          return { ok: true, coins: pack.coins, msg: '+' + pack.coins + ' coins added. Thank you!' };
+        }
+        return { ok: false, msg: 'Purchase not completed.' };
+      } catch (e) { return { ok: false, msg: 'Purchase cancelled. No charge was made.' }; }
       finally { paying = false; payDoneAt = Date.now(); }
     },
     privacy() { if (NATIVE && ready) AdMob.showPrivacyOptionsForm().catch(() => {}); }

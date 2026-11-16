@@ -308,7 +308,7 @@ const kinds = [
   ],
   destinations = ["TOOLBOX", "TOOL CART", "CAR", "WORKBENCH"];
 function rnd(seed) {
-  let x = Math.sin(seed * 127.1 + level * 83.7) * 43758.5453;
+  let x = Math.sin(seed * 127.1 + level * 83.7 + (window.runSeed || 0)) * 43758.5453;
   return x - Math.floor(x);
 }
 function createLevel() {
@@ -413,6 +413,7 @@ function createLevel() {
           : goalMode === "shelf"
             ? "land on the tool cart"
             : "roll under the " + destinations[(level - 1) % 4].toLowerCase());
+  if (window.FX) FX.levelBuilt();
 }
 function start() {
   continued = false;
@@ -1370,6 +1371,8 @@ function powerIcon(t, x, y) {
       ctx.lineTo(dx - 3, 8);
       ctx.stroke();
     }
+  } else if (t === "wd40" || t === "rocket") {
+    if (window.FX) FX.drawPowerIcon(t);
   } else if (t === "magnet") {
     ctx.lineWidth = 6;
     ctx.lineCap = "butt";
@@ -2028,6 +2031,7 @@ function render() {
   if (level >= 3 && scroll < world - 450) {
     magnetList().forEach(([mx, my], i) => drawMagnet(mx, my, i > 0));
   }
+  if (window.FX) FX.drawWorld();
   let dx = world - scroll - 210;
   if (dx < W + 290) destination(dx);
   for (const c of coins) {
@@ -2055,8 +2059,7 @@ function render() {
     if (p.taken) continue;
     let px = p.x - scroll;
     if (px < -30 || px > W + 30) continue;
-    const ps =
-      powerSprites[
+    const ps = window.FX && FX.isNewPower(p.type) ? null : powerSprites[
         ["shield", "slow", "boost", "magnet"].includes(p.type)
           ? p.type
           : "spring"
@@ -2086,7 +2089,11 @@ function render() {
             ? "#ff8854"
             : p.type === "magnet"
               ? "#cb85ff"
-              : "#ffca48";
+              : p.type === "wd40"
+                ? "#2f6fd6"
+                : p.type === "rocket"
+                  ? "#ff5a3c"
+                  : "#ffca48";
     ctx.beginPath();
     ctx.arc(px, p.y, 19, 0, Math.PI * 2);
     ctx.fill();
@@ -2183,6 +2190,7 @@ function render() {
     image("socket10", 0, 0, 52, 52);
   }
   ctx.restore();
+  if (window.FX) FX.drawOver();
 
   ctx.fillStyle = "#ffcb43";
   ctx.fillRect(
@@ -2202,6 +2210,7 @@ function tick(t) {
     (1 + runSpeedBonus) *
     (slow > 0 ? 0.68 : 1) *
     (boost > 0 ? 1.45 : 1) *
+    (window.FX ? FX.speedMul() : 1) *
     dt;
   scroll += speed;
   frames += dt;
@@ -2209,6 +2218,7 @@ function tick(t) {
   if (slow > 0) slow -= dt;
   if (boost > 0) boost -= dt;
   if (coinMagnet > 0) coinMagnet -= dt;
+  if (window.FX && FX.tick(dt, speed) === "stop") return;
   player.vy = Math.min(10, player.vy + 0.64 * dt);
   player.y += player.vy * dt;
   if (player.y < 48) {
@@ -2251,6 +2261,7 @@ function tick(t) {
     }
     if (
       shield <= 0 &&
+      !(window.FX && FX.ghost()) &&
       Math.abs(x - player.x) < player.r + o.w * 0.4 &&
       player.y + player.r > ground - lift - o.h + 7 &&
       player.y - player.r < ground - lift - 3
@@ -2285,6 +2296,7 @@ function tick(t) {
     if ((Math.abs(dx) < 30 && Math.abs(dy) < 33) || attracted) {
       c.taken = true;
       runCoins++;
+      if (window.FX) runCoins += FX.coinBonus();
       runScore += 100;
       sfx("power");
       $("coinsCount").textContent = totalCoins + runCoins;
@@ -2301,10 +2313,12 @@ function tick(t) {
       p.taken = true;
       sfx("power");
       buzz("medium");
-      if (p.type === "shield") shield = 320;
-      else if (p.type === "slow") slow = 340;
-      else if (p.type === "boost") boost = 300;
-      else if (p.type === "magnet") coinMagnet = 400;
+      const pm = window.FX ? FX.powerMul() : 1;
+      if (window.FX && FX.pickup(p.type, pm)) {
+      } else if (p.type === "shield") shield = 320 * pm;
+      else if (p.type === "slow") slow = 340 * pm;
+      else if (p.type === "boost") boost = 300 * pm;
+      else if (p.type === "magnet") coinMagnet = 400 * pm;
       else {
         player.vy = -12;
         player.jumps = 1;
@@ -2318,7 +2332,9 @@ function tick(t) {
               ? "SPEED BOOST! 45% faster for 5 seconds!"
               : p.type === "magnet"
                 ? "COIN MAGNET! Collect nearby coins!"
-                : "Spring bounce!";
+                : window.FX && FX.pickupText(p.type)
+                  ? FX.pickupText(p.type)
+                  : "Spring bounce!";
     }
   }
   if (
@@ -2334,7 +2350,7 @@ function tick(t) {
     const near = magnetList().some(
       ([mx, my]) => Math.abs(player.x - mx) < 42 && player.y < my + 80,
     );
-    if (near && shield <= 0) {
+    if (near && shield <= 0 && !(window.FX && FX.rocketOn())) {
       sfx("hit");
       buzz("heavy");
       stopMusic();
@@ -2368,6 +2384,7 @@ function tick(t) {
       reach > 0.88 &&
       handTip >= player.x - player.r * 0.55 &&
       shield <= 0 &&
+      !(window.FX && FX.ghost()) &&
       boost <= 0 &&
       grounded
     ) {
@@ -2423,6 +2440,7 @@ function tick(t) {
     sfx("win");
     buzz("success");
     stopMusic();
+    if (window.FX && FX.onWin()) return;
     totalCoins += runCoins;
     totalScore += runScore + 500;
     localStorage.setItem("tenmm-coins", totalCoins);
@@ -2469,6 +2487,7 @@ function tick(t) {
       },
       "win",
     );
+    if (window.FX) FX.afterWin();
     return;
   }
   render();
@@ -3285,6 +3304,8 @@ const SKINS = [
   { id: "gold", name: "24K Gold", price: 400 },
   { id: "neon", name: "Neon Blue", price: 600 },
   { id: "purple", name: "Finder's Purple", price: 0, bonus: 3 },
+  { id: "champ", name: "Daily Champ", price: 0, lock: "7-DAY DAILY STREAK" },
+  { id: "afterburner", name: "Afterburner", price: 0, lock: "ENDLESS: RUN 1000 M" },
   { id: "diamond", name: "Diamond Finder", price: 0, bonus: 6 },
   { id: "santa", name: "Santa Socket", price: 300, holiday: [12, 1, 12, 31] },
   {
@@ -3404,8 +3425,8 @@ function renderShop() {
         buzz("light");
         renderShop();
       };
-    } else if (sk.bonus) {
-      b.textContent = "WIN " + sk.bonus + " BONUS ROUNDS";
+    } else if (sk.bonus || sk.lock) {
+      b.textContent = sk.lock || "WIN " + sk.bonus + " BONUS ROUNDS";
       b.className = "no";
       b.disabled = true;
     } else if (totalCoins >= price) {
@@ -3469,6 +3490,7 @@ function showLevels() {
     }
     const b = document.createElement("button");
     b.textContent = n;
+    if (window.FX) FX.decorateLevelButton(b, n);
     b.disabled = n > best;
     if (n === level) b.className = "cur";
     b.onclick = () => {

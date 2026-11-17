@@ -1,117 +1,167 @@
-// Where's My 10MM?! — "Drain the Oil" bonus round.
-// Old oil sits in the engine's oil pan at the top. Tap groups of 2+ matching parts to clear them
-// and open a path so the oil can pour down into the drain pan before time runs out.
+// Where's My 10MM?! — "Drain the Oil" bonus round (match-and-drop style).
+// Old oil sits in the engine's oil pan at the top. Tap 2+ touching matching parts to clear them;
+// parts above drop down. Open a channel so the oil pours into the drain pan before your moves run out.
+// Big groups make power parts: 6-7 = TORQUE ROCKET (clears its column), 8+ = OIL BLAST (clears around it).
 "use strict";
 (() => {
-  const LW = 336, LH = 560, C = 4, GW = LW / C, GH = LH / C; // logical size and fine oil grid
-  const COLS = 7, ROWS = 7, T = 48, TOP = 120, GRID_Y = TOP / C, TCELL = T / C;
+  const LW = 350, LH = 640, C = 5, GW = LW / C, GH = LH / C;
+  const COLS = 7, ROWS = 8, T = 50, BX = 0, BY = 162, TCELL = T / C;
+  const PAN_TOP = 146;
+  const FLOOR = BY + ROWS * T;
   const TYPES = [
-    { img: "tool-wrench.webp", bg: "#dfe8f2" },
-    { img: "tool-nut.webp", bg: "#f2e3c4" },
-    { img: "svc-filter.webp", bg: "#ffd9b0" },
-    { img: "svc-funnel.webp", bg: "#ffd2d2" },
+    { img: "tool-wrench.webp", a: "#4aa3ff", b: "#1c5fbf" },
+    { img: "tool-nut.webp", a: "#ffd54a", b: "#d68a00" },
+    { img: "svc-filter.webp", a: "#ff8a3c", b: "#c84a0c" },
+    { img: "svc-funnel.webp", a: "#ff5d6c", b: "#b3122a" },
+    { img: "tool-bolt.webp", a: "#5ee07a", b: "#1d8f3c" },
   ];
-  const STEEL = "steel";
-  const imgs = TYPES.map((t) => { const i = new Image(); i.src = t.img; return i; });
-  const panImg = new Image(); panImg.src = "svc-pan.webp";
-  const engImg = new Image(); engImg.src = "scene-plug.webp";
+  const STEEL = "steel", ROCKET = "rocket", BLAST = "blast";
+  const load = (s) => { const i = new Image(); i.src = s; return i; };
+  const imgs = TYPES.map((t) => load(t.img));
+  const rocketImg = load("power-rocket.webp"), blastImg = load("power-oil.webp"), panImg = load("svc-pan.webp"), engImg = load("scene-engine-closed.webp");
+  const ready = (im) => im && im.complete && im.naturalWidth;
 
   window.runDrainIntro = function (done) {
-    const n = Math.round(level / 10), secs = Math.max(35, 60 - n);
-    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch to clear them. Open a path so the old oil pours into the drain pan. Fill it in " + secs + " seconds!", "START", () => runDrain(done, secs, n), "toolbox");
+    const n = Math.round(level / 10), moves = Math.max(14, 22 - Math.floor(n / 4));
+    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Parts above drop down. Open a path so the old oil pours into the drain pan in " + moves + " moves! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
 
-  function runDrain(done, secs, n) {
+  function runDrain(done, maxMoves, n) {
     hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("bonus");
     let el = $("drn");
     if (!el) { el = document.createElement("div"); el.id = "drn"; document.body.append(el); }
     el.className = "";
-    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap 2+ matching parts to clear a path</small></div><div id="dTime">0</div></div><div class="bbar"><i id="dBar"></i></div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>DRAIN PAN</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
+    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap 2+ matching parts. Parts above drop down.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
+      '<div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>DRAIN PAN</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
       can.style.width = LW * s + "px"; can.style.height = LH * s + "px";
       can.width = Math.round(LW * s * dpr); can.height = Math.round(LH * s * dpr);
       g.setTransform((LW * s * dpr) / LW, 0, 0, (LH * s * dpr) / LH, 0, 0);
-      return s;
     };
-    let scale = fit();
+    fit();
 
-    // tiles
-    const tiles = [];
-    const steelCount = Math.min(5, 1 + Math.floor(n / 4));
-    for (let r = 0; r < ROWS; r++) { tiles.push([]); for (let c = 0; c < COLS; c++) tiles[r].push(Math.floor(Math.random() * TYPES.length)); }
-    for (let k = 0; k < steelCount; k++) tiles[1 + Math.floor(Math.random() * (ROWS - 2))][Math.floor(Math.random() * COLS)] = STEEL;
-    // fine grid: 0 empty, 1 oil, 2 wall
-    const cell = new Uint8Array(GW * GH), shade = new Uint8Array(GW * GH);
-    const solidTile = new Uint8Array(GW * GH);
-    const oilCan = document.createElement("canvas"); oilCan.width = GW; oilCan.height = GH;
-    const oilCtx = oilCan.getContext("2d"), oilImg = oilCtx.createImageData(GW, GH);
+    // board: each tile has a type and an animated y so it can drop into place
+    const ntypes = n < 6 ? 4 : 5;
+    const grid = [];
+    for (let r = 0; r < ROWS; r++) { grid.push([]); for (let c = 0; c < COLS; c++) grid[r].push({ t: Math.floor(Math.random() * ntypes), y: BY + r * T - 260 - (ROWS - r) * 30, vy: 0, pop: 0 }); }
+    const steelCount = Math.min(8, 2 + Math.floor(n / 3));
+    for (let k = 0; k < steelCount; k++) grid[3 + Math.floor(Math.random() * (ROWS - 3))][Math.floor(Math.random() * COLS)].t = STEEL;
+
+    // liquid grid
+    const cell = new Uint8Array(GW * GH), shade = new Uint8Array(GW * GH), solid = new Uint8Array(GW * GH);
     const idx = (x, y) => y * GW + x;
-    const markTiles = () => {
-      solidTile.fill(0);
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (tiles[r][c] !== null) {
-        for (let y = 0; y < TCELL; y++) for (let x = 0; x < TCELL; x++) solidTile[idx(c * TCELL + x, GRID_Y + r * TCELL + y)] = 1;
-      }
-    };
-    markTiles();
-    // engine oil pan at the top, full of old oil
     let total = 0;
-    for (let y = 3; y < GRID_Y; y++) for (let x = 0; x < GW; x++) if (Math.random() < 0.93) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
-    const PAN_Y = GH - 10, target = Math.floor(total * 0.6);
-    let inPan = 0;
-    const solid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solidTile[idx(x, y)];
+    for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
+    const target = Math.floor(total * 0.6), PAN_Y = Math.floor((LH - 34) / C);
+    let inPan = 0, moved = 0, started = false;
+    const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
-    // tap groups
+    // tiles block oil where they are drawn; oil caught under a falling tile is pushed up
+    function markSolids() {
+      solid.fill(0);
+      for (let y = Math.floor(60 / C); y < Math.floor(PAN_TOP / C); y++) solid[idx(0, y)] = solid[idx(1, y)] = solid[idx(GW - 1, y)] = solid[idx(GW - 2, y)] = 1;
+      // until the parts have landed, the engine's drain plug is in
+      if (!started) for (let x = 0; x < GW; x++) solid[idx(x, Math.floor(PAN_TOP / C))] = 1;
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
+        const tl = grid[r][c];
+        if (!tl || tl.y + T < BY - 20) continue;
+        const x0 = Math.floor((BX + c * T) / C), y0 = Math.max(0, Math.floor(tl.y / C));
+        for (let y = y0; y < Math.min(GH, y0 + TCELL); y++) for (let x = x0; x < x0 + TCELL; x++) {
+          const k = idx(x, y);
+          solid[k] = 1;
+          if (cell[k]) { cell[k] = 0; for (let yy = y - 1; yy >= 0; yy--) { const kk = idx(x, yy); if (!cell[kk] && !solid[kk]) { cell[kk] = 1; shade[kk] = shade[k]; break; } } }
+        }
+      }
+    }
+
+    // matching
+    const same = (a, b) => a && b && typeof a.t === "number" && a.t === b.t;
     const group = (r0, c0) => {
-      const t = tiles[r0][c0], seen = new Set([r0 * COLS + c0]), q = [[r0, c0]];
+      const seen = new Set([r0 * COLS + c0]), q = [[r0, c0]];
       while (q.length) {
         const [r, c] = q.pop();
         for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
           const rr = r + dr, cc = c + dc;
-          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS || seen.has(rr * COLS + cc) || tiles[rr][cc] !== t) continue;
+          if (rr < 0 || rr >= ROWS || cc < 0 || cc >= COLS || seen.has(rr * COLS + cc) || !same(grid[rr][cc], grid[r0][c0])) continue;
           seen.add(rr * COLS + cc); q.push([rr, cc]);
         }
       }
       return [...seen].map((k) => [Math.floor(k / COLS), k % COLS]);
     };
-    const pops = [];
-    const hasMove = () => { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = tiles[r][c]; if (t !== null && t !== STEEL && group(r, c).length >= 2) return true; } return false; };
-    function reshuffleIfStuck() {
-      const spots = [];
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (tiles[r][c] !== null && tiles[r][c] !== STEEL) spots.push([r, c]);
-      if (spots.length < 2 || hasMove()) return;
-      for (let tries = 0; tries < 30 && !hasMove(); tries++) for (const [r, c] of spots) tiles[r][c] = Math.floor(Math.random() * TYPES.length);
-      if (!hasMove()) {
-        // make a pair next to each other for sure
-        for (const [r, c] of spots) for (const [dr, dc] of [[0, 1], [1, 0]]) { const a = r + dr, b = c + dc; if (a < ROWS && b < COLS && tiles[a][b] !== null && tiles[a][b] !== STEEL) { tiles[a][b] = tiles[r][c]; return pops.push({ x: LW / 2, y: TOP - 14, t: "SHUFFLED!", life: 50 }); } }
-        // only lone tiles left: they can be cleared with one tap
-        lonely = true;
-      }
-      pops.push({ x: LW / 2, y: TOP - 14, t: "SHUFFLED!", life: 50 });
+    const parts = [], pops = [];
+    let moves = maxMoves, over = false, raf = 0, shake = 0, hover = null, settleT = 0, busyT = 0, flash = null, idle = 0;
+    const burst = (r, c, color) => { for (let i = 0; i < 10; i++) parts.push({ x: BX + c * T + T / 2, y: BY + r * T + T / 2, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 6 - 1, life: 32, color, s: 3 + Math.random() * 4 }); };
+    const remove = (r, c) => {
+      const tl = grid[r][c];
+      if (!tl) return;
+      burst(r, c, tl.t === STEEL ? "#c9d3dc" : typeof tl.t === "number" ? TYPES[tl.t].a : "#ffd23f");
+      grid[r][c] = null;
+    };
+    function fire(r, c, kind) {
+      grid[r][c] = null; burst(r, c, "#ffd23f");
+      const hit = (rr, cc) => { const t = grid[rr][cc]; if (t && (t.t === ROCKET || t.t === BLAST)) fire(rr, cc, t.t); else remove(rr, cc); };
+      if (kind === ROCKET) { for (let rr = 0; rr < ROWS; rr++) hit(rr, c); pops.push({ x: BX + c * T + T / 2, y: BY + 20, t: "ROCKET!", life: 50 }); flash = { x: BX + c * T, life: 14 }; }
+      else { for (let rr = r - 1; rr <= r + 1; rr++) for (let cc = c - 1; cc <= c + 1; cc++) if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) hit(rr, cc); pops.push({ x: BX + c * T + T / 2, y: BY + r * T, t: "OIL BLAST!", life: 50 }); shake = 12; }
     }
-    let lonely = false;
-    let left = secs * 1000, last = performance.now(), over = false, raf = 0, shake = 0;
+
+    // parts fall into gaps; steel plates stay bolted in place
+    function gravity() {
+      for (let c = 0; c < COLS; c++) {
+        let write = ROWS - 1;
+        for (let r = ROWS - 1; r >= 0; r--) {
+          const tl = grid[r][c];
+          if (tl && tl.t === STEEL) { write = r - 1; continue; }
+          if (!tl) continue;
+          if (write !== r) { grid[write][c] = tl; grid[r][c] = null; }
+          write--;
+        }
+      }
+    }
+    const hasMove = () => { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = grid[r][c]; if (!t || t.t === STEEL) continue; if (t.t === ROCKET || t.t === BLAST || group(r, c).length >= 2) return true; } return false; };
+    function reshuffleIfStuck() {
+      if (hasMove()) return;
+      const spots = [];
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (grid[r][c] && grid[r][c].t !== STEEL) spots.push(grid[r][c]);
+      if (!spots.length) return;
+      for (let tries = 0; tries < 40 && !hasMove(); tries++) for (const t of spots) t.t = Math.floor(Math.random() * ntypes);
+      if (!hasMove()) spots[spots.length - 1].t = ROCKET;
+      pops.push({ x: LW / 2, y: BY - 6, t: "SHUFFLED!", life: 50 });
+    }
+    function bestGroup() {
+      let best = null;
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = grid[r][c]; if (!t || typeof t.t !== "number") continue; const gp = group(r, c); if (gp.length >= 2 && (!best || gp.length > best.length)) best = gp; }
+      return best || [];
+    }
+
+    const toCell = (e) => { const rc = can.getBoundingClientRect(), x = ((e.clientX - rc.left) / rc.width) * LW, y = ((e.clientY - rc.top) / rc.height) * LH; return [Math.floor((y - BY) / T), Math.floor((x - BX) / T), x, y]; };
     can.onpointerdown = (e) => {
       e.preventDefault();
-      if (over) return;
-      const rc = can.getBoundingClientRect(), x = ((e.clientX - rc.left) / rc.width) * LW, y = ((e.clientY - rc.top) / rc.height) * LH;
-      const c = Math.floor(x / T), r = Math.floor((y - TOP) / T);
-      if (r < 0 || r >= ROWS || c < 0 || c >= COLS || tiles[r][c] === null) return;
-      if (tiles[r][c] === STEEL) { left -= 1000; sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL!", life: 40, bad: 1 }); shake = 8; return; }
+      if (over || moves <= 0 || busyT > 0 || !started) return;
+      const [r, c, x, y] = toCell(e);
+      if (r < 0 || r >= ROWS || c < 0 || c >= COLS) return;
+      const tl = grid[r][c];
+      if (!tl) return;
+      idle = 0;
+      if (tl.t === STEEL) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL! Blast it", life: 40, bad: 1 }); shake = 8; return; }
+      if (tl.t === ROCKET || tl.t === BLAST) { moves--; fire(r, c, tl.t); sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
-      if (gp.length < 2 && !lonely) { left -= 1000; sfx("miss"); buzz("light"); pops.push({ x, y, t: "Need a match -1s", life: 45, bad: 1 }); shake = 8; return; }
-      for (const [rr, cc] of gp) { pops.push({ x: cc * T + T / 2, y: TOP + rr * T + T / 2, t: "", life: 18, burst: tiles[rr][cc] }); tiles[rr][cc] = null; }
-      // big groups also knock out a steel plate next to them
-      if (gp.length >= 5) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && tiles[a][b] === STEEL) { tiles[a][b] = null; pops.push({ x: b * T + T / 2, y: TOP + a * T + T / 2, t: "", life: 18, burst: 0 }); } }
-      markTiles();
-      reshuffleIfStuck();
-      sfx(gp.length >= 5 ? "power" : "coin"); buzz(gp.length >= 5 ? "medium" : "light");
-      if (gp.length >= 4) pops.push({ x, y, t: gp.length >= 5 ? "BIG CLEAR!" : "NICE!", life: 40 });
+      if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
+      moves--;
+      for (const [rr, cc] of gp) remove(rr, cc);
+      if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
+      if (gp.length >= 6) { grid[r][c] = { t: gp.length >= 8 ? BLAST : ROCKET, y: BY + r * T, vy: 0, pop: 14 }; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST MADE!" : "TORQUE ROCKET!", life: 50 }); }
+      else if (gp.length >= 4) pops.push({ x, y, t: gp.length === 5 ? "GREAT!" : "NICE!", life: 40 });
+      sfx(gp.length >= 6 ? "power" : "coin"); buzz(gp.length >= 6 ? "medium" : "light");
+      after();
     };
+    can.onpointermove = (e) => { const [r, c] = toCell(e); hover = r >= 0 && r < ROWS && c >= 0 && c < COLS ? [r, c] : null; };
+    can.onpointerleave = () => (hover = null);
+    function after() { gravity(); reshuffleIfStuck(); busyT = 8; }
 
-    // liquid: each oil cell falls, slides diagonally, or spreads sideways
+    // liquid
     let flip = 0;
     function stepOil() {
       flip ^= 1;
@@ -120,94 +170,150 @@
         for (let i = 0; i < GW; i++) {
           const x = ltr ? i : GW - 1 - i, k = idx(x, y);
           if (cell[k] !== 1) continue;
-          if (y >= PAN_Y) { cell[k] = 0; inPan++; continue; }
+          if (y >= PAN_Y) { cell[k] = 0; inPan++; moved++; continue; }
           const d = ltr ? 1 : -1;
           let nx = -1, ny = -1;
-          if (!solid(x, y + 1)) { nx = x; ny = y + 1; }
-          else if (!solid(x + d, y + 1)) { nx = x + d; ny = y + 1; }
-          else if (!solid(x - d, y + 1)) { nx = x - d; ny = y + 1; }
-          else if (!solid(x + d, y)) { nx = x + d; ny = y; if (!solid(x + 2 * d, y) && Math.random() < 0.6) nx = x + 2 * d; }
-          else if (!solid(x - d, y)) { nx = x - d; ny = y; }
-          if (nx >= 0) { const nk = idx(nx, ny); cell[nk] = 1; shade[nk] = shade[k]; cell[k] = 0; }
+          if (!isSolid(x, y + 1)) { nx = x; ny = y + 1; }
+          else if (!isSolid(x + d, y + 1)) { nx = x + d; ny = y + 1; }
+          else if (!isSolid(x - d, y + 1)) { nx = x - d; ny = y + 1; }
+          else if (!isSolid(x + d, y)) { nx = x + d; ny = y; if (!isSolid(x + 2 * d, y) && Math.random() < 0.6) nx = x + 2 * d; }
+          else if (!isSolid(x - d, y)) { nx = x - d; ny = y; }
+          if (nx >= 0) { const nk = idx(nx, ny); cell[nk] = 1; shade[nk] = shade[k]; cell[k] = 0; if (ny > y) moved++; }
         }
       }
     }
 
-    function draw() {
-      g.clearRect(0, 0, LW, LH);
-      // engine and its oil pan
-      g.fillStyle = "#222a31"; g.fillRect(0, 0, LW, TOP);
-      if (engImg.complete && engImg.naturalWidth) { g.globalAlpha = 0.5; g.drawImage(engImg, 0, -40, LW, (LW * engImg.naturalHeight) / engImg.naturalWidth); g.globalAlpha = 1; }
-      g.fillStyle = "#11161b"; g.fillRect(0, TOP, LW, ROWS * T);
-      // floor and drain pan
-      g.fillStyle = "#1b2229"; g.fillRect(0, TOP + ROWS * T, LW, LH - TOP - ROWS * T);
-      // oil: drawn on a tiny canvas and scaled up smoothly so it looks like liquid
+    // drawing
+    const oilCan = document.createElement("canvas"); oilCan.width = GW; oilCan.height = GH;
+    const oilCtx = oilCan.getContext("2d"), oilImg = oilCtx.createImageData(GW, GH);
+    function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
+    function fitImg(im, cx, cy, box) { if (!ready(im)) return; const a = im.naturalWidth / im.naturalHeight, w = a > 1 ? box : box * a, h = a > 1 ? box / a : box; g.drawImage(im, cx - w / 2, cy - h / 2, w, h); }
+    function drawBack() {
+      g.fillStyle = "#2a3038"; g.fillRect(0, 0, LW, LH);
+      g.strokeStyle = "#20252c"; g.lineWidth = 2;
+      for (let y = 0, row = 0; y < LH; y += 22, row++) { g.beginPath(); g.moveTo(0, y); g.lineTo(LW, y); g.stroke(); for (let x = (row % 2) * 24; x < LW; x += 48) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke(); } }
+      if (ready(engImg)) { g.save(); g.globalAlpha = 0.6; const w = LW * 1.2, h = (w * engImg.naturalHeight) / engImg.naturalWidth; g.drawImage(engImg, (LW - w) / 2, 64 - h * 0.92, w, h); g.restore(); }
+      const pg = g.createLinearGradient(0, 56, 0, PAN_TOP + 10); pg.addColorStop(0, "#6a747e"); pg.addColorStop(1, "#2b3138");
+      g.fillStyle = pg; rr(-6, 56, LW + 12, PAN_TOP - 48, 14); g.fill();
+      g.fillStyle = "#14181d"; g.fillRect(10, 68, LW - 20, PAN_TOP - 68);
+      g.fillStyle = "#9aa6b2"; for (let x = 18; x < LW; x += 38) { g.beginPath(); g.arc(x, 62, 3, 0, 7); g.fill(); }
+      g.font = "900 11px system-ui,sans-serif"; g.fillStyle = "#e6edf3"; g.textAlign = "left"; g.lineWidth = 3; g.strokeStyle = "#000a"; g.strokeText("ENGINE OIL PAN", 12, 52); g.fillText("ENGINE OIL PAN", 12, 52);
+      // board frame like a tool chest drawer
+      g.fillStyle = "#b52a20"; rr(BX - 1, BY - 8, COLS * T + 2, ROWS * T + 14, 10); g.fill();
+      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#1b232c" : "#202933"; g.fillRect(BX + c * T, BY + r * T, T, T); }
+      g.fillStyle = "#3b4048"; g.fillRect(0, FLOOR + 6, LW, LH - FLOOR);
+      g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
+    }
+    function drawOil() {
       const px = oilImg.data, t = performance.now() * 0.002;
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
         const k = idx(x, y), o = k * 4;
         if (cell[k] !== 1) { px[o + 3] = 0; continue; }
-        const top = y === 0 || cell[idx(x, y - 1)] !== 1, sh = Math.sin(t + x * 0.35 + y * 0.2) * 10 + (shade[k] - 128) * 0.06;
-        if (top) { px[o] = 245; px[o + 1] = 196; px[o + 2] = 92; }
-        else { px[o] = 176 + sh; px[o + 1] = 104 + sh * 0.7; px[o + 2] = 14; }
-        px[o + 3] = 255;
+        const top = y === 0 || cell[idx(x, y - 1)] !== 1, sh = Math.sin(t + x * 0.35 + y * 0.2) * 12 + (shade[k] - 128) * 0.07;
+        if (top) { px[o] = 255; px[o + 1] = 214; px[o + 2] = 110; }
+        else { px[o] = 168 + sh; px[o + 1] = 98 + sh * 0.7; px[o + 2] = 12; }
+        px[o + 3] = 250;
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.imageSmoothingEnabled = true;
       g.drawImage(oilCan, 0, 0, LW, LH);
-      // tiles
+      g.save(); g.globalAlpha = 0.16; g.globalCompositeOperation = "lighter"; g.drawImage(oilCan, 0, -1.5, LW, LH); g.restore();
+    }
+    function drawTile(tl, x, y, glow) {
+      const s = 1 - Math.max(0, tl.pop) * 0.015, cx = x + T / 2, cy = y + T / 2, w = (T - 4) * s;
+      g.save(); g.translate(cx, cy);
+      if (tl.t === STEEL) {
+        const gr = g.createLinearGradient(-w / 2, -w / 2, w / 2, w / 2); gr.addColorStop(0, "#e1e7ed"); gr.addColorStop(0.5, "#9aa6b1"); gr.addColorStop(1, "#5b6570");
+        g.fillStyle = gr; rr(-w / 2, -w / 2, w, w, 7); g.fill(); g.strokeStyle = "#3b434c"; g.lineWidth = 2; g.stroke();
+        g.fillStyle = "#3e4750"; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.arc(a * (w / 2 - 8), b * (w / 2 - 8), 3.2, 0, 7); g.fill(); }
+        g.restore(); return;
+      }
+      if (glow) { g.shadowColor = "#fff8c0"; g.shadowBlur = 14; }
+      g.fillStyle = "#0007"; rr(-w / 2 + 1, -w / 2 + 3, w, w, 10); g.fill();
+      g.shadowBlur = 0;
+      g.fillStyle = "#fff4dc"; rr(-w / 2, -w / 2, w, w, 10); g.fill();
+      let a = "#ffe27a", b = "#e08a00";
+      if (typeof tl.t === "number") { a = TYPES[tl.t].a; b = TYPES[tl.t].b; }
+      const gr = g.createLinearGradient(0, -w / 2, 0, w / 2); gr.addColorStop(0, a); gr.addColorStop(1, b);
+      g.fillStyle = gr; rr(-w / 2 + 4, -w / 2 + 4, w - 8, w - 8, 8); g.fill();
+      g.fillStyle = "#ffffff45"; rr(-w / 2 + 6, -w / 2 + 6, w - 12, (w - 12) * 0.36, 6); g.fill();
+      if (typeof tl.t === "number") fitImg(imgs[tl.t], 0, 1, w - 14);
+      else { fitImg(tl.t === ROCKET ? rocketImg : blastImg, 0, 0, w - 8); g.strokeStyle = "#fff"; g.lineWidth = 2.5; g.globalAlpha = 0.6 + Math.sin(performance.now() / 150) * 0.4; rr(-w / 2 + 1, -w / 2 + 1, w - 2, w - 2, 10); g.stroke(); }
+      g.restore();
+    }
+    let heroCache = null;
+    const heroImg = () => { if (!heroCache) heroCache = load(typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp"); return heroCache; };
+    function draw() {
+      g.clearRect(0, 0, LW, LH);
+      drawBack();
+      const hl = new Set();
+      if (hover && grid[hover[0]][hover[1]] && typeof grid[hover[0]][hover[1]].t === "number") { const gp = group(hover[0], hover[1]); if (gp.length >= 2) gp.forEach(([r, c]) => hl.add(r * COLS + c)); }
+      const hint = idle > 300 && moves > 0 ? new Set(bestGroup().map(([r, c]) => r * COLS + c)) : null;
+      let landing = true;
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
-        const t = tiles[r][c];
-        if (t === null) continue;
-        const x = c * T, y = TOP + r * T;
-        if (t === STEEL) {
-          const gr = g.createLinearGradient(x, y, x + T, y + T); gr.addColorStop(0, "#d3dbe3"); gr.addColorStop(1, "#6d7882");
-          g.fillStyle = gr; rr(x + 2, y + 2, T - 4, T - 4, 7); g.fill();
-          g.fillStyle = "#4a535c"; for (const [a, b] of [[9, 9], [T - 9, 9], [9, T - 9], [T - 9, T - 9]]) { g.beginPath(); g.arc(x + a, y + b, 3, 0, 7); g.fill(); }
-          continue;
-        }
-        g.fillStyle = TYPES[t].bg; rr(x + 2, y + 2, T - 4, T - 4, 9); g.fill();
-        g.strokeStyle = "#0006"; g.lineWidth = 2; g.stroke();
-        const im = imgs[t];
-        if (im.complete && im.naturalWidth) { const a = im.naturalWidth / im.naturalHeight, w = a > 1 ? T - 10 : (T - 10) * a, h = a > 1 ? (T - 10) / a : T - 10; g.drawImage(im, x + (T - w) / 2, y + (T - h) / 2, w, h); }
+        const tl = grid[r][c];
+        if (!tl) continue;
+        const ty = BY + r * T;
+        if (tl.y < ty) { landing = false; tl.vy = Math.min(16, tl.vy + 1.4); tl.y = Math.min(ty, tl.y + tl.vy); if (tl.y === ty) { tl.vy = 0; tl.pop = 4; } }
+        else tl.y = ty;
+        if (tl.pop > 0) tl.pop -= 1;
+        const k = r * COLS + c, wig = hint && hint.has(k) ? Math.sin(performance.now() / 90) * 2.5 : 0;
+        if (tl.y > BY - T) { g.save(); g.beginPath(); g.rect(0, BY - 8, LW, LH); g.clip(); drawTile(tl, BX + c * T + wig, tl.y - (hl.has(k) ? 3 : 0), hl.has(k)); g.restore(); }
       }
-      if (panImg.complete && panImg.naturalWidth) g.drawImage(panImg, -6, LH - 66, LW + 12, ((LW + 12) * panImg.naturalHeight) / panImg.naturalWidth);
-      // oil collecting in the drain pan
+      if (landing && !started) started = true;
+      drawOil();
+      const panW = LW - 30, panX = 15, panY = LH - 58;
       const f = Math.min(1, inPan / target);
-      if (f > 0) { const h = 4 + f * 20; g.fillStyle = "rgba(196,128,22,.92)"; rr(34, LH - 20 - h, LW - 68, h, 6); g.fill(); g.fillStyle = "rgba(255,214,120,.8)"; g.fillRect(40, LH - 20 - h, LW - 80, 2); }
-      // pops and bursts
-      for (const p of pops) {
-        if (p.burst !== undefined) { g.globalAlpha = p.life / 18; g.fillStyle = "#fff"; g.beginPath(); g.arc(p.x, p.y, (18 - p.life) * 1.8 + 6, 0, 7); g.fill(); g.globalAlpha = 1; }
-        else { g.globalAlpha = Math.min(1, p.life / 20); g.font = "900 18px system-ui,sans-serif"; g.textAlign = "center"; g.lineWidth = 4; g.strokeStyle = "#000"; g.fillStyle = p.bad ? "#ff6b5b" : "#4cd07d"; g.strokeText(p.t, p.x, p.y - (45 - p.life)); g.fillText(p.t, p.x, p.y - (45 - p.life)); g.globalAlpha = 1; }
-        p.life--;
+      if (f > 0) { const h = 6 + f * 22; const og = g.createLinearGradient(0, panY + 40 - h, 0, panY + 40); og.addColorStop(0, "#ffcf6e"); og.addColorStop(0.2, "#c27a12"); og.addColorStop(1, "#6b3a05"); g.fillStyle = og; rr(panX + 26, panY + 44 - h, panW - 52, h, 6); g.fill(); }
+      if (ready(panImg)) g.drawImage(panImg, panX - 4, panY, panW + 8, ((panW + 8) * panImg.naturalHeight) / panImg.naturalWidth);
+      const hero = heroImg();
+      if (ready(hero)) {
+        const bob = Math.sin(performance.now() / 260) * 2, w = 74, hx = LW - w - 4, hy = 8 + bob;
+        g.drawImage(hero, hx, hy, w, (w * hero.naturalHeight) / hero.naturalWidth);
+        const say = f >= 1 ? "YES!!" : f > 0.6 ? "ALMOST!" : moves <= 3 && moves > 0 ? "HURRY!" : "DRAIN IT!";
+        g.font = "900 12px system-ui,sans-serif"; g.textAlign = "center";
+        const tw = g.measureText(say).width + 14, bx = hx - tw - 4, by = hy + 6; g.fillStyle = "#fff"; rr(bx, by, tw, 18, 9); g.fill(); g.beginPath(); g.moveTo(bx + tw - 2, by + 6); g.lineTo(bx + tw + 6, by + 10); g.lineTo(bx + tw - 2, by + 13); g.fill();
+        g.fillStyle = f >= 1 ? "#1d8f3c" : "#1a2630"; g.fillText(say, bx + tw / 2, by + 13);
       }
+      if (flash && flash.life > 0) { g.save(); g.globalAlpha = flash.life / 14; g.fillStyle = "#fff6c0"; g.fillRect(flash.x + T * 0.3, BY - 10, T * 0.4, ROWS * T + 20); g.restore(); flash.life--; }
+      for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life--; g.globalAlpha = Math.max(0, p.life / 32); g.fillStyle = p.color; g.fillRect(p.x, p.y, p.s, p.s); }
+      g.globalAlpha = 1;
+      for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
+      for (const p of pops) { g.globalAlpha = Math.min(1, p.life / 20); g.font = "900 17px system-ui,sans-serif"; g.textAlign = "center"; g.lineWidth = 4; g.strokeStyle = "#000"; g.fillStyle = p.bad ? "#ff6b5b" : "#ffd23f"; const yy = p.y - (50 - p.life) * 0.8, xx = Math.max(70, Math.min(LW - 70, p.x)); g.strokeText(p.t, xx, yy); g.fillText(p.t, xx, yy); g.globalAlpha = 1; p.life--; }
       for (let i = pops.length - 1; i >= 0; i--) if (pops[i].life <= 0) pops.splice(i, 1);
     }
-    function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
 
     const upd = () => {
-      $("dTime").textContent = (left / 1000).toFixed(1); $("dTime").className = left < 8000 ? "low" : "";
-      $("dBar").style.transform = "scaleX(" + Math.max(0, left / (secs * 1000)) + ")";
+      $("dMoves").textContent = moves; $("dMoves").className = moves <= 3 ? "low" : "";
       const pct = Math.min(100, Math.floor((inPan / target) * 100));
       $("dFill").style.width = pct + "%"; $("dPct").textContent = pct + "%";
     };
-    const loop = (now) => {
+    const loop = () => {
       if (over) return;
-      left -= Math.min(100, now - last); last = now;
-      stepOil(); stepOil();
+      if (busyT > 0) busyT--;
+      idle++;
+      markSolids();
+      moved = 0; stepOil(); stepOil(); stepOil();
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
       draw(); upd();
       if (inPan >= target) return finish(true);
-      if (left <= 0) { left = 0; upd(); sfx("hit"); buzz("heavy"); return finish(false); }
+      if (moves <= 0) { settleT = moved > 2 ? 0 : settleT + 1; if (settleT > 75) return finish(false); }
       raf = requestAnimationFrame(loop);
     };
     function finish(won) {
       if (over) return;
       over = true; cancelAnimationFrame(raf); stopMusic();
-      if (won) { sfx("win"); buzz("success"); }
-      setTimeout(() => { el.className = "hidden"; bonusResult(won, left / 1000, done); $("message").textContent = won ? "OIL DRAINED!" : "TIME'S UP!"; if (!won) $("details").textContent = "Time ran out before the drain pan filled up. Keep going to reach the next bonus round."; }, won ? 900 : 700);
+      if (won) { sfx("win"); buzz("success"); } else { sfx("hit"); buzz("heavy"); }
+      setTimeout(() => {
+        el.className = "hidden";
+        bonusResult(won, moves * 2, done);
+        $("details").textContent = $("details").textContent.replace(/^Found with [\d.]+s left!/, "Drained with " + moves + " move" + (moves === 1 ? "" : "s") + " to spare!");
+        $("message").textContent = won ? "OIL DRAINED!" : "OUT OF MOVES!";
+        if (!won) $("details").textContent = "The drain pan didn't fill up in time. Keep going to reach the next bonus round.";
+      }, won ? 1000 : 700);
     }
-    window.addEventListener("resize", () => { if (!over) scale = fit(); });
+    window.addEventListener("resize", () => { if (!over) fit(); });
     upd(); raf = requestAnimationFrame(loop);
-    window.__drain = { tiles, group, get inPan() { return inPan; }, target };
+    window.__drain = { grid, group, bestGroup, get inPan() { return inPan; }, target, get moves() { return moves; }, get started() { return started; } };
   }
 })();

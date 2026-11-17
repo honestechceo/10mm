@@ -27,7 +27,7 @@ function bonusIntro(done) {
     () => runBonus(done),
     "toolbox",
   );
-  $("eyebrow").textContent = "BONUS ROUND " + n + " OF 20";
+  $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
 }
 function bonusRand(a, b) {
   return a + Math.random() * (b - a);
@@ -291,11 +291,11 @@ function bonusResult(won, t, done) {
   popup(
     won ? "FOUND IT!" : "TIME'S UP!",
     desc,
-    level === 200 ? "PLAY AGAIN" : "NEXT LEVEL",
+    level === MAX_LEVEL ? "PLAY AGAIN" : "NEXT LEVEL",
     done,
     won ? (art === "hero" ? "hero" : "win") : "toolbox",
   );
-  $("eyebrow").textContent = "BONUS ROUND " + level / 10 + " OF 20";
+  $("eyebrow").textContent = "BONUS ROUND " + level / 10 + " OF " + MAX_LEVEL / 10;
 }
 
 let homeTimers = [];

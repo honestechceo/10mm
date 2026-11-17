@@ -29,7 +29,17 @@ const THEMES = [
   { key: "dealership", name: "DEALER SERVICE", tint: "#dbe6ff" },
   { key: "pitlane", name: "PIT LANE", tint: "#ffd8a3", fx: "dusk" },
   { key: "snow", name: "SNOWY ROADSIDE", tint: "#c8dcff", fx: "snow" },
+  // levels 201-400
+  { key: "engineshop", name: "ENGINE SHOP" },
+  { key: "repairshop", name: "MAIN STREET REPAIR", fx: "dusk" },
+  { key: "autoparts", name: "AUTO PARTS PLAZA" },
+  { key: "usedcars", name: "USED CAR LOT", fx: "dusk" },
+  { key: "carwash", name: "NEON CAR WASH", fx: "night" },
+  { key: "salvage", name: "SALVAGE YARD", fx: "dust" },
+  { key: "servicecenter", name: "SERVICE CENTER", fx: "dusk" },
+  { key: "evtech", name: "EV TECH CENTER", fx: "night" },
 ];
+const MAX_LEVEL = THEMES.length * 25;
 const themeArt = {};
 function themeOf(l) {
   return THEMES[Math.min(THEMES.length - 1, Math.floor((l - 1) / 25))];
@@ -223,11 +233,11 @@ const settings = loadSettings();
 applyLayout();
 let level = Math.max(
     1,
-    Math.min(200, +(localStorage.getItem("tenmm-escape-current") || 1)),
+    Math.min(MAX_LEVEL, +(localStorage.getItem("tenmm-escape-current") || 1)),
   ),
   best = Math.max(
     1,
-    Math.min(200, +(localStorage.getItem("tenmm-escape-best") || 1)),
+    Math.min(MAX_LEVEL, +(localStorage.getItem("tenmm-escape-best") || 1)),
   ),
   state = "menu",
   player = {
@@ -313,7 +323,7 @@ function rnd(seed) {
 }
 function createLevel() {
   loadTheme(themeOf(level));
-  if (level > 1) loadTheme(themeOf(Math.min(200, level + 1)));
+  if (level > 1) loadTheme(themeOf(Math.min(MAX_LEVEL, level + 1)));
   flakes = [];
   scroll = 0;
   frames = 0;
@@ -330,7 +340,9 @@ function createLevel() {
     flightMode: false,
   };
   world =
-    level <= 3 ? 1750 + level * 310 : 4800 + Math.min(7200, (level - 1) * 38);
+    level <= 3
+      ? 1750 + level * 310
+      : 4800 + Math.min(7200, (level - 1) * 38) + Math.min(2400, Math.max(0, level - 200) * 12);
   obstacles = [];
   powerups = [];
   coins = [];
@@ -352,7 +364,7 @@ function createLevel() {
               ? "drawer"
               : "under";
   chase = level >= 2 ? "hand" : "none";
-  let spacing = level <= 3 ? 430 : Math.max(185, 300 - level * 0.48);
+  let spacing = level <= 3 ? 430 : Math.max(level > 200 ? 172 : 185, 300 - level * 0.48);
   for (
     let x = level <= 3 ? 680 : 640, i = 0;
     x < world - 450;
@@ -397,7 +409,7 @@ function createLevel() {
         taken: false,
       });
   }
-  $("level").textContent = level + " / 200";
+  $("level").textContent = level + " / " + MAX_LEVEL;
   $("best").textContent = best;
   $("distance").textContent = "0%";
   $("coinsCount").textContent = totalCoins;
@@ -1085,6 +1097,14 @@ const THEME_HAZ = [
   "wetsign",
   "dolly",
   "snowball",
+  "tire",
+  "cone",
+  "cart",
+  "ball",
+  "wetsign",
+  "tire",
+  "dolly",
+  "cone",
 ];
 function themeIndex(l) {
   return Math.min(THEMES.length - 1, Math.floor((l - 1) / 25));
@@ -2207,7 +2227,7 @@ function tick(t) {
   let dt = Math.min(2.2, (t - (last || t)) / 16.67);
   last = t;
   let speed =
-    (3.25 + Math.min(2.9, level * 0.022)) *
+    (3.25 + Math.min(2.9, level * 0.022) + Math.min(0.55, Math.max(0, level - 200) * 0.003)) *
     DIFF[settings.difficulty].speed *
     (1 + runSpeedBonus) *
     (slow > 0 ? 0.68 : 1) *
@@ -2450,9 +2470,9 @@ function tick(t) {
     $("coinsCount").textContent = totalCoins;
     $("scoreCount").textContent = totalScore;
     $("distance").textContent = "100%";
-    best = Math.max(best, Math.min(200, level + 1));
+    best = Math.max(best, Math.min(MAX_LEVEL, level + 1));
     localStorage.setItem("tenmm-escape-best", best);
-    localStorage.setItem("tenmm-escape-current", Math.min(200, level + 1));
+    localStorage.setItem("tenmm-escape-current", Math.min(MAX_LEVEL, level + 1));
     render();
     popup(
       "ESCAPED!",
@@ -2476,12 +2496,12 @@ function tick(t) {
         " points.",
       level % 10 === 0
         ? "BONUS ROUND!"
-        : level === 200
+        : level === MAX_LEVEL
           ? "PLAY AGAIN"
           : "NEXT LEVEL",
       () => {
         const go = () => {
-          level = level === 200 ? 1 : level + 1;
+          level = level === MAX_LEVEL ? 1 : level + 1;
           start();
         };
         if (level % 10 === 0) bonusIntro(go);
@@ -2603,6 +2623,7 @@ function loadSettings() {
     difficulty: "normal",
     layout: "two",
     startMode: "tap",
+    radio: null,
   };
   try {
     const saved = JSON.parse(localStorage.getItem("tenmm-settings") || "{}");
@@ -2610,6 +2631,8 @@ function loadSettings() {
   } catch (e) {}
   if (!["easy", "normal", "hard"].includes(d.difficulty))
     d.difficulty = "normal";
+  if (!["game", "mine", "off"].includes(d.radio)) d.radio = d.music ? "game" : "off";
+  d.music = d.radio === "game";
   return d;
 }
 function saveSettings() {
@@ -3143,10 +3166,12 @@ function renderOptions() {
     ],
     [
       "Music",
-      settings.music ? "ON" : "OFF",
-      settings.music,
+      settings.radio === "mine" ? "MY MUSIC" : settings.music ? "GAME" : "OFF",
+      settings.radio !== "off",
       () => {
+        if (window.RadioUI) return RadioUI.open();
         settings.music = !settings.music;
+        settings.radio = settings.music ? "game" : "off";
         if (settings.music && settingsFrom !== "paused") {
           audioReady();
         } else stopMusic();
@@ -3512,7 +3537,7 @@ function showLevels() {
   $("eyebrow").textContent = "LEVEL SELECT";
   $("message").textContent = "PICK A GARAGE";
   $("details").textContent =
-    "Replay any level you have unlocked (" + best + " of 200).";
+    "Replay any level you have unlocked (" + best + " of " + MAX_LEVEL + ").";
   $("menuExtra").style.display = "none";
   $("menuSettings").style.display = "none";
   $("menuLevels").style.display = "none";
@@ -3522,7 +3547,7 @@ function showLevels() {
   const box = $("levels");
   box.innerHTML = "";
   const frag = document.createDocumentFragment();
-  for (let n = 1; n <= 200; n++) {
+  for (let n = 1; n <= MAX_LEVEL; n++) {
     if ((n - 1) % 25 === 0) {
       const hd = document.createElement("div");
       hd.className = "lvhead";

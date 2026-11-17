@@ -14,7 +14,7 @@
     popup(
       reason === "end" ? "YOU BEAT THE DEMO!" : "IN THE FULL GAME",
       (reason === "end" ? "Nice driving! That's the end of the free demo. " : "That's part of the full game. ") +
-        "Get Where's My 10MM?! FREE on the App Store for all 200 levels, boss fights, the Daily Challenge, Endless mode, Service Bay oil changes and brake jobs, 5 bonus games and Game Center.",
+        "Get Where's My 10MM?! FREE on the App Store for all 400 levels, boss fights, the Daily Challenge, Endless mode, Service Bay oil changes and brake jobs, 5 bonus games and Game Center.",
       "GET IT ON THE APP STORE", open, "hero");
     $("eyebrow").textContent = "FREE ON THE APP STORE";
     const m = $("menuSettings"); m.style.display = ""; m.textContent = "MAIN MENU"; m.onclick = () => showMenu();
@@ -23,6 +23,7 @@
 
   // levels past the demo
   const baseStart = start;
+  window.__fullStart = baseStart;
   start = function () {
     const mode = window.Feature ? Feature.mode() : "adventure";
     if (mode !== "adventure" || level > MAX) { if (mode === "adventure") { level = MAX; } return upsell(level >= MAX && mode === "adventure" ? "end" : "mode"); }

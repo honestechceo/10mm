@@ -29,7 +29,7 @@
   window.runHiddenIntro = function (done) {
     const n = level / 10, secs = Math.max(40, 70 - n * 2), finds = n < 8 ? 4 : n < 15 ? 5 : 6;
     popup("BONUS ROUND!", "HIDDEN 10MM: the 10mm and " + (finds - 1) + " other items are hidden in this scene. Find them all in " + secs + " seconds! Drag to look around and pinch to zoom.", "START", () => runHidden(done, secs, finds), "toolbox");
-    $("eyebrow").textContent = "BONUS ROUND " + n + " OF 20";
+    $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
 
   function runHidden(done, secs, finds) {
@@ -51,7 +51,7 @@
     });
     const hb = document.createElement("button"); hb.id = "hHint"; hb.textContent = "HINT -5s"; list.append(hb);
     const key = themeOf(level).key, n = Math.round(level / 10);
-    const bgSrc = "ho-" + ({ junkyard: "junkyard", partsstore: "partsstore", pitlane: "pitlane" }[key] || ["garage", "garage2", "garage3"][n % 3]) + ".jpg";
+    const bgSrc = "ho-" + ({ junkyard: "junkyard", salvage: "junkyard", partsstore: "partsstore", autoparts: "partsstore", pitlane: "pitlane" }[key] || ["garage", "garage2", "garage3"][n % 3]) + ".jpg";
     const VH = view.clientHeight, VW = view.clientWidth;
     // the scene is the location art, full height of the view and wider than the screen
     const H0 = VH, W0 = Math.max(VW * 1.4, H0 * 1.5);

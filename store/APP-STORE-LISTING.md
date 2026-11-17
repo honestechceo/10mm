@@ -11,7 +11,7 @@
 **Marketing URL (optional):** https://honestechmobilemechanic.com
 
 ## Promotional text (170 max, can change any time)
-Every mechanic has lost a 10mm socket. Now you know why: it's running away! Roll, jump and fly through 200 levels and 8 wild locations.
+Every mechanic has lost a 10mm socket. Now you know why: it's running away! Roll, jump and fly through 400 levels and 16 wild locations.
 
 ## Description
 Every mechanic knows the feeling: you set down your 10mm socket for one second… and it's gone.
@@ -20,7 +20,7 @@ Now find out where it goes.
 
 WHERE'S MY 10MM?! puts you in control of the runaway socket. Roll across the shop floor, jump over wrenches and pliers, dodge the overhead magnet, and stay one step ahead of the mechanic's grabbing glove. Make it to the hiding spot before you get caught!
 
-• 200 LEVELS that get faster and trickier as you go
+• 400 LEVELS that get faster and trickier as you go
 • 8 LOCATIONS: the garage, a home driveway, a parking garage, the junkyard, an auto parts store, a dealer service drive, a race pit lane and a snowy roadside
 • NEW HAZARDS in every location: bouncing basketballs, rolling tires, runaway shopping carts, speeding pit jacks, snowballs and more
 • SIMPLE ONE-TAP CONTROLS: tap to jump, double-tap for more height, triple-tap to fly

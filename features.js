@@ -27,7 +27,7 @@
   // ---------- run modes ----------
   let runMode = "adventure", savedLevel = 1, coinsInLevel = 0;
   window.runSeed = 0;
-  const dailyLevel = () => 30 + ((today() * 37) % 160);
+  const dailyLevel = () => 30 + ((today() * 37) % 360);
   function enterMode(m) {
     if (runMode === "adventure") savedLevel = level;
     runMode = m;
@@ -117,7 +117,7 @@
         }
         if (runMode === "adventure" && level % 25 === 0) {
           chase = "none";
-          boss = { x: -170, mode: "wait", t: 200, charges: 0, spin: 0, speed: 6.2 + level * 0.012 };
+          boss = { x: -170, mode: "wait", t: 200, charges: 0, spin: 0, speed: 6.2 + Math.min(level, 260) * 0.012 };
           $("tip").textContent = "BOSS LEVEL: the BIG 12 is coming! Double-jump over it when it charges.";
         }
         if (runMode === "daily") {
@@ -332,7 +332,7 @@
   function startEndless() {
     if (best < 26) { toast("Beat level 25 to unlock Endless mode!", false); return; }
     enterMode("endless");
-    level = 30 + 25 * Math.floor(Math.random() * 7);
+    level = 30 + 25 * Math.floor(Math.random() * (THEMES.length - 1));
     window.runSeed = Math.random() * 1000;
     start();
   }
@@ -464,7 +464,7 @@
     if (kind === "hidden" && window.runHiddenIntro) return runHiddenIntro(done);
     const secs = kind === "sort" ? Math.max(8, 15 - Math.floor(n / 3)) : Math.max(20, 34 - n);
     popup("BONUS ROUND!", kind === "sort" ? "SOCKET SORT: tap the sockets from smallest to biggest (8mm up to 14mm) in " + secs + " seconds. Wrong taps cost time." : "TOOL MATCH: flip the cards and find all 6 pairs of tools in " + secs + " seconds.", "START", () => (kind === "sort" ? runSort : runMatch)(done, secs), "toolbox");
-    $("eyebrow").textContent = "BONUS ROUND " + n + " OF 20";
+    $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
   function bonusShell(title, sub, secs, onTimeout) {
     hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("bonus");

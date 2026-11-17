@@ -457,8 +457,9 @@ function unlockAudio() {
   document.addEventListener(ev, unlockAudio, { capture: true, passive: true }),
 );
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden && audioCtx && audioCtx.state !== "running")
-    audioCtx.resume().catch(() => {});
+  if (document.hidden) return;
+  // coming back to the game: the old sound engine is often dead on iPhone, so build a fresh one
+  if (audioCtx && window.audioReset) audioReset();
 });
 
 function toast(m, ok) {

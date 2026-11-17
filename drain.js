@@ -19,7 +19,7 @@
   window.runDrainIntro = function (done) {
     const n = Math.round(level / 10), secs = Math.max(35, 60 - n);
     popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch to clear them. Open a path so the old oil pours into the drain pan. Fill it in " + secs + " seconds!", "START", () => runDrain(done, secs, n), "toolbox");
-    $("eyebrow").textContent = "BONUS ROUND " + n + " OF 20";
+    $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
 
   function runDrain(done, secs, n) {

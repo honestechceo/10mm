@@ -3031,7 +3031,13 @@ function startMusic(which) {
   musicStep = 0;
   musicNext = audioCtx.currentTime + 0.06;
   musicTimer = setInterval(() => {
-    if (!audioCtx) return;
+    if (!audioCtx || audioCtx.state !== "running") return;
+    // if the game stalled (busy screen, phone hiccup), skip the missed beats instead of playing them all at once
+    if (musicNext < audioCtx.currentTime - 0.05) {
+      const missed = Math.ceil((audioCtx.currentTime - musicNext) / sx);
+      musicNext += missed * sx;
+      musicStep += missed;
+    }
     while (musicNext < audioCtx.currentTime + 0.25) {
       playStep(song, musicStep, musicNext, sx);
       musicNext += sx;
@@ -3051,6 +3057,39 @@ function stopMusic() {
     } catch (e) {}
   }
 }
+// iPhone can interrupt or silently break the game's sound (full-screen ads, calls, Siri, other apps).
+// Rebuild the sound engine when that happens and pick the music back up.
+function audioReset() {
+  const wasSong = musicTimer ? musicSong : null;
+  stopMusic();
+  try { audioCtx && audioCtx.close(); } catch (e) {}
+  audioCtx = null;
+  musicGain = null;
+  noiseBuf = null;
+  audioReady();
+  watchAudio();
+  if (wasSong) startMusic(wasSong);
+}
+window.audioReset = audioReset;
+let watchedCtx = null;
+function watchAudio() {
+  if (!audioCtx || watchedCtx === audioCtx) return;
+  watchedCtx = audioCtx;
+  audioCtx.onstatechange = () => {
+    if (!audioCtx || document.hidden) return;
+    if (audioCtx.state === "interrupted" || audioCtx.state === "suspended")
+      audioCtx.resume().catch(() => {});
+  };
+}
+setInterval(() => {
+  if (document.hidden || !audioCtx) return;
+  watchAudio();
+  // the clock stops moving when iOS has taken the sound away without saying so
+  const t = audioCtx.currentTime;
+  if (audioCtx.state === "running" && t === watchAudio.lastT && (state === "running" || state === "bonus")) audioReset();
+  watchAudio.lastT = t;
+  if (audioCtx.state !== "running" && (state === "running" || state === "bonus")) audioCtx.resume().catch(() => {});
+}, 1500);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     if (state === "running") $("pause").onclick();

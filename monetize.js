@@ -86,6 +86,7 @@
       if (Date.now() - lastInter < cfg.interstitialMinSeconds * 1000) return;
       busy = true; silence();
       try { await AdMob.showInterstitial(); lastInter = Date.now(); } catch (e) {}
+      try { window.audioReset && window.audioReset(); } catch (e) {}
       interReady = false; busy = false; loadInter();
     },
     // optional rewarded ad: resolves true if the player earned the reward
@@ -98,6 +99,7 @@
       busy = true; silence(); rewardEarned = false; lastRewardResult = '';
       let r = null;
       try { r = await AdMob.showRewardVideoAd(); } catch (e) { lastRewardResult = 'failed'; }
+      try { window.audioReset && window.audioReset(); } catch (e) {}
       busy = false; rewardedReady = false; loadRewarded();
       const ok = rewardEarned || !!(r && (r.amount !== undefined || r.type));
       if (!ok && !lastRewardResult) lastRewardResult = 'closed';

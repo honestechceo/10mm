@@ -4,7 +4,7 @@
 // Big groups make power parts: 6-7 = TORQUE ROCKET (clears its column), 8+ = OIL BLAST (clears around it).
 "use strict";
 (() => {
-  const LW = 350, LH = 640, C = 5, GW = LW / C, GH = LH / C;
+  const LW = 350, LH = 640, C = 2, GW = LW / C, GH = LH / C;
   const COLS = 7, ROWS = 8, T = 50, BX = 0, BY = 162, TCELL = T / C;
   const PAN_TOP = 146;
   const FLOOR = BY + ROWS * T;
@@ -57,6 +57,9 @@
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
     const target = Math.max(1, Math.floor(total * 0.12)), PAN_Y = Math.floor((LH - 34) / C);
+    // Catch zone spans the full playable board, including the far-left and far-right columns.
+    const PAN_LEFT = 0, PAN_RIGHT = LW, PAN_RIM = LH - 49;
+    let missedOil = 0;
     let inPan = 0, moved = 0, started = false, oilToDrain = 0, streamY = PAN_TOP, drainedThroughStream = 0;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
@@ -180,7 +183,14 @@
         for (let i = 0; i < GW; i++) {
           const x = ltr ? i : GW - 1 - i, k = idx(x, y);
           if (cell[k] !== 1) continue;
-          if (y >= PAN_Y) { cell[k] = 0; inPan++; moved++; continue; }
+          if (y >= PAN_Y) {
+            cell[k] = 0;
+            const landingX = (x + .5) * C;
+            if (landingX >= PAN_LEFT && landingX <= PAN_RIGHT) inPan++;
+            else missedOil++;
+            moved++;
+            continue;
+          }
           const d = ltr ? 1 : -1;
           let nx = -1, ny = -1;
           if (!isSolid(x, y + 1)) { nx = x; ny = y + 1; }
@@ -226,8 +236,8 @@
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.imageSmoothingEnabled = true;
-      g.drawImage(oilCan, 0, 0, LW, LH);
-      g.save(); g.globalAlpha = 0.16; g.globalCompositeOperation = "lighter"; g.drawImage(oilCan, 0, -1.5, LW, LH); g.restore();
+      g.save(); g.filter = "blur(1.1px)"; g.drawImage(oilCan, 0, 0, LW, LH); g.restore();
+      g.save(); g.globalAlpha = 0.12; g.globalCompositeOperation = "lighter"; g.filter = "blur(2px)"; g.drawImage(oilCan, 0, -1.5, LW, LH); g.restore();
     }
     function drawTile(tl, x, y, glow) {
       const s = 1 - Math.max(0, tl.pop) * 0.015, cx = x + T / 2, cy = y + T / 2, w = (T - 4) * s;
@@ -276,7 +286,7 @@
       // Keep streamY as the authoritative progress position for the drain logic.
       if (oilToDrain > 0) {
         const now = performance.now(), bottom = Math.min(streamY, LH - 42);
-        const startX = LW - 17, travel = Math.max(0, bottom - PAN_TOP);
+        const startX = LW / 2, travel = Math.max(0, bottom - PAN_TOP);
         const path = (offset) => {
           g.beginPath();
           for (let y = PAN_TOP; y <= bottom; y += 5) {
@@ -312,10 +322,25 @@
         }
         g.restore();
       }
-      const panW = LW - 30, panX = 15, panY = LH - 58;
+      const panW = LW, panX = 0, panY = LH - 62;
       const f = Math.min(1, inPan / target);
-      if (f > 0) { const h = 6 + f * 22; const og = g.createLinearGradient(0, panY + 40 - h, 0, panY + 40); og.addColorStop(0, "#ffcf6e"); og.addColorStop(0.2, "#c27a12"); og.addColorStop(1, "#6b3a05"); g.fillStyle = og; rr(panX + 26, panY + 44 - h, panW - 52, h, 6); g.fill(); }
-      if (ready(panImg)) g.drawImage(panImg, panX - 4, panY, panW + 8, ((panW + 8) * panImg.naturalHeight) / panImg.naturalWidth);
+      // Full-width drain trough, with the rim and liquid visible above the floor.
+      g.save();
+      const steel = g.createLinearGradient(0, panY, 0, LH);
+      steel.addColorStop(0, "#e6f0f6"); steel.addColorStop(.22, "#6b8499"); steel.addColorStop(.65, "#263d51"); steel.addColorStop(1, "#101c2a");
+      g.fillStyle = steel; g.beginPath(); g.moveTo(0, PAN_RIM); g.lineTo(LW, PAN_RIM);
+      g.lineTo(LW - 10, LH - 4); g.quadraticCurveTo(LW / 2, LH + 9, 10, LH - 4); g.closePath(); g.fill();
+      g.strokeStyle = "#e4eff8"; g.lineWidth = 5; g.beginPath(); g.moveTo(0, PAN_RIM); g.lineTo(LW, PAN_RIM); g.stroke();
+      g.fillStyle = "#0b151d"; g.fillRect(4, PAN_RIM + 4, LW - 8, 11);
+      if (f > 0) {
+        const h = 5 + f * 24, top = LH - 13 - h;
+        const og = g.createLinearGradient(0, top, 0, LH - 12);
+        og.addColorStop(0, "#e3a94c"); og.addColorStop(.3, "#a35b16"); og.addColorStop(1, "#462509");
+        g.fillStyle = og; g.beginPath(); g.moveTo(13, top);
+        for (let x = 13; x <= LW - 13; x += 7) g.lineTo(x, top + Math.sin(x * .045 + performance.now() * .004) * 1.8);
+        g.lineTo(LW - 13, LH - 12); g.lineTo(13, LH - 12); g.closePath(); g.fill();
+      }
+      g.restore();
       const hero = heroImg();
       if (ready(hero)) {
         const bob = Math.sin(performance.now() / 260) * 2, w = 74, hx = LW - w - 4, hy = 8 + bob;

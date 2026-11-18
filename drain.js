@@ -33,7 +33,7 @@
     if (!el) { el = document.createElement("div"); el.id = "drn"; document.body.append(el); }
     el.className = "";
     el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap groups of 2+ matching parts to open a path.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
-      '<div class="dhint">CLEAR MATCHING PARTS TO OPEN A CHANNEL ↓</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
+      '<div class="dhint">MATCH 2+ PARTS • OPEN A PATH ↓ • COLLECT OIL</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
@@ -47,7 +47,7 @@
     const ntypes = n < 6 ? 4 : 5;
     const grid = [];
     for (let r = 0; r < ROWS; r++) { grid.push([]); for (let c = 0; c < COLS; c++) grid[r].push({ t: Math.floor(Math.random() * ntypes), y: BY + r * T - 260 - (ROWS - r) * 30, vy: 0, pop: 0 }); }
-    const steelCount = Math.min(5, 1 + Math.floor(n / 5));
+    const steelCount = Math.min(4, 1 + Math.floor(n / 6));
     for (let k = 0; k < steelCount; k++) grid[3 + Math.floor(Math.random() * (ROWS - 3))][Math.floor(Math.random() * COLS)].t = STEEL;
 
     // liquid grid
@@ -55,7 +55,7 @@
     const idx = (x, y) => y * GW + x;
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
-    const target = Math.floor(total * 0.35), PAN_Y = Math.floor((LH - 34) / C);
+    const target = Math.max(1, Math.floor(total * 0.30)), PAN_Y = Math.floor((LH - 34) / C);
     let inPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
@@ -92,7 +92,7 @@
       return [...seen].map((k) => [Math.floor(k / COLS), k % COLS]);
     };
     const parts = [], pops = [];
-    let moves = Math.max(18, maxMoves), over = false, raf = 0, shake = 0, hover = null, settleT = 0, busyT = 0, flash = null, idle = 0;
+    let moves = Math.max(22, maxMoves), over = false, raf = 0, shake = 0, hover = null, settleT = 0, busyT = 0, flash = null, idle = 0;
     const burst = (r, c, color) => { for (let i = 0; i < 10; i++) parts.push({ x: BX + c * T + T / 2, y: BY + r * T + T / 2, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 6 - 1, life: 32, color, s: 3 + Math.random() * 4 }); };
     const remove = (r, c) => {
       const tl = grid[r][c];
@@ -239,7 +239,7 @@
       drawBack();
       const hl = new Set();
       if (hover && grid[hover[0]][hover[1]] && typeof grid[hover[0]][hover[1]].t === "number") { const gp = group(hover[0], hover[1]); if (gp.length >= 2) gp.forEach(([r, c]) => hl.add(r * COLS + c)); }
-      const hint = idle > 300 && moves > 0 ? new Set(bestGroup().map(([r, c]) => r * COLS + c)) : null;
+      const hint = idle > 135 && moves > 0 ? new Set(bestGroup().map(([r, c]) => r * COLS + c)) : null;
       let landing = true;
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         const tl = grid[r][c];
@@ -288,7 +288,7 @@
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
       draw(); upd();
       if (inPan >= target) return finish(true);
-      if (moves <= 0) { settleT++; if (settleT > 180) return finish(false); }
+      if (moves <= 0) { settleT++; if (settleT > 240) return finish(false); }
       raf = requestAnimationFrame(loop);
     };
     function finish(won) {

@@ -22,7 +22,7 @@
   const ready = (im) => im && im.complete && im.naturalWidth;
 
   window.runDrainIntro = function (done) {
-    const n = Math.round(level / 10), moves = 75;
+    const n = Math.round(level / 10), moves = 105;
     popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Cleared spaces stay open. Open a path so the old oil pours into the drain pan before the " + moves + "-second timer expires! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
@@ -44,10 +44,10 @@
     fit();
 
     // board: each tile has a type and an animated y so it can drop into place
-    const ntypes = n < 6 ? 4 : 5;
+    const ntypes = n < 12 ? 3 : 4;
     const grid = [];
     for (let r = 0; r < ROWS; r++) { grid.push([]); for (let c = 0; c < COLS; c++) grid[r].push({ t: Math.floor(Math.random() * ntypes), y: BY + r * T - 260 - (ROWS - r) * 30, vy: 0, pop: 0 }); }
-    const steelCount = Math.min(4, 1 + Math.floor(n / 6));
+    const steelCount = n < 6 ? 0 : Math.min(3, Math.floor(n / 8));
     for (let k = 0; k < steelCount; k++) grid[3 + Math.floor(Math.random() * (ROWS - 3))][Math.floor(Math.random() * COLS)].t = STEEL;
 
     // liquid grid
@@ -55,7 +55,7 @@
     const idx = (x, y) => y * GW + x;
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
-    const target = Math.max(1, Math.floor(total * 0.30)), PAN_Y = Math.floor((LH - 34) / C);
+    const target = Math.max(1, Math.floor(total * 0.18)), PAN_Y = Math.floor((LH - 34) / C);
     let inPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
@@ -152,11 +152,11 @@
       if (!tl) return;
       idle = 0;
       if (tl.t === STEEL) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL! Blast it", life: 40, bad: 1 }); shake = 8; return; }
-      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); sfx("power"); buzz("heavy"); after(); return; }
+      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); inPan = Math.min(target, inPan + 45); sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
       if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
-      inPan = Math.min(target, inPan + gp.length * 2);
-      if (gp.length >= 5) moves = Math.min(99, moves + (gp.length >= 8 ? 5 : 2));
+      inPan = Math.min(target, inPan + gp.length * 7);
+      if (gp.length >= 5) moves = Math.min(120, moves + (gp.length >= 8 ? 7 : 3));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
       if (gp.length >= 6) { grid[r][c] = { t: gp.length >= 8 ? BLAST : ROCKET, y: BY + r * T, vy: 0, pop: 14 }; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST MADE!" : "TORQUE ROCKET!", life: 50 }); }

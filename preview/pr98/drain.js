@@ -272,14 +272,44 @@
       }
       if (landing && !started) started = true;
       drawOil();
-      // Oil from cleared matches must visibly travel into the pan before it counts.
+      // Animated viscous oil: flowing ribbons, moving highlights, droplets and ripples.
+      // Keep streamY as the authoritative progress position for the drain logic.
       if (oilToDrain > 0) {
-        const x = LW - 12;
-        g.save();
-        g.strokeStyle = "#ffc65a"; g.lineWidth = 7; g.lineCap = "round";
-        g.beginPath(); g.moveTo(x, PAN_TOP); g.lineTo(x + Math.sin(performance.now()/85)*2, Math.min(streamY, LH-42)); g.stroke();
-        g.strokeStyle = "#94500b"; g.lineWidth = 2;
-        g.beginPath(); g.moveTo(x-2, PAN_TOP); g.lineTo(x-2, Math.min(streamY, LH-42)); g.stroke();
+        const now = performance.now(), bottom = Math.min(streamY, LH - 42);
+        const startX = LW - 17, travel = Math.max(0, bottom - PAN_TOP);
+        const path = (offset) => {
+          g.beginPath();
+          for (let y = PAN_TOP; y <= bottom; y += 5) {
+            const q = (y - PAN_TOP) / Math.max(1, travel);
+            const x = startX + Math.sin(y * 0.034 - now * 0.006) * (1.5 + 2.2 * q) +
+              Math.sin(y * 0.081 + now * 0.004) * 1.3 + offset;
+            if (y === PAN_TOP) g.moveTo(x, y); else g.lineTo(x, y);
+          }
+          if (travel > 0) g.lineTo(startX + Math.sin(bottom * 0.034 - now * 0.006) * 3 + offset, bottom);
+        };
+        g.save(); g.lineCap = "round"; g.lineJoin = "round";
+        const oilGradient = g.createLinearGradient(startX - 9, 0, startX + 10, 0);
+        oilGradient.addColorStop(0, "#2b1609"); oilGradient.addColorStop(.22, "#673309");
+        oilGradient.addColorStop(.54, "#ac6619"); oilGradient.addColorStop(.78, "#e9a941");
+        oilGradient.addColorStop(1, "#4a2409");
+        path(0); g.strokeStyle = oilGradient; g.lineWidth = 11; g.stroke();
+        path(2.6); g.strokeStyle = "rgba(255,220,127,.65)"; g.lineWidth = 2.4; g.stroke();
+        path(-3); g.strokeStyle = "rgba(20,9,3,.65)"; g.lineWidth = 2.4; g.stroke();
+        // Drips stretch as they fall and periodically detach from the main stream.
+        for (let d = 0; d < 5; d++) {
+          const phase = ((now * .11 + d * 97) % 430) / 430;
+          const y = PAN_TOP + phase * travel;
+          if (y > bottom - 8 || y < PAN_TOP + 9) continue;
+          const x = startX + Math.sin(y * .034 - now * .006) * 3 + (d % 2 ? 7 : -7);
+          g.fillStyle = d % 2 ? "#b47424" : "#edb65a";
+          g.beginPath(); g.ellipse(x, y, 1.8 + phase * 1.5, 3 + phase * 4, 0, 0, Math.PI * 2); g.fill();
+        }
+        if (bottom >= LH - 44) {
+          const pulse = (now * .005) % 1;
+          g.strokeStyle = "rgba(255,191,78," + (0.65 * (1 - pulse)) + ")";
+          g.lineWidth = 2.5;
+          g.beginPath(); g.ellipse(startX, LH - 43, 6 + pulse * 21, 2 + pulse * 5, 0, 0, Math.PI * 2); g.stroke();
+        }
         g.restore();
       }
       const panW = LW - 30, panX = 15, panY = LH - 58;

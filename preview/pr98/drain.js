@@ -56,7 +56,7 @@
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
     const target = Math.max(1, Math.floor(total * 0.12)), PAN_Y = Math.floor((LH - 34) / C);
-    let inPan = 0, moved = 0, started = false;
+    let inPan = 0, moved = 0, started = false, oilToDrain = 0, streamY = PAN_TOP, drainedThroughStream = 0;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
     // tiles block oil where they are drawn; oil caught under a falling tile is pushed up
@@ -152,10 +152,10 @@
       if (!tl) return;
       idle = 0;
       if (tl.t === STEEL) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL! Blast it", life: 40, bad: 1 }); shake = 8; return; }
-      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); inPan = Math.min(target, inPan + 45); sfx("power"); buzz("heavy"); after(); return; }
+      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); oilToDrain += 45; sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
       if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
-      inPan = Math.min(target, inPan + gp.length * 10);
+      oilToDrain += gp.length * 10;
       if (gp.length >= 5) moves = Math.min(210, moves + (gp.length >= 8 ? 10 : 5));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
@@ -269,6 +269,16 @@
       }
       if (landing && !started) started = true;
       drawOil();
+      // Oil from cleared matches must visibly travel into the pan before it counts.
+      if (oilToDrain > 0) {
+        const x = LW - 12;
+        g.save();
+        g.strokeStyle = "#ffc65a"; g.lineWidth = 7; g.lineCap = "round";
+        g.beginPath(); g.moveTo(x, PAN_TOP); g.lineTo(x + Math.sin(performance.now()/85)*2, Math.min(streamY, LH-42)); g.stroke();
+        g.strokeStyle = "#94500b"; g.lineWidth = 2;
+        g.beginPath(); g.moveTo(x-2, PAN_TOP); g.lineTo(x-2, Math.min(streamY, LH-42)); g.stroke();
+        g.restore();
+      }
       const panW = LW - 30, panX = 15, panY = LH - 58;
       const f = Math.min(1, inPan / target);
       if (f > 0) { const h = 6 + f * 22; const og = g.createLinearGradient(0, panY + 40 - h, 0, panY + 40); og.addColorStop(0, "#ffcf6e"); og.addColorStop(0.2, "#c27a12"); og.addColorStop(1, "#6b3a05"); g.fillStyle = og; rr(panX + 26, panY + 44 - h, panW - 52, h, 6); g.fill(); }
@@ -306,10 +316,19 @@
       idle++;
       markSolids();
       moved = 0; for (let i = 0; i < 6; i++) stepOil();
+      if (oilToDrain > 0) {
+        streamY = Math.min(LH - 42, streamY + 6);
+        if (streamY >= LH - 42) {
+          const drained = Math.min(oilToDrain, Math.max(1, dt * 95));
+          oilToDrain -= drained;
+          inPan += drained;
+          drainedThroughStream += drained;
+        }
+      } else streamY = PAN_TOP;
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
       draw(); upd();
-      if (inPan >= target) return finish(true);
-      if (moves <= 0) return finish(false);
+      if (inPan >= target && drainedThroughStream >= Math.min(target * 0.4, 80) && oilToDrain <= 0) return finish(true);
+      if (moves <= 0 && oilToDrain <= 0) return finish(false);
       raf = requestAnimationFrame(loop);
     };
     function finish(won) {

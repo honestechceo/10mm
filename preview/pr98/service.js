@@ -183,7 +183,7 @@
       (raised?'<g><path d="M320 363 L395 320 470 363Z" fill="#9e1d1a" stroke="#280b10" stroke-width="6"/><rect x="335" y="356" width="142" height="17" rx="6" fill="#e43e2b"/><circle cx="348" cy="374" r="12" fill="#141b27"/><circle cx="462" cy="374" r="12" fill="#141b27"/><path d="M454 347 L532 301" stroke="#fa533a" stroke-width="15" stroke-linecap="round"/></g>':'')+
       '</svg>';
     const brakeArt = (stage) => {
-      const fresh = stage >= 7, bare = stage === 6, noCaliper = stage >= 4 && stage <= 7;
+      const fresh = stage >= 7, bare = stage === 5 || stage === 6, noCaliper = stage >= 4 && stage <= 7;
       const rotor = fresh ? 'url(#rotor)' : 'url(#rust)';
       const caliper = fresh ? '#657587' : '#765b4c';
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
@@ -204,10 +204,10 @@
     const renderBrake = () => {
       if (j !== "brake") return;
       const stage = Math.max(0,i);
-      const carView = stage <= 2 || stage >= 9;
+      const carView = stage <= 2 || stage >= 10;
       $("sScene").classList.toggle("carview", carView);
       if (carView) {
-        $("sCar").src = svgUrl(suvArt(stage===2 || stage===9 || stage===10, false));
+        $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
         $("sScene").classList.remove("lifted");
         $("sJack").classList.remove("on");
       } else $("sImg").src = svgUrl(brakeArt(stage));

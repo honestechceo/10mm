@@ -3443,6 +3443,7 @@ function skinFile(id) {
   return "socket-" + id + ".webp";
 }
 function ownedSkins() {
+  return SKINS.map(s => s.id); // PR98 preview only; no purchases or saved unlocks
   try {
     const o = JSON.parse(localStorage.getItem("tenmm-skins") || '["chrome"]');
     return Array.isArray(o) ? o : ["chrome"];
@@ -3473,7 +3474,7 @@ function showShop() {
   $("details").textContent =
     "You have " +
     totalCoins +
-    " coins. Grab coins in every level to unlock new finishes.";
+    " coins. PREVIEW MODE: All skins unlocked for testing; no coins spent.";
   $("menuExtra").style.display = "none";
   $("menuSettings").style.display = "none";
   $("menuLevels").style.display = "none";

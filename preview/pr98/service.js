@@ -155,7 +155,7 @@
 
   let S = null;
   function runJob(j) {
-    for (const id of JOBS[j].needs) if (!has(id)) return showGarage();
+    if (!window.__pr98Testing) for (const id of JOBS[j].needs) if (!has(id)) return showGarage();
     hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("bonus");
     let el = $("svc");
     if (!el) { el = document.createElement("div"); el.id = "svc"; document.body.append(el); }
@@ -274,7 +274,9 @@
         el.className = "hidden";
         const t = Math.ceil(left / 1000);
         let desc;
-        if (won) {
+        if (window.__pr98Testing) {
+          desc = "TEST COMPLETE — " + JOBS[j].name + ". No tools, coins, or progress changed.";
+        } else if (won) {
           G.done[j] = (G.done[j] || 0) + 1; save();
           const coinsWon = (j === "oil" ? 120 : 100) + t * 3 - mistakes * 5, pts = 2000 + t * 100;
           totalCoins += Math.max(40, coinsWon); totalScore += pts;
@@ -283,7 +285,7 @@
             "Your tools stay in the bag. Find new " + JOBS[j].needs.filter((id) => ITEMS[id].kind === "part").map((id) => ITEMS[id].name.toLowerCase()).join(" and ") + " in the levels to do it again.";
         } else {
           desc = "Time's up! The customer is still waiting. Your parts were " + (i > 3 ? "partly used, so grab new ones in the levels." : "saved, so try again from the Service Bay.");
-          if (i <= 3) for (const st of steps.slice(0, i + 1)) if (st.consume) { G.cart[st.consume] = (G.cart[st.consume] || 0) + 1; save(); }
+          if (!window.__pr98Testing && i <= 3) for (const st of steps.slice(0, i + 1)) if (st.consume) { G.cart[st.consume] = (G.cart[st.consume] || 0) + 1; save(); }
         }
         popup(won ? "JOB DONE!" : "TIME'S UP!", desc, "SERVICE BAY", showGarage, won ? "win" : "toolbox");
         $("eyebrow").textContent = JOBS[j].name;

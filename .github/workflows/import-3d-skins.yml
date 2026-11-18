@@ -8,10 +8,6 @@ on:
         description: "Release tag containing the 29-skin ZIP (example: skins-upload-1)"
         required: true
         default: skins-upload-1
-      zip_name:
-        description: "Exact ZIP filename attached to that release"
-        required: true
-        default: 10mm_all_rolling_skins_348_frames.zip
 
 permissions:
   contents: write
@@ -34,44 +30,42 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ inputs.release_tag }}
-          ZIP_NAME: ${{ inputs.zip_name }}
         run: |
           mkdir -p /tmp/skin-import
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "$ZIP_NAME" --dir /tmp/skin-import
-          test -s "/tmp/skin-import/$ZIP_NAME"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern "10mm_skins_part_*_of_4.zip" --dir /tmp/skin-import
+          test "$(find /tmp/skin-import -name "10mm_skins_part_*_of_4.zip" | wc -l)" -eq 4
 
       - name: Validate and extract skin frames without mixing folders
         env:
-          ZIP_NAME: ${{ inputs.zip_name }}
         run: |
           python3 - <<'PY'
           import os, zipfile, pathlib, re, collections, struct
-          zpath=pathlib.Path('/tmp/skin-import')/os.environ['ZIP_NAME']
+          zpaths=sorted(pathlib.Path('/tmp/skin-import').glob('10mm_skins_part_*_of_4.zip'))
+          if len(zpaths)!=4: raise ValueError('Exactly four ZIP parts required')
           target=pathlib.Path('skins3d')
-          with zipfile.ZipFile(zpath) as z:
-              frames=collections.defaultdict(dict)
-              for info in z.infolist():
-                  if info.is_dir(): continue
-                  p=pathlib.PurePosixPath(info.filename)
-                  if p.name in ('manifest_complete.json','README_COMPLETE.txt') and len(p.parts)==1: continue
-                  if len(p.parts)!=2 or not re.fullmatch(r'[a-z0-9_]+',p.parts[0]) or not re.fullmatch(r'frame_(0[0-9]|1[01])\.png',p.parts[1]):
-                      raise ValueError('Unexpected file in ZIP: '+info.filename)
-                  folder=p.parts[0]; frame=p.parts[1]
-                  if frame in frames[folder]: raise ValueError('Duplicate frame: '+info.filename)
-                  data=z.read(info)
-                  if not data.startswith(b'\x89PNG\r\n\x1a\n'): raise ValueError('Not PNG: '+info.filename)
-                  if len(data)<26 or data[25]!=6: raise ValueError('Not RGBA PNG: '+info.filename)
-                  frames[folder][frame]=data
-              if len(frames)!=29 or sum(map(len,frames.values()))!=348:
-                  raise ValueError('Expected 29 skin folders and 348 frames, got '+str(len(frames))+' folders and '+str(sum(map(len,frames.values())))+' frames')
-              expected={f'frame_{i:02d}.png' for i in range(12)}
-              for folder, files in frames.items():
-                  if set(files)!=expected: raise ValueError('Incomplete frames in '+folder)
-              for folder, files in frames.items():
-                  dest=target/folder
-                  dest.mkdir(parents=True,exist_ok=True)
-                  for filename,data in files.items():
-                      (dest/filename).write_bytes(data)
+          frames=collections.defaultdict(dict)
+          for zpath in zpaths:
+              with zipfile.ZipFile(zpath) as z:
+                  for info in z.infolist():
+                      if info.is_dir(): continue
+                      p=pathlib.PurePosixPath(info.filename)
+                      if len(p.parts)!=2 or not re.fullmatch(r'[a-z0-9_]+',p.parts[0]) or not re.fullmatch(r'frame_(0[0-9]|1[01])\\.png',p.parts[1]):
+                          raise ValueError('Unexpected ZIP entry: '+info.filename)
+                      folder,frame=p.parts
+                      if frame in frames[folder]: raise ValueError('Duplicate frame: '+info.filename)
+                      data=z.read(info)
+                      if not data.startswith(bytes.fromhex('89504e470d0a1a0a')) or len(data)<26 or data[25]!=6:
+                          raise ValueError('Invalid RGBA PNG: '+info.filename)
+                      frames[folder][frame]=data
+          if len(frames)!=29 or sum(map(len,frames.values()))!=348:
+              raise ValueError('Expected 29 folders and 348 frames')
+          expected={f'frame_{i:02d}.png' for i in range(12)}
+          for folder, files in frames.items():
+              if set(files)!=expected: raise ValueError('Missing frame in '+folder)
+              dest=target/folder
+              dest.mkdir(parents=True,exist_ok=True)
+              for filename,data in files.items():
+                  (dest/filename).write_bytes(data)
           print('Validated and extracted 29 skin folders / 348 RGBA PNG frames')
           PY
 

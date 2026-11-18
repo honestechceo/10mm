@@ -3443,7 +3443,7 @@ function skinFile(id) {
   return "socket-" + id + ".webp";
 }
 function ownedSkins() {
-  return SKINS.map(s => s.id); // PR98 preview only; no purchases or saved unlocks
+  return ["chrome","rusty","black","candy","gold","neon","purple","champ","afterburner","diamond","santa","candycane","valentine","shamrock","easter","usa","pumpkin","turkey"]; // PR98 preview only
   try {
     const o = JSON.parse(localStorage.getItem("tenmm-skins") || '["chrome"]');
     return Array.isArray(o) ? o : ["chrome"];

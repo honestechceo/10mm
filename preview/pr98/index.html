@@ -166,4 +166,46 @@ body.one-button #jumpLeft{display:none}body.one-button #pause{grid-area:pause;mi
 <div class="hhome"><button id="hRadio" class="hradio"><i>📻</i><b>RADIO: GAME MUSIC</b><span class="hr-eq"><s></s><s></s><s></s><s></s></span></button><div class="hstats"><span><i>COINS</i><img src="coin.webp" alt=""><b id="hCoins">0</b></span><span><i>BEST LEVEL</i><b id="hBest">1</b></span><span><i>STARS</i><b id="hStars">0</b></span></div>
 <button id="hPlay">PLAY</button>
 <div class="hmodes"><button id="hDaily"><b>DAILY CHALLENGE</b><small id="hDailySub">New level every day</small></button><button id="hEndless"><b>ENDLESS</b><small id="hEndlessSub">Beat level 25 to unlock</small></button></div><button id="hService" class="hsvc"><img src="svc-bag.webp" alt=""><span><b>SERVICE BAY</b><small id="hServiceSub">Find tools and parts in levels</small></span><img src="svc-cart.webp" alt=""></button><div class="hgrid"><button id="hLevels">LEVELS</button><button id="hShop"><img src="coin.webp" alt="">SHOP</button><button id="hUpg">UPGRADES</button><button id="hSettings">SETTINGS</button></div><div class="hlinks"><button id="hHow">HOW TO PLAY</button><button id="hShare">SHARE</button><button id="hGC" style="display:none">GAME CENTER</button></div>
-<div class="hver" id="hVer"></div></div></div><div id="ready" class="hidden"><div class="rc"><div class="rl" id="rTheme"></div><div class="rn" id="rLevel"></div><div class="rg" id="rGoal"></div><div class="rt">TAP TO START</div></div></div><div id="bonus" class="hidden"><div class="bhead"><div>BONUS: FIND THE 10MM<small id="bSub">Tap the 10mm socket. Wrong taps cost time!</small></div><div id="bTime">20.0</div></div><div class="bbar"><i id="bBar"></i></div><div class="drawer" id="drawer"></div></div><div id="toast"></div><script src="ui.js"></script><script src="features.js"></script><script src="service.js"></script><script src="hidden.js"></script><script src="drain.js"></script><script src="radio.js"></script><!-- PR98 TEST BUILD: demo.js intentionally omitted; full gameplay available only in isolated preview. --></body></html>
+<div class="hver" id="hVer"></div></div></div><div id="ready" class="hidden"><div class="rc"><div class="rl" id="rTheme"></div><div class="rn" id="rLevel"></div><div class="rg" id="rGoal"></div><div class="rt">TAP TO START</div></div></div><div id="bonus" class="hidden"><div class="bhead"><div>BONUS: FIND THE 10MM<small id="bSub">Tap the 10mm socket. Wrong taps cost time!</small></div><div id="bTime">20.0</div></div><div class="bbar"><i id="bBar"></i></div><div class="drawer" id="drawer"></div></div><div id="toast"></div><script src="ui.js"></script><script src="features.js"></script><script src="service.js"></script><script src="hidden.js"></script><script src="drain.js"></script><script src="radio.js"></script><!-- PR98 TEST BUILD: demo.js intentionally omitted; full gameplay available only in isolated preview. --><style>
+#pr98TestOpen{position:fixed;right:12px;top:calc(env(safe-area-inset-top,0px) + 9px);z-index:1100;background:#ffce49;color:#14202d;border:2px solid #fff4bd;border-radius:14px;padding:9px 12px;font:900 12px system-ui;box-shadow:0 4px 15px #0008}
+#pr98TestPanel{position:fixed;inset:0;z-index:1099;background:#07101bef;display:none;overflow:auto;padding:calc(env(safe-area-inset-top,0px) + 65px) 18px 35px;color:white;font:600 15px system-ui}
+#pr98TestPanel.open{display:block}
+#pr98TestPanel .testinner{max-width:500px;margin:auto;background:#1c3040;border:2px solid #53778e;border-radius:18px;padding:18px;box-shadow:0 10px 45px #0008}
+#pr98TestPanel h2{font-size:24px;color:#ffce49;margin:0 0 8px}
+#pr98TestPanel p{font-size:13px;color:#c4d6e2;line-height:1.5}
+#pr98TestPanel button{display:block;width:100%;margin:10px 0;padding:15px 10px;background:#ffce49;color:#152332;border:0;border-radius:12px;font:900 15px system-ui}
+#pr98TestPanel select{width:100%;font:700 16px system-ui;background:#304d60;color:white;padding:12px;border:1px solid #7895a8;border-radius:10px}
+</style>
+<button id="pr98TestOpen" type="button">🧪 TEST ROUNDS</button>
+<div id="pr98TestPanel"><div class="testinner"><h2>🧪 Quick Test Menu</h2><p>Jump straight into any bonus or Service Bay job. No stages, coins, or collected tools required. Test results do not count toward game progress.</p><label for="pr98TestLevel">Bonus round number</label><select id="pr98TestLevel"><option value="10">Round 1 — Level 10</option><option value="20">Round 2 — Level 20</option><option value="30">Round 3 — Level 30</option><option value="40">Round 4 — Level 40</option><option value="50">Round 5 — Level 50</option><option value="100">Round 10 — Level 100</option><option value="200">Round 20 — Level 200</option><option value="400">Round 40 — Level 400</option></select><button data-test="drain">🛢️ DRAIN THE OIL</button><button data-test="find">🔎 FIND THE 10MM</button><button data-test="oil">🔧 OIL CHANGE JOB</button><button data-test="brake">🛞 FRONT BRAKE JOB</button><button data-test="close" style="background:#4c657a;color:white">BACK TO GAME</button></div></div>
+<script>
+(function(){
+ const panel=document.getElementById('pr98TestPanel'), trigger=document.getElementById('pr98TestOpen');
+ const open=()=>{panel.classList.add('open');trigger.style.display='none';};
+ const close=()=>{panel.classList.remove('open');trigger.style.display='';};
+ window.__pr98ShowTests=function(){if(typeof showMenu==='function')showMenu();open();};
+ trigger.onclick=open;
+ panel.addEventListener('click',function(e){
+   const btn=e.target.closest('[data-test]');if(!btn)return;
+   const kind=btn.dataset.test;
+   if(kind==='close'){close();return;}
+   try{
+     window.__pr98Testing=true;
+     if(typeof audioReady==='function')audioReady();
+     if(typeof stopMusic==='function')stopMusic();
+     if(typeof hideHome==='function')hideHome();
+     if(typeof hidePanels==='function')hidePanels();
+     const ov=document.getElementById('overlay');if(ov)ov.classList.add('hidden');
+     if(kind==='drain'||kind==='find'){
+       level=Number(document.getElementById('pr98TestLevel').value);
+       close();
+       if(kind==='drain')window.runDrainIntro(()=>window.__pr98ShowTests());
+       else bonusIntro(()=>window.__pr98ShowTests());
+     }else{
+       close();
+       window.Service.runJob(kind);
+     }
+   }catch(err){open();alert('Test launcher error: '+err.message);}
+ });
+})();
+</script></body></html>

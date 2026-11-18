@@ -58,7 +58,7 @@
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
     const target = Math.max(1, Math.floor(total * 0.0192)), PAN_Y = Math.floor((LH - 34) / C);
     // Catch zone spans the full playable board, including the far-left and far-right columns.
-    const PAN_LEFT = 0, PAN_RIGHT = LW, PAN_RIM = LH - 49;
+    const PAN_LEFT = 7, PAN_RIGHT = LW - 7, PAN_RIM = LH - 49;
     let missedOil = 0;
     let inPan = 0, moved = 0, started = false, oilToDrain = 0, streamY = PAN_TOP, drainedThroughStream = 0;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
@@ -186,7 +186,7 @@
           if (y >= PAN_Y) {
             cell[k] = 0;
             const landingX = (x + .5) * C;
-            if (landingX >= PAN_LEFT && landingX <= PAN_RIGHT) inPan++;
+            if (landingX >= PAN_LEFT && landingX <= PAN_RIGHT && y * C >= PAN_RIM) inPan++;
             else missedOil++;
             moved++;
             continue;
@@ -336,7 +336,7 @@
       // Draw the oil over the interior, not hidden below the bottom edge.
       if (f > 0) {
         const t = performance.now() * .004;
-        const bottom = LH - 7, top = bottom - (8 + f * 38);
+        const bottom = LH - 7, top = bottom - (8 + f * 40);
         g.save();
         g.beginPath(); g.rect(7, PAN_RIM + 5, LW - 14, LH - PAN_RIM - 11); g.clip();
         const og = g.createLinearGradient(0, top, 0, bottom);
@@ -394,8 +394,12 @@
         if (streamY >= LH - 42) {
           const drained = Math.min(oilToDrain, Math.max(1, dt * 95));
           oilToDrain -= drained;
-          inPan += drained;
-          drainedThroughStream += drained;
+          // Stream credit is earned only after its visible tip enters the catch tray.
+          const streamCatchX = LW / 2;
+          if (streamCatchX >= PAN_LEFT && streamCatchX <= PAN_RIGHT && streamY >= PAN_RIM) {
+            inPan += drained;
+            drainedThroughStream += drained;
+          } else missedOil += drained;
         }
       } else streamY = PAN_TOP;
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";

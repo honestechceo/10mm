@@ -46,6 +46,7 @@
     // board: each tile has a type and an animated y so it can drop into place
     const ntypes = n < 12 ? 3 : 4;
     const grid = [];
+    const channels = new Uint8Array(ROWS * COLS); // Cleared passages never refill.
     for (let r = 0; r < ROWS; r++) { grid.push([]); for (let c = 0; c < COLS; c++) grid[r].push({ t: Math.floor(Math.random() * ntypes), y: BY + r * T - 260 - (ROWS - r) * 30, vy: 0, pop: 0 }); }
     const steelCount = n < 6 ? 0 : Math.min(3, Math.floor(n / 8));
     for (let k = 0; k < steelCount; k++) grid[3 + Math.floor(Math.random() * (ROWS - 3))][Math.floor(Math.random() * COLS)].t = STEEL;
@@ -99,9 +100,10 @@
       if (!tl) return;
       burst(r, c, tl.t === STEEL ? "#c9d3dc" : typeof tl.t === "number" ? TYPES[tl.t].a : "#ffd23f");
       grid[r][c] = null;
+      channels[r * COLS + c] = 1;
     };
     function fire(r, c, kind) {
-      grid[r][c] = null; burst(r, c, "#ffd23f");
+      grid[r][c] = null; channels[r * COLS + c] = 1; burst(r, c, "#ffd23f");
       const hit = (rr, cc) => { const t = grid[rr][cc]; if (t && (t.t === ROCKET || t.t === BLAST)) fire(rr, cc, t.t); else remove(rr, cc); };
       if (kind === ROCKET) { for (let rr = 0; rr < ROWS; rr++) hit(rr, c); pops.push({ x: BX + c * T + T / 2, y: BY + 20, t: "ROCKET!", life: 50 }); flash = { x: BX + c * T, life: 14 }; }
       else { for (let rr = r - 1; rr <= r + 1; rr++) for (let cc = c - 1; cc <= c + 1; cc++) if (rr >= 0 && rr < ROWS && cc >= 0 && cc < COLS) hit(rr, cc); pops.push({ x: BX + c * T + T / 2, y: BY + r * T, t: "OIL BLAST!", life: 50 }); shake = 12; }
@@ -118,9 +120,10 @@
           let top = bottom;
           while (top >= 0 && !(grid[top][c] && grid[top][c].t === STEEL)) top--;
           const survivors = [];
-          for (let r = bottom; r > top; r--) if (grid[r][c]) survivors.push(grid[r][c]);
+          for (let r = bottom; r > top; r--) if (!channels[r * COLS + c] && grid[r][c]) survivors.push(grid[r][c]);
           for (let r = bottom; r > top; r--) {
-            grid[r][c] = survivors[bottom-r] || { t: Math.floor(Math.random()*ntypes), y: BY + (top - 1 - (bottom-r))*T, vy: 0, pop: 0 };
+            if (channels[r * COLS + c]) { grid[r][c] = null; continue; }
+            grid[r][c] = survivors.shift() || { t: Math.floor(Math.random()*ntypes), y: BY - T * 2, vy: 0, pop: 0 };
           }
           bottom = top - 1;
         }
@@ -159,7 +162,7 @@
       if (gp.length >= 5) moves = Math.min(210, moves + (gp.length >= 8 ? 10 : 5));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
-      if (gp.length >= 6) { grid[r][c] = { t: gp.length >= 8 ? BLAST : ROCKET, y: BY + r * T, vy: 0, pop: 14 }; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST MADE!" : "TORQUE ROCKET!", life: 50 }); }
+      if (gp.length >= 6) { /* Cleared channel stays open; power effects activate immediately. */ oilToDrain += gp.length >= 8 ? 65 : 35; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST!" : "TORQUE ROCKET!", life: 50 }); }
       else if (gp.length >= 4) pops.push({ x, y, t: gp.length === 5 ? "GREAT!" : "NICE!", life: 40 });
       sfx(gp.length >= 6 ? "power" : "coin"); buzz(gp.length >= 6 ? "medium" : "light");
       after();
@@ -345,6 +348,6 @@
     }
     window.addEventListener("resize", () => { if (!over) fit(); });
     upd(); raf = requestAnimationFrame(loop);
-    window.__drain = { grid, group, bestGroup, get inPan() { return inPan; }, target, get moves() { return moves; }, get started() { return started; } };
+    window.__drain = { grid, channels, group, bestGroup, get inPan() { return inPan; }, target, get moves() { return moves; }, get started() { return started; } };
   }
 })();

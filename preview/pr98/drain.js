@@ -22,7 +22,7 @@
   const ready = (im) => im && im.complete && im.naturalWidth;
 
   window.runDrainIntro = function (done) {
-    const n = Math.round(level / 10), moves = 105;
+    const n = Math.round(level / 10), moves = 180;
     popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Cleared spaces stay open. Open a path so the old oil pours into the drain pan before the " + moves + "-second timer expires! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
@@ -55,7 +55,7 @@
     const idx = (x, y) => y * GW + x;
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
-    const target = Math.max(1, Math.floor(total * 0.18)), PAN_Y = Math.floor((LH - 34) / C);
+    const target = Math.max(1, Math.floor(total * 0.12)), PAN_Y = Math.floor((LH - 34) / C);
     let inPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
@@ -155,8 +155,8 @@
       if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); inPan = Math.min(target, inPan + 45); sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
       if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
-      inPan = Math.min(target, inPan + gp.length * 7);
-      if (gp.length >= 5) moves = Math.min(120, moves + (gp.length >= 8 ? 7 : 3));
+      inPan = Math.min(target, inPan + gp.length * 10);
+      if (gp.length >= 5) moves = Math.min(210, moves + (gp.length >= 8 ? 10 : 5));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
       if (gp.length >= 6) { grid[r][c] = { t: gp.length >= 8 ? BLAST : ROCKET, y: BY + r * T, vy: 0, pop: 14 }; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST MADE!" : "TORQUE ROCKET!", life: 50 }); }

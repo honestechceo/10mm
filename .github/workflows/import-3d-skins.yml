@@ -36,7 +36,6 @@ jobs:
           test "$(find /tmp/skin-import -name "10mm_skins_part_*_of_4.zip" | wc -l)" -eq 4
 
       - name: Validate and extract skin frames without mixing folders
-        env:
         run: |
           python3 - <<'PY'
           import os, zipfile, pathlib, re, collections, struct
@@ -49,7 +48,7 @@ jobs:
                   for info in z.infolist():
                       if info.is_dir(): continue
                       p=pathlib.PurePosixPath(info.filename)
-                      if len(p.parts)!=2 or not re.fullmatch(r'[a-z0-9_]+',p.parts[0]) or not re.fullmatch(r'frame_(0[0-9]|1[01])\\.png',p.parts[1]):
+                      if len(p.parts)!=2 or not re.fullmatch(r'[a-z0-9_]+',p.parts[0]) or not re.fullmatch(r'frame_(0[0-9]|1[01])\.png',p.parts[1]):
                           raise ValueError('Unexpected ZIP entry: '+info.filename)
                       folder,frame=p.parts
                       if frame in frames[folder]: raise ValueError('Duplicate frame: '+info.filename)

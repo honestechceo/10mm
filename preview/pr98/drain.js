@@ -332,13 +332,28 @@
       g.lineTo(LW - 10, LH - 4); g.quadraticCurveTo(LW / 2, LH + 9, 10, LH - 4); g.closePath(); g.fill();
       g.strokeStyle = "#e4eff8"; g.lineWidth = 5; g.beginPath(); g.moveTo(0, PAN_RIM); g.lineTo(LW, PAN_RIM); g.stroke();
       g.fillStyle = "#0b151d"; g.fillRect(4, PAN_RIM + 4, LW - 8, 11);
+      // Visible tank interior: the amber surface rises toward the rim as oil is caught.
+      // Draw the oil over the interior, not hidden below the bottom edge.
       if (f > 0) {
-        const h = 5 + f * 24, top = LH - 13 - h;
-        const og = g.createLinearGradient(0, top, 0, LH - 12);
-        og.addColorStop(0, "#e3a94c"); og.addColorStop(.3, "#a35b16"); og.addColorStop(1, "#462509");
-        g.fillStyle = og; g.beginPath(); g.moveTo(13, top);
-        for (let x = 13; x <= LW - 13; x += 7) g.lineTo(x, top + Math.sin(x * .045 + performance.now() * .004) * 1.8);
-        g.lineTo(LW - 13, LH - 12); g.lineTo(13, LH - 12); g.closePath(); g.fill();
+        const t = performance.now() * .004;
+        const bottom = LH - 7, top = bottom - (8 + f * 38);
+        g.save();
+        g.beginPath(); g.rect(7, PAN_RIM + 5, LW - 14, LH - PAN_RIM - 11); g.clip();
+        const og = g.createLinearGradient(0, top, 0, bottom);
+        og.addColorStop(0, "#f7c16b"); og.addColorStop(.12, "#b87522");
+        og.addColorStop(.55, "#794014"); og.addColorStop(1, "#351b09");
+        g.fillStyle = og;
+        g.beginPath(); g.moveTo(7, top);
+        for (let x = 7; x <= LW - 7; x += 5) g.lineTo(x, top + Math.sin(x * .044 + t) * 1.8 + Math.sin(x * .087 - t * .8));
+        g.lineTo(LW - 7, bottom); g.lineTo(7, bottom); g.closePath(); g.fill();
+        g.strokeStyle = "rgba(255,223,143,.85)"; g.lineWidth = 2;
+        g.beginPath();
+        for (let x = 7; x <= LW - 7; x += 5) {
+          const y = top + Math.sin(x * .044 + t) * 1.8 + Math.sin(x * .087 - t * .8);
+          if (x === 7) g.moveTo(x,y); else g.lineTo(x,y);
+        }
+        g.stroke();
+        g.restore();
       }
       g.restore();
       const hero = heroImg();

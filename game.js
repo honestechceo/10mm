@@ -210,6 +210,7 @@ for (const kind of [
   "snowball",
   "wetsign",
   "dolly",
+  "cart",
 ]) {
   const im = new Image();
   im.src = "tool-" + kind + ".webp";
@@ -1069,6 +1070,7 @@ const HAZ = {
     move: "roll",
     vx: 1.1,
     name: "a runaway shopping cart",
+    art: [2.05, 1.75, 0.4, 0.4],
   },
   wetsign: {
     w: 52,

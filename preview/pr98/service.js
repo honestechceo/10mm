@@ -129,12 +129,12 @@
   const OIL_STEPS = [
     { say: "Put on your gloves", use: "gloves", scene: "scene-plug.webp" },
     { say: "Slide the drain pan under the engine", use: "pan", scene: "scene-plug.webp", after: (s) => s.showPan(true) },
-    { say: "Loosen the drain plug", use: "wrenches", scene: "scene-draining.webp", after: (s) => s.wait("Draining the old oil…", 1800) },
-    { say: "Swap in the new oil filter", use: "filter", consume: "filter", scene: "scene-draining.webp", after: (s) => s.flash("svc-filter.webp") },
-    { say: "Put the drain plug back in", use: "ratchet", scene: "scene-plug.webp", after: (s) => s.showPan(false) },
+    { say: "Remove the drain plug to start draining", use: "wrenches", scene: "scene-plug.webp", next: "scene-draining.webp", after: (s) => s.wait("Old oil draining into the pan…", 1800) },
+    { say: "Install the new oil filter after draining", use: "filter", consume: "filter", scene: "scene-draining.webp", after: (s) => s.flash("svc-filter.webp") },
+    { say: "Reinstall the drain plug", use: "ratchet", scene: "scene-draining.webp", next: "scene-plug.webp", after: (s) => s.showPan(false) },
     { say: "Tap the oil cap to open it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-closed.webp", next: "scene-engine-open.webp" },
     { say: "Set the funnel in the fill hole", use: "funnel", scene: "scene-engine-open.webp", after: (s) => s.showFunnel(true) },
-    { say: "HOLD the oil jug to pour", pour: true, use: "oil", consume: "oil", scene: "scene-engine-open.webp" },
+    { say: "Tap the oil jug to add the correct amount", pour: true, use: "oil", consume: "oil", scene: "scene-engine-open.webp" },
     { say: "BLUE RAG: Clean the dipstick before checking the oil level", use: "ragblue", scene: "scene-engine-open.webp", after: (s) => s.dip("dip-clean.webp") },
     { say: "Tap CHECK DIPSTICK", check: true, scene: "scene-engine-open.webp" },
     { say: "Tap the oil cap to close it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-open.webp", next: "scene-engine-closed.webp", before: (s) => s.showFunnel(false) },
@@ -143,12 +143,12 @@
   const BRAKE_STEPS = [
     { say: "Put on your gloves", use: "gloves", scene: "car" },
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "LUG WRENCH: Remove wheel to access the brakes", use: "lugwrench", scene: "car", next: "svc-car-jack.webp" },
-    { say: "RATCHET: Remove caliper bolts", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
-    { say: "PISTON TOOL: Retract caliper piston", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston pushed back. Room for the thick new pads!") },
-    { say: "NEW PARTS: Fit the rotor and brake pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
+    { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
+    { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
+    { say: "PISTON TOOL: Retract the caliper piston", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston retracted for the new pads.") },
+    { say: "NEW PARTS: Remove old rotor and pads; install replacements", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
     { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "LUG WRENCH: Reinstall wheel and tighten lug nuts", use: "lugwrench", scene: "svc-car-jack.webp", next: "car" },
+    { say: "LUG WRENCH: Reinstall wheel and tighten lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
     { say: "Lower the car", use: "jack", scene: "car", after: (s) => s.lift(false) },
     { say: "Pump the brake pedal 3 times", pump: 3, scene: "car" },
   ];
@@ -215,11 +215,11 @@
       $("sDip").classList.toggle("on", !!st.check);
     }
     function done(st) {
-      if (st.consume) { G.cart[st.consume] = Math.max(0, (G.cart[st.consume] || 0) - 1); save(); const b = el.querySelector('.stool[data-id="' + st.consume + '"]'); if (b) b.classList.add("used"); }
+      if (st.consume && !window.__pr98Testing) { G.cart[st.consume] = Math.max(0, (G.cart[st.consume] || 0) - 1); save(); const b = el.querySelector('.stool[data-id="' + st.consume + '"]'); if (b) b.classList.add("used"); }
       sfx("power"); buzz("light"); pop("✓", true);
       if (st.next) setScene(st.next);
       if (st.after) st.after(S);
-      setTimeout(() => { const go = () => (busy ? setTimeout(go, 100) : nextStep()); go(); }, 350);
+      setTimeout(() => { const go = () => { if (over) return; if (busy) setTimeout(go, 100); else nextStep(); }; go(); }, 350);
     }
     el.querySelectorAll(".stool").forEach((b) => {
       const id = b.dataset.id;
@@ -227,13 +227,13 @@
         e.preventDefault();
         if (over || busy || i < 0) return;
         const st = steps[i];
-        if (st.pour && id === "oil") { pouring = true; b.classList.add("pouring"); return; }
+        if (st.pour && id === "oil") { busy = true; pouring = false; oilLvl = 0.8; meterUpd(); b.classList.add("pouring"); S.wait("Adding the correct amount of fresh oil…", 1300); setTimeout(() => { b.classList.remove("pouring"); done(st); }, 1350); return; }
         if (st.use === id && !st.pour) { busy = true; setTimeout(() => (busy = false), 360); done(st); }
         else if (b.classList.contains("used")) wrong("Already used!");
         else wrong(st.tap || st.check || st.pump ? "Tap the " + (st.tap ? "oil cap" : "button") + "!" : "Wrong tool! -2s");
       };
       b.onpointerdown = press;
-      const stop = () => { if (pouring) { pouring = false; b.classList.remove("pouring"); const st = steps[i]; if (st && st.pour && oilLvl >= 0.70) { busy = true; setTimeout(() => (busy = false), 360); done(st); } } };
+      const stop = () => { /* Oil filling is a single tap, not a fragile long press. */ };
       b.onpointerup = stop; b.onpointerleave = stop; b.onpointercancel = stop;
     });
     $("sTap").onpointerdown = (e) => { e.preventDefault(); if (over || busy) return; const st = steps[i]; if (st && st.tap) { $("sTap").className = "stap"; busy = true; setTimeout(() => (busy = false), 360); done(st); } };
@@ -253,16 +253,7 @@
     const loop = (now) => {
       if (over) return;
       const dt = Math.min(100, now - last); last = now; left -= dt;
-      if (pouring) {
-        oilLvl = Math.min(0.8, oilLvl + dt / 3200); meterUpd();
-        if (oilLvl >= 0.8) {
-          pouring = false;
-          const oilButton = el.querySelector('.stool[data-id="oil"]');
-          if (oilButton) oilButton.classList.remove("pouring");
-          const st = steps[i];
-          if (st && st.pour && !busy) { busy = true; done(st); }
-        }
-      }
+
       if (left <= 0) { left = 0; upd(); sfx("hit"); buzz("heavy"); return finish(false); }
       upd(); raf = requestAnimationFrame(loop);
     };

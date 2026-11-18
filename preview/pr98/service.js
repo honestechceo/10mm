@@ -200,9 +200,9 @@
         Array.from({length:5},(_,n)=>'<circle cx="'+(400+48*Math.cos(n*2*Math.PI/5))+'" cy="'+(242+48*Math.sin(n*2*Math.PI/5))+'" r="9" fill="#d2d9df" stroke="#263545" stroke-width="4"/>').join('')+
         '<circle cx="400" cy="242" r="17" fill="#1d2a37" stroke="#a7b8c6" stroke-width="5"/>'+
         (!noCaliper?'<g><path d="M218 153 Q175 167 173 206 V291 Q180 333 236 334 H290 Q312 325 312 304 V180 Q301 148 273 150Z" fill="'+caliper+'" stroke="#1a2530" stroke-width="10"/><path d="M195 207 H285 V267 H195Z" fill="#252d37" stroke="#c0a28c" stroke-width="7"/><circle cx="241" cy="177" r="13" fill="#a9b8c6"/><circle cx="241" cy="313" r="13" fill="#a9b8c6"/></g>':'<path d="M194 165 V318 H277" stroke="#6c7984" stroke-width="23" fill="none"/>')+
-        (stage===5?'<g stroke="#ffbd3a" stroke-width="6"><path d="M337 195 L490 289 M345 289 L483 187"/></g>':'')+
-        (stage===6?'<g><path d="M510 140 L590 100" stroke="#e6b83d" stroke-width="18"/><path d="M530 150 L608 107" stroke="#c3d3de" stroke-width="13"/></g>':'')+
-        '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="25" text-anchor="middle" fill="#fff">'+(bare?'HUB EXPOSED — CLEAN THE MATING FACE':fresh?'NEW ROTOR • SAME CALIPER DESIGN':'WORN ROTOR • WORN PADS • ORIGINAL CALIPER')+'</text></svg>';
+        (stage===5?'<g><circle cx="400" cy="242" r="76" fill="none" stroke="#f0b43a" stroke-width="5" stroke-dasharray="12 12"/><path d="M540 170 L493 211" stroke="#ffda57" stroke-width="14" stroke-linecap="round"/><path d="M492 211 L465 225" stroke="#b6cbd9" stroke-width="20" stroke-linecap="round"/></g>':'')+
+        (stage===6?'<g><rect x="516" y="135" width="206" height="104" rx="15" fill="#263546" stroke="#e9c14b" stroke-width="5"/><path d="M540 163 H696 M540 209 H696" stroke="#b9c8d5" stroke-width="15" stroke-linecap="round"/><circle cx="553" cy="163" r="9" fill="#d7b15b"/><circle cx="553" cy="209" r="9" fill="#d7b15b"/><path d="M580 164 L647 185" stroke="#f8d351" stroke-width="8" stroke-linecap="round"/><text x="620" y="259" font-size="18" font-family="Arial" font-weight="bold" fill="#ffe076" text-anchor="middle">CLEAN + GREASE PINS</text></g>':'')+
+        '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="23" text-anchor="middle" fill="#fff">'+(['WHEEL REMOVED • ORIGINAL WORN BRAKES','CALIPER BOLTS • REMOVE','RETRACT PISTON • REMOVE OLD PARTS','HUB EXPOSED • REMOVE RUST','CLEAN + GREASE ORIGINAL SLIDE PINS','NEW ROTOR + PADS • ORIGINAL CALIPER','REINSTALL THE ORIGINAL CALIPER','REINSTALL WHEEL'][Math.max(0,Math.min(7,stage-2))])+'</text></svg>';
     };
     $("sCar").src = svgUrl(suvArt(false, false));
     const renderBrake = () => {
@@ -215,6 +215,7 @@
         $("sScene").classList.remove("lifted");
         $("sJack").classList.remove("on");
       } else $("sImg").src = svgUrl(brakeArt(stage));
+      $("sScene").dataset.brakeStage = String(stage);
     };
     for (const id of tools) {
       const b = document.createElement("button");

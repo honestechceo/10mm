@@ -22,8 +22,8 @@
   const ready = (im) => im && im.complete && im.naturalWidth;
 
   window.runDrainIntro = function (done) {
-    const n = Math.round(level / 10), moves = Math.max(14, 22 - Math.floor(n / 4));
-    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Cleared spaces stay open. Open a path so the old oil pours into the drain pan in " + moves + " moves! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
+    const n = Math.round(level / 10), moves = 75;
+    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Cleared spaces stay open. Open a path so the old oil pours into the drain pan before the " + moves + "-second timer expires! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
 
@@ -32,8 +32,8 @@
     let el = $("drn");
     if (!el) { el = document.createElement("div"); el.id = "drn"; document.body.append(el); }
     el.className = "";
-    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap groups of 2+ matching parts to open a path.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
-      '<div class="dhint">MATCH 2+ PARTS • OPEN A PATH ↓ • COLLECT OIL</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
+    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap groups of 2+ matching parts to open a path.</small></div><div class="dmoves"><span>TIME</span><b id="dMoves">0</b></div></div>' +
+      '<div class="dhint">MATCH 2+ • NEW PARTS DROP • FILL THE PAN</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
@@ -92,7 +92,7 @@
       return [...seen].map((k) => [Math.floor(k / COLS), k % COLS]);
     };
     const parts = [], pops = [];
-    let moves = Math.max(22, maxMoves), over = false, raf = 0, shake = 0, hover = null, settleT = 0, busyT = 0, flash = null, idle = 0;
+    let moves = maxMoves, over = false, raf = 0, shake = 0, hover = null, settleT = 0, busyT = 0, flash = null, idle = 0;
     const burst = (r, c, color) => { for (let i = 0; i < 10; i++) parts.push({ x: BX + c * T + T / 2, y: BY + r * T + T / 2, vx: (Math.random() - 0.5) * 7, vy: -Math.random() * 6 - 1, life: 32, color, s: 3 + Math.random() * 4 }); };
     const remove = (r, c) => {
       const tl = grid[r][c];
@@ -110,7 +110,22 @@
     // parts fall into gaps; steel plates stay bolted in place
     // Drain puzzle: a removed part must leave a lasting opening. Falling pieces
     // previously resealed the channel, making the objective effectively impossible.
-    function gravity() { /* intentional: cleared cells stay open */ }
+    function gravity() {
+      for (let c = 0; c < COLS; c++) {
+        let bottom = ROWS - 1;
+        while (bottom >= 0) {
+          if (grid[bottom][c] && grid[bottom][c].t === STEEL) { bottom--; continue; }
+          let top = bottom;
+          while (top >= 0 && !(grid[top][c] && grid[top][c].t === STEEL)) top--;
+          const survivors = [];
+          for (let r = bottom; r > top; r--) if (grid[r][c]) survivors.push(grid[r][c]);
+          for (let r = bottom; r > top; r--) {
+            grid[r][c] = survivors[bottom-r] || { t: Math.floor(Math.random()*ntypes), y: BY + (top - 1 - (bottom-r))*T, vy: 0, pop: 0 };
+          }
+          bottom = top - 1;
+        }
+      }
+    }
     const hasMove = () => { for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { const t = grid[r][c]; if (!t || t.t === STEEL) continue; if (t.t === ROCKET || t.t === BLAST || group(r, c).length >= 2) return true; } return false; };
     function reshuffleIfStuck() {
       if (hasMove()) return;
@@ -137,10 +152,11 @@
       if (!tl) return;
       idle = 0;
       if (tl.t === STEEL) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL! Blast it", life: 40, bad: 1 }); shake = 8; return; }
-      if (tl.t === ROCKET || tl.t === BLAST) { moves--; fire(r, c, tl.t); sfx("power"); buzz("heavy"); after(); return; }
+      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
       if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
-      moves--;
+      inPan = Math.min(target, inPan + gp.length * 2);
+      if (gp.length >= 5) moves = Math.min(99, moves + (gp.length >= 8 ? 5 : 2));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
       if (gp.length >= 6) { grid[r][c] = { t: gp.length >= 8 ? BLAST : ROCKET, y: BY + r * T, vy: 0, pop: 14 }; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST MADE!" : "TORQUE ROCKET!", life: 50 }); }
@@ -275,12 +291,17 @@
     }
 
     const upd = () => {
-      $("dMoves").textContent = moves; $("dMoves").className = moves <= 3 ? "low" : "";
+      $("dMoves").textContent = Math.ceil(moves) + "s"; $("dMoves").className = moves <= 3 ? "low" : "";
       const pct = Math.min(100, Math.floor((inPan / target) * 100));
       $("dFill").style.width = pct + "%"; $("dPct").textContent = pct + "%";
     };
-    const loop = () => {
+    let lastFrame = 0;
+    const loop = (now = 0) => {
       if (over) return;
+      if (!lastFrame) lastFrame = now;
+      const dt = Math.min(0.1, Math.max(0, (now-lastFrame)/1000));
+      lastFrame = now;
+      if (started) moves = Math.max(0, moves-dt);
       if (busyT > 0) busyT--;
       idle++;
       markSolids();
@@ -288,7 +309,7 @@
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
       draw(); upd();
       if (inPan >= target) return finish(true);
-      if (moves <= 0) { settleT++; if (settleT > 240) return finish(false); }
+      if (moves <= 0) return finish(false);
       raf = requestAnimationFrame(loop);
     };
     function finish(won) {
@@ -297,9 +318,9 @@
       if (won) { sfx("win"); buzz("success"); } else { sfx("hit"); buzz("heavy"); }
       setTimeout(() => {
         el.className = "hidden";
-        bonusResult(won, moves * 2, done);
-        $("details").textContent = $("details").textContent.replace(/^Found with [\d.]+s left!/, "Drained with " + moves + " move" + (moves === 1 ? "" : "s") + " to spare!");
-        $("message").textContent = won ? "OIL DRAINED!" : "OUT OF MOVES!";
+        bonusResult(won, Math.ceil(moves) * 2, done);
+        $("details").textContent = $("details").textContent.replace(/^Found with [\d.]+s left!/, "Drained with " + Math.ceil(moves) + " seconds to spare!");
+        $("message").textContent = won ? "OIL DRAINED!" : "TIME IS UP!";
         if (!won) $("details").textContent = "The drain pan didn't fill up in time. Keep going to reach the next bonus round.";
       }, won ? 1000 : 700);
     }

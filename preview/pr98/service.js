@@ -171,9 +171,47 @@
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
     // Unjacked car with wheels ON at the start. The jack is a separate sprite
     // and the car only rises after the player uses it.
-    const carSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="360" viewBox="0 0 800 360"><defs><linearGradient id="paint" x2="0" y2="1"><stop stop-color="#62b7e8"/><stop offset="1" stop-color="#175187"/></linearGradient></defs><ellipse cx="400" cy="316" rx="335" ry="22" fill="#07131b" opacity=".5"/><path d="M85 188 L169 170 253 76 Q268 61 302 61 H514 Q549 61 569 83 L639 166 709 185 Q751 192 753 222 V270 H52 V227 Q52 199 85 188Z" fill="url(#paint)" stroke="#071b2b" stroke-width="12"/><path d="M270 91 H503 Q523 91 535 107 L583 168 H211Z" fill="#b8e8fa" stroke="#123b5c" stroke-width="10"/><path d="M398 91 V169" stroke="#123b5c" stroke-width="11"/><path d="M72 223 H750" stroke="#a9e6ff" stroke-width="7" opacity=".5"/><rect x="698" y="205" width="43" height="19" rx="7" fill="#fff4c3"/><rect x="57" y="206" width="24" height="20" rx="5" fill="#ff6d59"/><g fill="#111a25" stroke="#02070b" stroke-width="9"><circle cx="207" cy="271" r="66"/><circle cx="614" cy="271" r="66"/></g><g fill="#aab9c8" stroke="#344453" stroke-width="8"><circle cx="207" cy="271" r="38"/><circle cx="614" cy="271" r="38"/></g><g fill="#45576a"><circle cx="207" cy="271" r="11"/><circle cx="614" cy="271" r="11"/></g></svg>';
-    const carSrc = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(carSvg);
-    $("sCar").src = carSrc;
+    // Shared, unbranded 3D-comic SUV and identical brake geometry in every stage.
+    const svgUrl = (markup) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent(markup);
+    const artDefs = '<defs><linearGradient id="blue" x2=".2" y2="1"><stop stop-color="#94dcff"/><stop offset=".27" stop-color="#1766c5"/><stop offset=".65" stop-color="#003f94"/><stop offset="1" stop-color="#071c47"/></linearGradient><linearGradient id="metal" x2=".3" y2="1"><stop stop-color="#f2f6fc"/><stop offset=".5" stop-color="#73899e"/><stop offset="1" stop-color="#26384d"/></linearGradient><radialGradient id="rotor"><stop stop-color="#cad8e5"/><stop offset=".55" stop-color="#7b8c9b"/><stop offset=".8" stop-color="#dae5ee"/><stop offset="1" stop-color="#33485d"/></radialGradient><radialGradient id="rust"><stop stop-color="#81502d"/><stop offset=".5" stop-color="#a45d34"/><stop offset=".8" stop-color="#6d3a26"/><stop offset="1" stop-color="#302b2a"/></radialGradient><linearGradient id="glass" x2=".8" y2="1"><stop stop-color="#c2efff"/><stop offset=".35" stop-color="#3879b0"/><stop offset="1" stop-color="#0b1c35"/></linearGradient></defs>';
+    const wheel = (x,y) => '<g transform="translate('+x+' '+y+')"><circle r="75" fill="#0a0e18" stroke="#202a39" stroke-width="9"/><circle r="60" fill="#26384b" stroke="#0a1018" stroke-width="8"/><circle r="49" fill="url(#metal)" stroke="#e4effa" stroke-width="4"/>'+Array.from({length:10},(_,n)=>'<path d="M-7 -43 L7 -43 11 -15 -11 -15Z" fill="#1a2636" transform="rotate('+(n*36)+')"/>').join('')+'<circle r="13" fill="#1b293d" stroke="#b9c9d8" stroke-width="5"/></g>';
+    const suvArt = (raised, wheelOff) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
+      '<rect width="800" height="430" fill="#111d2b"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
+      '<g transform="translate(0 '+(raised?-37:0)+')"><path d="M82 207 L153 186 245 102 Q260 86 290 86 H503 Q538 86 558 104 L635 188 709 206 Q752 218 754 254 L744 320 H52 L48 255 Q49 226 82 207Z" fill="url(#blue)" stroke="#081529" stroke-width="12"/>'+
+      '<path d="M257 111 H500 Q520 111 534 127 L589 194 H182Z" fill="url(#glass)" stroke="#07172e" stroke-width="10"/><path d="M398 111 V194" stroke="#081a33" stroke-width="10"/><path d="M166 210 H640" stroke="#7acbff" stroke-width="6" opacity=".75"/><path d="M71 263 H735" stroke="#041c45" stroke-width="8"/><path d="M72 233 L161 214 161 246 70 257Z" fill="#e6f9ff" stroke="#193953" stroke-width="6"/><path d="M648 217 L726 233 734 254 650 242Z" fill="#f34b35"/><path d="M64 292 H745" stroke="#2a9ff2" stroke-width="6"/><path d="M317 194 V312 M550 194 V312" stroke="#061a3d" stroke-width="5"/><path d="M536 224 h37" stroke="#d7f5ff" stroke-width="6" stroke-linecap="round"/>'+
+      wheel(210,320)+wheel(612,320)+'</g>'+
+      (raised?'<g><path d="M320 363 L395 320 470 363Z" fill="#9e1d1a" stroke="#280b10" stroke-width="6"/><rect x="335" y="356" width="142" height="17" rx="6" fill="#e43e2b"/><circle cx="348" cy="374" r="12" fill="#141b27"/><circle cx="462" cy="374" r="12" fill="#141b27"/><path d="M454 347 L532 301" stroke="#fa533a" stroke-width="15" stroke-linecap="round"/></g>':'')+
+      '</svg>';
+    const brakeArt = (stage) => {
+      const fresh = stage >= 7, bare = stage === 6, noCaliper = stage >= 4 && stage <= 7;
+      const rotor = fresh ? 'url(#rotor)' : 'url(#rust)';
+      const caliper = fresh ? '#657587' : '#765b4c';
+      return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
+        '<rect width="800" height="430" fill="#101c2c"/><path d="M0 40 Q220 0 800 35 V120 Q600 76 450 115 Q180 95 0 150Z" fill="url(#blue)" stroke="#081426" stroke-width="15"/><path d="M0 380 H800" stroke="#ffcb3c" stroke-width="5"/>'+
+        '<circle cx="400" cy="242" r="181" fill="#0a1019" stroke="#1c2a3b" stroke-width="19"/><circle cx="400" cy="242" r="154" fill="#25313e" stroke="#56697a" stroke-width="10"/>'+
+        (bare ? '' : '<circle cx="400" cy="242" r="137" fill="'+rotor+'" stroke="#18232d" stroke-width="9"/>'+
+        (fresh ? Array.from({length:9},(_,n)=>'<path d="M400 113 V140" transform="rotate('+(n*40)+' 400 242)" stroke="#fff" opacity=".28" stroke-width="5"/>').join('') :
+        Array.from({length:11},(_,n)=>'<path d="M400 114 Q415 145 400 170" transform="rotate('+(n*32)+' 400 242)" stroke="#db9864" opacity=".6" stroke-width="4" fill="none"/>').join('')))+
+        '<circle cx="400" cy="242" r="66" fill="'+(bare?'#7a5742':fresh?'#9caebc':'#795137')+'" stroke="#283646" stroke-width="10"/>'+
+        Array.from({length:5},(_,n)=>'<circle cx="'+(400+48*Math.cos(n*2*Math.PI/5))+'" cy="'+(242+48*Math.sin(n*2*Math.PI/5))+'" r="9" fill="#d2d9df" stroke="#263545" stroke-width="4"/>').join('')+
+        '<circle cx="400" cy="242" r="17" fill="#1d2a37" stroke="#a7b8c6" stroke-width="5"/>'+
+        (!noCaliper?'<g><path d="M218 153 Q175 167 173 206 V291 Q180 333 236 334 H290 Q312 325 312 304 V180 Q301 148 273 150Z" fill="'+caliper+'" stroke="#1a2530" stroke-width="10"/><path d="M195 207 H285 V267 H195Z" fill="#252d37" stroke="#c0a28c" stroke-width="7"/><circle cx="241" cy="177" r="13" fill="#a9b8c6"/><circle cx="241" cy="313" r="13" fill="#a9b8c6"/></g>':'<path d="M194 165 V318 H277" stroke="#6c7984" stroke-width="23" fill="none"/>')+
+        (stage===5?'<g stroke="#ffbd3a" stroke-width="6"><path d="M337 195 L490 289 M345 289 L483 187"/></g>':'')+
+        (stage===6?'<g><path d="M510 140 L590 100" stroke="#e6b83d" stroke-width="18"/><path d="M530 150 L608 107" stroke="#c3d3de" stroke-width="13"/></g>':'')+
+        '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="25" text-anchor="middle" fill="#fff">'+(bare?'HUB EXPOSED — CLEAN THE MATING FACE':fresh?'NEW ROTOR • SAME CALIPER DESIGN':'WORN ROTOR • WORN PADS • ORIGINAL CALIPER')+'</text></svg>';
+    };
+    $("sCar").src = svgUrl(suvArt(false, false));
+    const renderBrake = () => {
+      if (j !== "brake") return;
+      const stage = Math.max(0,i);
+      const carView = stage <= 2 || stage >= 9;
+      $("sScene").classList.toggle("carview", carView);
+      if (carView) {
+        $("sCar").src = svgUrl(suvArt(stage===2 || stage===9 || stage===10, false));
+        $("sScene").classList.remove("lifted");
+        $("sJack").classList.remove("on");
+      } else $("sImg").src = svgUrl(brakeArt(stage));
+    };
     for (const id of tools) {
       const b = document.createElement("button");
       b.className = "stool"; b.dataset.id = id;
@@ -204,6 +242,7 @@
       const st = steps[i];
       if (st.before) st.before(S);
       setScene(st.scene);
+      renderBrake();
       $("sStep").textContent = "STEP " + (i + 1) + "/" + steps.length + ": " + st.say;
       el.querySelectorAll(".stool").forEach((btn) => {
         const active = st.use === btn.dataset.id;
@@ -225,6 +264,7 @@
       if (st.consume && !window.__pr98Testing) { G.cart[st.consume] = Math.max(0, (G.cart[st.consume] || 0) - 1); save(); const b = el.querySelector('.stool[data-id="' + st.consume + '"]'); if (b) b.classList.add("used"); }
       sfx("power"); buzz("light"); pop("✓", true);
       if (st.next) setScene(st.next);
+      if (j === "brake") renderBrake();
       if (st.after) st.after(S);
       setTimeout(() => { const go = () => { if (over) return; if (busy) setTimeout(go, 100); else nextStep(); }; go(); }, 350);
     }

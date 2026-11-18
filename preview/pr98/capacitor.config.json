@@ -1,0 +1,13 @@
+{
+  "appId": "com.honestech.wheresmy10mm",
+  "appName": "Where's My 10MM?!",
+  "webDir": "www",
+  "server": {
+    "iosScheme": "capacitor"
+  },
+  "backgroundColor": "#071526",
+  "ios": {
+    "backgroundColor": "#071526",
+    "scrollEnabled": false
+  }
+}

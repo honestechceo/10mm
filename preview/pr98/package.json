@@ -1,0 +1,23 @@
+{
+  "name": "wheres-my-10mm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Where's My 10MM?! iPhone build (Capacitor). The web game itself needs none of this.",
+  "scripts": {
+    "www": "node scripts/prepare-web.mjs --app",
+    "sync": "node scripts/prepare-web.mjs --app && npx cap sync ios"
+  },
+  "dependencies": {
+    "@capacitor-community/admob": "^8.0.0",
+    "@capacitor/core": "^8.6.0",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/haptics": "^8.0.2",
+    "@capacitor/ios": "^8.6.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
+    "@capgo/native-purchases": "^8.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.0"
+  }
+}

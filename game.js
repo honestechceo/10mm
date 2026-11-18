@@ -180,7 +180,7 @@ const heroSprites = {};
 const ROLLING_SKIN_FOLDERS = {
   chrome:"shop_chrome", rusty:"junkyard_rust", black:"black_impact",
   candy:"candy_red", gold:"24k_gold", neon:"neon_blue",
-  purple:"finders_purple", champ:"daily_champ", afterburner:"afterburner",
+  /* Finder’s Purple: use original sprite until its 3D frames are corrected */ champ:"daily_champ", afterburner:"afterburner",
   diamond:"diamond_chrome", santa:"christmas_lights",
   candycane:"candy_cane_santa", valentine:"sweetheart",
   shamrock:"lucky_shamrock", easter:"easter_egg",

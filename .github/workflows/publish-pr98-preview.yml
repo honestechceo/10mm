@@ -35,6 +35,11 @@ jobs:
           from pathlib import Path
           p=Path('live/preview/pr98/game.js')
           s=p.read_text()
+          # Avoid TDZ ReferenceError: sprite initialization can access state early.
+          if s.count('const heroSprites = {};') != 1 or s.count('  state = "menu",\\n  player = {') != 1:
+              raise SystemExit('Game state initialization markers changed')
+          s=s.replace('const heroSprites = {};','const heroSprites = {};\\nlet state = "menu";',1)
+          s=s.replace('  state = "menu",\\n  player = {','  player = {',1)
           old='function ownedSkins() {'
           new='function ownedSkins() {\n  return ["chrome","rusty","black","candy","gold","neon","purple","champ","afterburner","diamond","santa","candycane","valentine","shamrock","easter","usa","pumpkin","turkey"]; // preview only'
           if s.count(old)!=1: raise SystemExit('Could not locate skin ownership function')

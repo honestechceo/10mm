@@ -176,6 +176,33 @@ const magnetArt = new Image();
 magnetArt.src = "chaser-magnet.webp";
 chaserSprites.magnetArt = magnetArt;
 const heroSprites = {};
+// Optional 12-frame 3D skin atlas; existing WebP sprites remain the fallback.
+const ROLLING_SKIN_FOLDERS = {
+  chrome:"shop_chrome", rusty:"junkyard_rust", black:"black_impact",
+  candy:"candy_red", gold:"24k_gold", neon:"neon_blue",
+  purple:"finders_purple", champ:"daily_champ", afterburner:"afterburner",
+  diamond:"diamond_chrome", santa:"christmas_lights",
+  candycane:"candy_cane_santa", valentine:"sweetheart",
+  shamrock:"lucky_shamrock", easter:"easter_egg",
+  usa:"stars_stripes", pumpkin:"jack_o_lantern", turkey:"turkey_day"
+};
+const rollingSkinCache = new Map();
+let activeRollingSkin = null;
+function loadRollingSkin(id) {
+  const folder = ROLLING_SKIN_FOLDERS[id];
+  if (!folder) { activeRollingSkin = null; return; }
+  if (rollingSkinCache.has(id)) { activeRollingSkin = rollingSkinCache.get(id); return; }
+  const record = { frames: Array(12).fill(null), ready: 0, missing: false };
+  rollingSkinCache.set(id, record);
+  activeRollingSkin = record;
+  for (let i=0; i<12; i++) {
+    const img = new Image();
+    img.onload = () => { record.frames[i] = img; record.ready++; if(state !== "running") render(); };
+    img.onerror = () => { record.missing = true; record.frames.fill(null); };
+    img.src = "skins3d/" + folder + "/frame_" + String(i).padStart(2,"0") + ".png";
+  }
+}
+
 for (const [key, src] of Object.entries({
   socket: skinSrc(),
   toolboxOpen: "toolbox-open.webp",
@@ -2206,7 +2233,12 @@ function render() {
   ctx.translate(player.x, player.y);
   ctx.rotate(Math.sin(player.angle) * 0.22);
   const hero = heroSprites.socket;
-  if (hero && hero.complete && hero.naturalWidth) {
+  const rollFrame = activeRollingSkin && !activeRollingSkin.missing && activeRollingSkin.ready === 12
+    ? activeRollingSkin.frames[Math.floor(Math.abs(player.angle) * 12 / (Math.PI * 2)) % 12] : null;
+  if (rollFrame && rollFrame.naturalWidth) {
+    ctx.rotate(-Math.sin(player.angle) * 0.22);
+    ctx.drawImage(rollFrame, -46, -46, 92, 92);
+  } else if (hero && hero.complete && hero.naturalWidth) {
     ctx.drawImage(hero, -87, -33, 131, 62);
   } else {
     image("socket10", 0, 0, 52, 52);
@@ -3427,7 +3459,9 @@ function skinSrc() {
 }
 function applySkin() {
   if (heroSprites && heroSprites.socket) heroSprites.socket.src = skinSrc();
+  loadRollingSkin(equippedSkin());
 }
+loadRollingSkin(equippedSkin());
 function showShop() {
   state = "shop";
   $("overlay").classList.remove("hidden");

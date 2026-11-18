@@ -30,6 +30,20 @@ jobs:
           mkdir -p live/preview/pr98
           rsync -a --delete --exclude='.git/' --exclude='.github/' --exclude='preview/' --exclude='CNAME' --exclude='.nojekyll' candidate/ live/preview/pr98/
           printf '%s\n' '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>PR 98 Skin Preview</title><p>Test build for 3D socket skins. <a href="./index.html">Open game</a>.</p>' > live/preview/pr98/preview-info.html
+          # Preview-only: unlock all existing shop skins without spending coins.
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('live/preview/pr98/game.js')
+          s=p.read_text()
+          old='function ownedSkins() {'
+          new='function ownedSkins() {\n  return SKINS.map(s => s.id); // PR98 preview only; no purchases or saved unlocks'
+          if s.count(old)!=1: raise SystemExit('Could not locate skin ownership function')
+          s=s.replace(old,new,1)
+          old_msg='" coins. Grab coins in every level to unlock new finishes.";'
+          if old_msg in s:
+              s=s.replace(old_msg,'" coins. PREVIEW MODE: All skins unlocked for testing; no coins spent.";')
+          p.write_text(s)
+          PY
           touch live/.nojekyll
           echo "Preview files: $(find live/preview/pr98 -type f | wc -l)"
       - name: Commit isolated preview only

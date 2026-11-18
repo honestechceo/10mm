@@ -21,6 +21,10 @@
     oil: { name: "Jug of motor oil", img: "svc-oil-full.webp", kind: "part" },
     brakes: { name: "Rotor & brake pads", img: "svc-brakes-new.webp", kind: "part" },
   };
+  // Dedicated matching tool illustrations; no more wrench/oil-jug placeholders.
+  const iconSvg = (body) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ff8757"/><stop offset="1" stop-color="#a71b17"/></linearGradient></defs>'+body+'</svg>');
+  ITEMS.brush.img = iconSvg('<g transform="rotate(-35 80 80)"><rect x="65" y="70" width="30" height="75" rx="11" fill="url(#g)" stroke="#2d1010" stroke-width="5"/><rect x="56" y="31" width="48" height="48" rx="8" fill="#394b5a" stroke="#cbd8df" stroke-width="5"/>'+Array.from({length:8},(_,i)=>'<path d="M'+(60+i*6)+' 31 V10" stroke="#e8c16d" stroke-width="5" stroke-linecap="round"/>').join('')+'</g>');
+  ITEMS.grease.img = iconSvg('<g transform="rotate(-23 80 80)"><path d="M50 36 H110 L118 115 H42Z" fill="#f4f6f8" stroke="#293647" stroke-width="6"/><path d="M49 55 H111 V100 H49Z" fill="url(#g)"/><text x="80" y="75" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">BRAKE</text><text x="80" y="93" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">GREASE</text><path d="M58 36 L66 15 H94 L102 36Z" fill="#c6d3df" stroke="#293647" stroke-width="5"/><path d="M56 116 H104 L97 145 H63Z" fill="#e3e9ed" stroke="#293647" stroke-width="5"/></g>');
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
     brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 110 },
@@ -147,7 +151,7 @@
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
     { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
     { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
-    { say: "PISTON TOOL: Retract the caliper piston", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston retracted for the new pads.") },
+    { say: "PISTON TOOL: Retract the caliper piston; remove old pads and rotor", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => { s.label("Piston retracted; worn pads and rotor removed."); s.wait("Removing the worn rotor and pads…", 900); } },
     { say: "HUB BRUSH: Clean rust and debris off the hub face", use: "brush", scene: "svc-brakes-worn.webp", after: (s) => s.label("Hub face cleaned for proper rotor seating.") },
     { say: "BRAKE GREASE: Clean and lightly lubricate the caliper slide pins", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Slide pins serviced with compatible brake grease; keep grease off friction surfaces.") },
     { say: "NEW PARTS: Remove old rotor and pads; install replacements", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },

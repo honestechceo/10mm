@@ -167,7 +167,11 @@
     hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("bonus");
     let el = $("svc");
     if (!el) { el = document.createElement("div"); el.id = "svc"; document.body.append(el); }
-    const steps = j === "oil" ? OIL_STEPS : BRAKE_STEPS, secs = JOBS[j].secs;
+    const steps = j === "oil" ? OIL_STEPS : BRAKE_STEPS;
+    // First successful service teaches the player. Later services test their memory.
+    const practiceKey = "tenmm-service-trained-" + j;
+    const trained = (G.done[j] || 0) > 0 || localStorage.getItem(practiceKey) === "1";
+    const secs = JOBS[j].secs + (trained ? 0 : 25);
     const tools = JOBS[j].needs.slice(); // Keep tools in a stable order.
     el.className = "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
@@ -180,7 +184,7 @@
     const artDefs = '<defs><linearGradient id="blue" x2=".2" y2="1"><stop stop-color="#94dcff"/><stop offset=".27" stop-color="#1766c5"/><stop offset=".65" stop-color="#003f94"/><stop offset="1" stop-color="#071c47"/></linearGradient><linearGradient id="metal" x2=".3" y2="1"><stop stop-color="#f2f6fc"/><stop offset=".5" stop-color="#73899e"/><stop offset="1" stop-color="#26384d"/></linearGradient><radialGradient id="rotor"><stop stop-color="#cad8e5"/><stop offset=".55" stop-color="#7b8c9b"/><stop offset=".8" stop-color="#dae5ee"/><stop offset="1" stop-color="#33485d"/></radialGradient><radialGradient id="rust"><stop stop-color="#81502d"/><stop offset=".5" stop-color="#a45d34"/><stop offset=".8" stop-color="#6d3a26"/><stop offset="1" stop-color="#302b2a"/></radialGradient><linearGradient id="glass" x2=".8" y2="1"><stop stop-color="#c2efff"/><stop offset=".35" stop-color="#3879b0"/><stop offset="1" stop-color="#0b1c35"/></linearGradient></defs>';
     const wheel = (x,y) => '<g transform="translate('+x+' '+y+')"><circle r="75" fill="#0a0e18" stroke="#202a39" stroke-width="9"/><circle r="60" fill="#26384b" stroke="#0a1018" stroke-width="8"/><circle r="49" fill="url(#metal)" stroke="#e4effa" stroke-width="4"/>'+Array.from({length:10},(_,n)=>'<path d="M-7 -43 L7 -43 11 -15 -11 -15Z" fill="#1a2636" transform="rotate('+(n*36)+')"/>').join('')+'<circle r="13" fill="#1b293d" stroke="#b9c9d8" stroke-width="5"/></g>';
     const suvArt = (raised, wheelOff) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
-      '<rect width="800" height="430" fill="#111d2b"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
+      '<rect width="800" height="430" fill="#111d2b"/><path d="M0 70 H800 M0 145 H800 M0 220 H800" stroke="#263d56" stroke-width="5" opacity=".7"/><path d="M55 0 V350 M755 0 V350" stroke="#37495d" stroke-width="13"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
       '<g transform="translate(0 '+(raised?-37:0)+')"><path d="M82 207 L153 186 245 102 Q260 86 290 86 H503 Q538 86 558 104 L635 188 709 206 Q752 218 754 254 L744 320 H52 L48 255 Q49 226 82 207Z" fill="url(#blue)" stroke="#081529" stroke-width="12"/>'+
       '<path d="M257 111 H500 Q520 111 534 127 L589 194 H182Z" fill="url(#glass)" stroke="#07172e" stroke-width="10"/><path d="M398 111 V194" stroke="#081a33" stroke-width="10"/><path d="M166 210 H640" stroke="#7acbff" stroke-width="6" opacity=".75"/><path d="M71 263 H735" stroke="#041c45" stroke-width="8"/><path d="M72 233 L161 214 161 246 70 257Z" fill="#e6f9ff" stroke="#193953" stroke-width="6"/><path d="M648 217 L726 233 734 254 650 242Z" fill="#f34b35"/><path d="M64 292 H745" stroke="#2a9ff2" stroke-width="6"/><path d="M317 194 V312 M550 194 V312" stroke="#061a3d" stroke-width="5"/><path d="M536 224 h37" stroke="#d7f5ff" stroke-width="6" stroke-linecap="round"/>'+
       wheel(210,320)+wheel(612,320)+'</g>'+
@@ -189,10 +193,10 @@
     const brakeArt = (stage) => {
       const fresh = stage >= 7, bare = stage === 5 || stage === 6, noCaliper = stage >= 4 && stage <= 7;
       const rotor = fresh ? 'url(#rotor)' : 'url(#rust)';
-      const caliper = fresh ? '#657587' : '#765b4c';
+      const caliper = '#765b4c'; // Original caliper stays the same, even after rotor/pad replacement.
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
-        '<rect width="800" height="430" fill="#101c2c"/><path d="M0 40 Q220 0 800 35 V120 Q600 76 450 115 Q180 95 0 150Z" fill="url(#blue)" stroke="#081426" stroke-width="15"/><path d="M0 380 H800" stroke="#ffcb3c" stroke-width="5"/>'+
-        '<circle cx="400" cy="242" r="181" fill="#0a1019" stroke="#1c2a3b" stroke-width="19"/><circle cx="400" cy="242" r="154" fill="#25313e" stroke="#56697a" stroke-width="10"/>'+
+        '<rect width="800" height="430" fill="#101c2c"/><path d="M0 65 H800 M0 135 H800 M0 205 H800" stroke="#263a50" stroke-width="5" opacity=".5"/><path d="M0 40 Q220 0 800 35 V120 Q600 76 450 115 Q180 95 0 150Z" fill="url(#blue)" stroke="#081426" stroke-width="15"/><path d="M35 62 Q240 15 690 55" fill="none" stroke="#6ecaff" stroke-width="9" opacity=".55"/><path d="M0 380 H800" stroke="#ffcb3c" stroke-width="5"/>'+
+        '<circle cx="400" cy="242" r="181" fill="#0a1019" stroke="#1c2a3b" stroke-width="19"/><circle cx="400" cy="242" r="154" fill="#25313e" stroke="#56697a" stroke-width="10"/><path d="M254 170 Q400 70 551 170" fill="none" stroke="#738ba1" stroke-width="8" opacity=".6"/>' +
         (bare ? '' : '<circle cx="400" cy="242" r="137" fill="'+rotor+'" stroke="#18232d" stroke-width="9"/>'+
         (fresh ? Array.from({length:9},(_,n)=>'<path d="M400 113 V140" transform="rotate('+(n*40)+' 400 242)" stroke="#fff" opacity=".28" stroke-width="5"/>').join('') :
         Array.from({length:11},(_,n)=>'<path d="M400 114 Q415 145 400 170" transform="rotate('+(n*32)+' 400 242)" stroke="#db9864" opacity=".6" stroke-width="4" fill="none"/>').join('')))+
@@ -251,11 +255,11 @@
       $("sStep").textContent = "STEP " + (i + 1) + "/" + steps.length + ": " + st.say;
       el.querySelectorAll(".stool").forEach((btn) => {
         const active = st.use === btn.dataset.id;
-        btn.classList.toggle("needed", active);
-        btn.setAttribute("aria-label", ITEMS[btn.dataset.id].name + (active ? ", use this now" : ""));
+        btn.classList.toggle("needed", active && !trained);
+        btn.setAttribute("aria-label", ITEMS[btn.dataset.id].name + (active && !trained ? ", use this now" : ""));
       });
       const cue = $("sCue");
-      if (cue) cue.textContent = st.use ? "USE NOW: " + ITEMS[st.use].name.toUpperCase() :
+      if (cue) cue.textContent = trained && st.use ? "EXPERT MODE • SELECT THE CORRECT TOOL" : st.use ? "USE NOW: " + ITEMS[st.use].name.toUpperCase() :
         st.tap ? "TAP THE HIGHLIGHTED OIL CAP" : st.check ? "CHECK THE DIPSTICK READING" :
         st.pump ? "TAP THE BRAKE PEDAL THREE TIMES" : st.say.toUpperCase();
       const tap = $("sTap"), act = $("sAct"), meter = $("sMeter");
@@ -331,7 +335,10 @@
     function finish(won) {
       if (over) return;
       over = true; cancelAnimationFrame(raf); if (fillTimer !== null) clearTimeout(fillTimer); stopMusic();
-      if (won) { sfx("win"); buzz("success"); el.classList.add("won"); }
+      if (won) {
+        try { localStorage.setItem(practiceKey, "1"); } catch (e) {}
+        sfx("win"); buzz("success"); el.classList.add("won");
+      }
       setTimeout(() => {
         el.className = "hidden";
         const t = Math.ceil(left / 1000);

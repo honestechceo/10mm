@@ -23,7 +23,7 @@
 
   window.runDrainIntro = function (done) {
     const n = Math.round(level / 10), moves = Math.max(14, 22 - Math.floor(n / 4));
-    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Parts above drop down. Open a path so the old oil pours into the drain pan in " + moves + " moves! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
+    popup("BONUS ROUND!", "DRAIN THE OIL: tap 2 or more matching parts that touch. Cleared spaces stay open. Open a path so the old oil pours into the drain pan in " + moves + " moves! Clear 6+ for a Torque Rocket, 8+ for an Oil Blast.", "START", () => runDrain(done, moves, n), "toolbox");
     $("eyebrow").textContent = "BONUS ROUND " + n + " OF " + MAX_LEVEL / 10;
   };
 
@@ -32,7 +32,7 @@
     let el = $("drn");
     if (!el) { el = document.createElement("div"); el.id = "drn"; document.body.append(el); }
     el.className = "";
-    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap 2+ matching parts. Parts above drop down.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
+    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap groups of 2+ matching parts to open a path.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
       '<div class="dhint">CLEAR MATCHING PARTS TO OPEN A CHANNEL ↓</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
     const fit = () => {

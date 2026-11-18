@@ -173,7 +173,7 @@
       b.innerHTML = '<img src="' + ITEMS[id].img + '" alt=""><em>' + ITEMS[id].name + "</em>";
       (ITEMS[id].kind === "tool" ? $("sBag") : $("sCartRow")).append(b);
     }
-    let left = secs * 1000, last = performance.now(), over = false, raf = 0, i = -1, busy = false, mistakes = 0, oilLvl = 0, pouring = false, pumps = 0;
+    let left = secs * 1000, last = performance.now(), over = false, raf = 0, i = -1, busy = false, mistakes = 0, oilLvl = 0, pouring = false, pumps = 0, fillTimer = null;
     const upd = () => { $("sTime").textContent = (left / 1000).toFixed(1); $("sTime").className = left < 8000 ? "low" : ""; $("sBar").style.transform = "scaleX(" + Math.max(0, left / (secs * 1000)) + ")"; };
     const pop = (txt, good) => { const p = document.createElement("div"); p.className = "bpop" + (good ? " good" : ""); p.textContent = txt; p.style.left = "50%"; p.style.top = "40%"; p.style.transform = "translateX(-50%)"; $("sScene").append(p); setTimeout(() => p.remove(), 800); };
     const wrong = (txt) => { left -= 2000; mistakes++; sfx("miss"); buzz("medium"); pop(txt || "-2s"); el.classList.remove("shake"); void el.offsetWidth; el.classList.add("shake"); };
@@ -208,7 +208,7 @@
         st.tap ? "TAP THE HIGHLIGHTED OIL CAP" : st.check ? "CHECK THE DIPSTICK READING" :
         st.pump ? "TAP THE BRAKE PEDAL THREE TIMES" : st.say.toUpperCase();
       const tap = $("sTap"), act = $("sAct"), meter = $("sMeter");
-      tap.className = "stap"; act.className = "sact"; meter.classList.toggle("on", !!st.pour);
+      tap.className = "stap"; act.className = "sact"; meter.classList.toggle("on", !!st.pour); if (st.pour) { oilLvl = 0; meterUpd(); }
       if (st.tap) { const [x, y, w, h] = st.tap; Object.assign(tap.style, { left: x * 100 + "%", top: y * 100 + "%", width: w * 100 + "%", height: h * 100 + "%" }); tap.className = "stap on"; }
       if (st.check) { act.textContent = "CHECK DIPSTICK"; act.className = "sact on"; }
       if (st.pump) { pumps = 0; act.textContent = "PUMP BRAKE PEDAL"; act.className = "sact on"; }
@@ -227,7 +227,26 @@
         e.preventDefault();
         if (over || busy || i < 0) return;
         const st = steps[i];
-        if (st.pour && id === "oil") { busy = true; pouring = false; oilLvl = 0.8; meterUpd(); b.classList.add("pouring"); S.wait("Adding the correct amount of fresh oil…", 1300); setTimeout(() => { b.classList.remove("pouring"); done(st); }, 1350); return; }
+        if (st.pour && id === "oil") {
+          busy = true;
+          oilLvl = 0;
+          meterUpd();
+          b.classList.add("pouring");
+          S.wait("Adding fresh oil — watch the meter rise…", 2800);
+          const startedAt = performance.now();
+          const fill = () => {
+            if (over || i < 0 || steps[i] !== st) { b.classList.remove("pouring"); return; }
+            oilLvl = Math.min(0.8, (performance.now() - startedAt) / 2800 * 0.8);
+            meterUpd();
+            if (oilLvl >= 0.8) {
+              b.classList.remove("pouring");
+              fillTimer = null;
+              done(st);
+            } else fillTimer = setTimeout(fill, 40);
+          };
+          fillTimer = setTimeout(fill, 40);
+          return;
+        }
         if (st.use === id && !st.pour) { busy = true; setTimeout(() => (busy = false), 360); done(st); }
         else if (b.classList.contains("used")) wrong("Already used!");
         else wrong(st.tap || st.check || st.pump ? "Tap the " + (st.tap ? "oil cap" : "button") + "!" : "Wrong tool! -2s");
@@ -259,7 +278,7 @@
     };
     function finish(won) {
       if (over) return;
-      over = true; cancelAnimationFrame(raf); stopMusic();
+      over = true; cancelAnimationFrame(raf); if (fillTimer !== null) clearTimeout(fillTimer); stopMusic();
       if (won) { sfx("win"); buzz("success"); el.classList.add("won"); }
       setTimeout(() => {
         el.className = "hidden";

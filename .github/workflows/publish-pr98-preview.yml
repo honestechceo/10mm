@@ -36,7 +36,7 @@ jobs:
           p=Path('live/preview/pr98/game.js')
           s=p.read_text()
           old='function ownedSkins() {'
-          new='function ownedSkins() {\n  return SKINS.map(s => s.id); // PR98 preview only; no purchases or saved unlocks'
+          new='function ownedSkins() {\n  return ["chrome","rusty","black","candy","gold","neon","purple","champ","afterburner","diamond","santa","candycane","valentine","shamrock","easter","usa","pumpkin","turkey"]; // preview only'
           if s.count(old)!=1: raise SystemExit('Could not locate skin ownership function')
           s=s.replace(old,new,1)
           old_msg='" coins. Grab coins in every level to unlock new finishes.";'

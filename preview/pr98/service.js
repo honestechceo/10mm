@@ -20,6 +20,11 @@
     filter: { name: "Oil filter", img: "svc-filter.webp", kind: "part" },
     oil: { name: "Jug of motor oil", img: "svc-oil-full.webp", kind: "part" },
     brakes: { name: "Rotor & brake pads", img: "svc-brakes-new.webp", kind: "part" },
+    sparkplug: { name: "Spark plug (not needed)", img: "tool-bolt.webp", kind: "tool" },
+    battery: { name: "Battery tester (not needed)", img: "svc-piston.webp", kind: "tool" },
+    coolant: { name: "Coolant jug (not needed)", img: "svc-oil-full.webp", kind: "tool" },
+    pliers: { name: "Pliers (not needed)", img: "svc-wrenches.webp", kind: "tool" },
+    belt: { name: "Drive belt (not needed)", img: "svc-brakes-new.webp", kind: "tool" },
   };
   // Dedicated matching tool illustrations; no more wrench/oil-jug placeholders.
   const iconSvg = (body) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ff8757"/><stop offset="1" stop-color="#a71b17"/></linearGradient></defs>'+body+'</svg>');
@@ -172,7 +177,14 @@
     const practiceKey = "tenmm-service-trained-" + j;
     const trained = (G.done[j] || 0) > 0 || localStorage.getItem(practiceKey) === "1";
     const secs = JOBS[j].secs + (trained ? 0 : 25);
-    const tools = JOBS[j].needs.slice(); // Keep tools in a stable order.
+    // The tool tray is a puzzle, not an ordered checklist. Add distractors and shuffle
+    // on every job launch; all required items remain present.
+    const distractors = j === "brake" ? ["sparkplug", "battery", "coolant", "pliers"] : ["sparkplug", "battery", "belt", "pliers"];
+    const tools = JOBS[j].needs.concat(distractors);
+    for (let k = tools.length - 1; k > 0; k--) {
+      const swap = Math.floor(Math.random() * (k + 1));
+      [tools[k], tools[swap]] = [tools[swap], tools[k]];
+    }
     el.className = "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
       '<div class="scue" id="sCue" aria-live="polite"></div><div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
@@ -225,7 +237,7 @@
       const b = document.createElement("button");
       b.className = "stool"; b.dataset.id = id;
       b.innerHTML = '<img src="' + ITEMS[id].img + '" alt=""><em>' + ITEMS[id].name + "</em>";
-      (ITEMS[id].kind === "tool" ? $("sBag") : $("sCartRow")).append(b);
+      $("sBag").append(b); // One mixed tray: parts and tools are not separated by step order.
     }
     let left = secs * 1000, last = performance.now(), over = false, raf = 0, i = -1, busy = false, mistakes = 0, oilLvl = 0, pouring = false, pumps = 0, fillTimer = null;
     const upd = () => { $("sTime").textContent = (left / 1000).toFixed(1); $("sTime").className = left < 8000 ? "low" : ""; $("sBar").style.transform = "scaleX(" + Math.max(0, left / (secs * 1000)) + ")"; };
@@ -259,7 +271,7 @@
         btn.setAttribute("aria-label", ITEMS[btn.dataset.id].name + (active && !trained ? ", use this now" : ""));
       });
       const cue = $("sCue");
-      if (cue) cue.textContent = trained && st.use ? "EXPERT MODE • SELECT THE CORRECT TOOL" : st.use ? "USE NOW: " + ITEMS[st.use].name.toUpperCase() :
+      if (cue) cue.textContent = trained && st.use ? "EXPERT MODE • SELECT THE CORRECT TOOL OR PART" : st.use ? "USE NOW: " + ITEMS[st.use].name.toUpperCase() :
         st.tap ? "TAP THE HIGHLIGHTED OIL CAP" : st.check ? "CHECK THE DIPSTICK READING" :
         st.pump ? "TAP THE BRAKE PEDAL THREE TIMES" : st.say.toUpperCase();
       const tap = $("sTap"), act = $("sAct"), meter = $("sMeter");

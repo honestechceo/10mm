@@ -15,13 +15,15 @@
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
     lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
+    brush: { name: "Hub cleaning brush", img: "svc-wrenches.webp", kind: "tool" },
+    grease: { name: "Brake pin grease", img: "svc-oil-full.webp", kind: "tool" },
     filter: { name: "Oil filter", img: "svc-filter.webp", kind: "part" },
     oil: { name: "Jug of motor oil", img: "svc-oil-full.webp", kind: "part" },
     brakes: { name: "Rotor & brake pads", img: "svc-brakes-new.webp", kind: "part" },
   };
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
-    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brakes"], secs: 50 },
+    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 110 },
   };
 
   const load = () => { try { return JSON.parse(localStorage.getItem("tenmm-garage")) || {}; } catch (e) { return {}; } };
@@ -146,6 +148,8 @@
     { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
     { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
     { say: "PISTON TOOL: Retract the caliper piston", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston retracted for the new pads.") },
+    { say: "HUB BRUSH: Clean rust and debris off the hub face", use: "brush", scene: "svc-brakes-worn.webp", after: (s) => s.label("Hub face cleaned for proper rotor seating.") },
+    { say: "BRAKE GREASE: Clean and lightly lubricate the caliper slide pins", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Slide pins serviced with compatible brake grease; keep grease off friction surfaces.") },
     { say: "NEW PARTS: Remove old rotor and pads; install replacements", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
     { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
     { say: "LUG WRENCH: Reinstall wheel and tighten lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
@@ -165,7 +169,10 @@
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
       '<div class="scue" id="sCue" aria-live="polite"></div><div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
-    const carSrc = "svc-car-jack.webp";
+    // Unjacked car with wheels ON at the start. The jack is a separate sprite
+    // and the car only rises after the player uses it.
+    const carSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="360" viewBox="0 0 800 360"><defs><linearGradient id="paint" x2="0" y2="1"><stop stop-color="#62b7e8"/><stop offset="1" stop-color="#175187"/></linearGradient></defs><ellipse cx="400" cy="316" rx="335" ry="22" fill="#07131b" opacity=".5"/><path d="M85 188 L169 170 253 76 Q268 61 302 61 H514 Q549 61 569 83 L639 166 709 185 Q751 192 753 222 V270 H52 V227 Q52 199 85 188Z" fill="url(#paint)" stroke="#071b2b" stroke-width="12"/><path d="M270 91 H503 Q523 91 535 107 L583 168 H211Z" fill="#b8e8fa" stroke="#123b5c" stroke-width="10"/><path d="M398 91 V169" stroke="#123b5c" stroke-width="11"/><path d="M72 223 H750" stroke="#a9e6ff" stroke-width="7" opacity=".5"/><rect x="698" y="205" width="43" height="19" rx="7" fill="#fff4c3"/><rect x="57" y="206" width="24" height="20" rx="5" fill="#ff6d59"/><g fill="#111a25" stroke="#02070b" stroke-width="9"><circle cx="207" cy="271" r="66"/><circle cx="614" cy="271" r="66"/></g><g fill="#aab9c8" stroke="#344453" stroke-width="8"><circle cx="207" cy="271" r="38"/><circle cx="614" cy="271" r="38"/></g><g fill="#45576a"><circle cx="207" cy="271" r="11"/><circle cx="614" cy="271" r="11"/></g></svg>';
+    const carSrc = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(carSvg);
     $("sCar").src = carSrc;
     for (const id of tools) {
       const b = document.createElement("button");

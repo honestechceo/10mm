@@ -1,0 +1,46 @@
+name: Publish PR 98 game preview
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-pr98-preview
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out main (live website)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: live
+          persist-credentials: true
+      - name: Check out PR 98 branch
+        uses: actions/checkout@v4
+        with:
+          ref: feature/3d-rolling-skin-loader
+          path: candidate
+          persist-credentials: false
+      - name: Copy game into isolated preview folder
+        run: |
+          mkdir -p live/preview/pr98
+          rsync -a --delete --exclude='.git/' --exclude='.github/' --exclude='preview/' --exclude='CNAME' --exclude='.nojekyll' candidate/ live/preview/pr98/
+          printf '%s\n' '<!doctype html><meta charset="utf-8"><meta name="robots" content="noindex"><title>PR 98 Skin Preview</title><p>Test build for 3D socket skins. <a href="./index.html">Open game</a>.</p>' > live/preview/pr98/preview-info.html
+          touch live/.nojekyll
+          echo "Preview files: $(find live/preview/pr98 -type f | wc -l)"
+      - name: Commit isolated preview only
+        working-directory: live
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add preview/pr98 .nojekyll
+          if git diff --cached --quiet; then
+            echo "Preview already up to date"
+          else
+            git commit -m "Publish isolated PR 98 game preview under /preview/pr98"
+            git push origin HEAD:main
+          fi

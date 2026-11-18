@@ -56,7 +56,7 @@
     const idx = (x, y) => y * GW + x;
     let total = 0;
     for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
-    const target = Math.max(1, Math.floor(total * 0.12)), PAN_Y = Math.floor((LH - 34) / C);
+    const target = Math.max(1, Math.floor(total * 0.0192)), PAN_Y = Math.floor((LH - 34) / C);
     // Catch zone spans the full playable board, including the far-left and far-right columns.
     const PAN_LEFT = 0, PAN_RIGHT = LW, PAN_RIM = LH - 49;
     let missedOil = 0;

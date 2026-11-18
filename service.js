@@ -160,7 +160,7 @@
     let el = $("svc");
     if (!el) { el = document.createElement("div"); el.id = "svc"; document.body.append(el); }
     const steps = j === "oil" ? OIL_STEPS : BRAKE_STEPS, secs = JOBS[j].secs;
-    const tools = JOBS[j].needs.slice().sort(() => Math.random() - 0.5);
+    const tools = JOBS[j].needs.slice(); // Keep tools in a stable order.
     el.className = "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
       '<div class="scue" id="sCue" aria-live="polite"></div><div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
@@ -233,7 +233,7 @@
         else wrong(st.tap || st.check || st.pump ? "Tap the " + (st.tap ? "oil cap" : "button") + "!" : "Wrong tool! -2s");
       };
       b.onpointerdown = press;
-      const stop = () => { if (pouring) { pouring = false; b.classList.remove("pouring"); const st = steps[i]; if (st && st.pour && oilLvl >= 0.35) { busy = true; setTimeout(() => (busy = false), 360); done(st); } } };
+      const stop = () => { if (pouring) { pouring = false; b.classList.remove("pouring"); const st = steps[i]; if (st && st.pour && oilLvl >= 0.70) { busy = true; setTimeout(() => (busy = false), 360); done(st); } } };
       b.onpointerup = stop; b.onpointerleave = stop; b.onpointercancel = stop;
     });
     $("sTap").onpointerdown = (e) => { e.preventDefault(); if (over || busy) return; const st = steps[i]; if (st && st.tap) { $("sTap").className = "stap"; busy = true; setTimeout(() => (busy = false), 360); done(st); } };
@@ -253,7 +253,16 @@
     const loop = (now) => {
       if (over) return;
       const dt = Math.min(100, now - last); last = now; left -= dt;
-      if (pouring) { oilLvl = Math.min(1.05, oilLvl + dt / 3200); meterUpd(); }
+      if (pouring) {
+        oilLvl = Math.min(0.8, oilLvl + dt / 3200); meterUpd();
+        if (oilLvl >= 0.8) {
+          pouring = false;
+          const oilButton = el.querySelector('.stool[data-id="oil"]');
+          if (oilButton) oilButton.classList.remove("pouring");
+          const st = steps[i];
+          if (st && st.pour && !busy) { busy = true; done(st); }
+        }
+      }
       if (left <= 0) { left = 0; upd(); sfx("hit"); buzz("heavy"); return finish(false); }
       upd(); raf = requestAnimationFrame(loop);
     };

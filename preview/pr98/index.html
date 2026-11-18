@@ -181,9 +181,13 @@ body.one-button #jumpLeft{display:none}body.one-button #pause{grid-area:pause;mi
 <script>
 (function(){
  const panel=document.getElementById('pr98TestPanel'), trigger=document.getElementById('pr98TestOpen');
+ const selector=document.getElementById('pr98TestLevel');
+ selector.innerHTML='';
+ for(let n=1;n<=40;n++){const o=document.createElement('option');o.value=String(n*10);o.textContent='Round '+n+' — Level '+(n*10);selector.appendChild(o);}
+ let savedLevel=null;
  const open=()=>{panel.classList.add('open');trigger.style.display='none';};
  const close=()=>{panel.classList.remove('open');trigger.style.display='';};
- window.__pr98ShowTests=function(){if(typeof showMenu==='function')showMenu();open();};
+ window.__pr98ShowTests=function(){if(savedLevel!==null){level=savedLevel;savedLevel=null;}if(typeof showMenu==='function')showMenu();open();};
  trigger.onclick=open;
  panel.addEventListener('click',function(e){
    const btn=e.target.closest('[data-test]');if(!btn)return;
@@ -197,6 +201,7 @@ body.one-button #jumpLeft{display:none}body.one-button #pause{grid-area:pause;mi
      if(typeof hidePanels==='function')hidePanels();
      const ov=document.getElementById('overlay');if(ov)ov.classList.add('hidden');
      if(kind==='drain'||kind==='find'){
+       if(savedLevel===null)savedLevel=level;
        level=Number(document.getElementById('pr98TestLevel').value);
        close();
        if(kind==='drain')window.runDrainIntro(()=>window.__pr98ShowTests());

@@ -10,8 +10,8 @@
     wrenches: { name: "Wrenches", img: "svc-wrenches.webp", kind: "tool" },
     ratchet: { name: "Flex ratchet", img: "svc-ratchet.webp", kind: "tool" },
     funnel: { name: "Funnel", img: "svc-funnel.webp", kind: "tool" },
-    ragblue: { name: "Blue shop rag", img: "svc-rag-blue.webp", kind: "tool" },
-    ragred: { name: "Red shop rag", img: "svc-rag-red.webp", kind: "tool" },
+    ragblue: { name: "BLUE • Dipstick rag", img: "svc-rag-blue.webp", kind: "tool" },
+    ragred: { name: "RED • Spill cleanup rag", img: "svc-rag-red.webp", kind: "tool" },
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
     lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
@@ -135,20 +135,20 @@
     { say: "Tap the oil cap to open it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-closed.webp", next: "scene-engine-open.webp" },
     { say: "Set the funnel in the fill hole", use: "funnel", scene: "scene-engine-open.webp", after: (s) => s.showFunnel(true) },
     { say: "HOLD the oil jug to pour", pour: true, use: "oil", consume: "oil", scene: "scene-engine-open.webp" },
-    { say: "Wipe the dipstick with the blue rag", use: "ragblue", scene: "scene-engine-open.webp", after: (s) => s.dip("dip-clean.webp") },
+    { say: "BLUE RAG: Clean the dipstick before checking the oil level", use: "ragblue", scene: "scene-engine-open.webp", after: (s) => s.dip("dip-clean.webp") },
     { say: "Tap CHECK DIPSTICK", check: true, scene: "scene-engine-open.webp" },
     { say: "Tap the oil cap to close it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-open.webp", next: "scene-engine-closed.webp", before: (s) => s.showFunnel(false) },
-    { say: "Wipe up the spills with the red rag", use: "ragred", scene: "scene-engine-closed.webp" },
+    { say: "RED RAG: Wipe spilled oil around the fill cap", use: "ragred", scene: "scene-engine-closed.webp" },
   ];
   const BRAKE_STEPS = [
     { say: "Put on your gloves", use: "gloves", scene: "car" },
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Loosen the lug nuts and take the wheel off", use: "lugwrench", scene: "car", next: "svc-car-jack.webp" },
-    { say: "Unbolt the caliper", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
-    { say: "Push the caliper piston back in", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston pushed back. Room for the thick new pads!") },
-    { say: "Install the new rotor & pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
-    { say: "Bolt the caliper back on", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "Put the wheel back on and tighten the lug nuts", use: "lugwrench", scene: "svc-car-jack.webp", next: "car" },
+    { say: "LUG WRENCH: Remove wheel to access the brakes", use: "lugwrench", scene: "car", next: "svc-car-jack.webp" },
+    { say: "RATCHET: Remove caliper bolts", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
+    { say: "PISTON TOOL: Retract caliper piston", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston pushed back. Room for the thick new pads!") },
+    { say: "NEW PARTS: Fit the rotor and brake pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
+    { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
+    { say: "LUG WRENCH: Reinstall wheel and tighten lug nuts", use: "lugwrench", scene: "svc-car-jack.webp", next: "car" },
     { say: "Lower the car", use: "jack", scene: "car", after: (s) => s.lift(false) },
     { say: "Pump the brake pedal 3 times", pump: 3, scene: "car" },
   ];
@@ -163,9 +163,9 @@
     const tools = JOBS[j].needs.slice().sort(() => Math.random() - 0.5);
     el.className = "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
-      '<div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
+      '<div class="scue" id="sCue" aria-live="polite"></div><div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
-    const carSrc = "car-" + (1 + (level % 7)) + ".webp";
+    const carSrc = "svc-car-jack.webp";
     $("sCar").src = carSrc;
     for (const id of tools) {
       const b = document.createElement("button");
@@ -198,6 +198,15 @@
       if (st.before) st.before(S);
       setScene(st.scene);
       $("sStep").textContent = "STEP " + (i + 1) + "/" + steps.length + ": " + st.say;
+      el.querySelectorAll(".stool").forEach((btn) => {
+        const active = st.use === btn.dataset.id;
+        btn.classList.toggle("needed", active);
+        btn.setAttribute("aria-label", ITEMS[btn.dataset.id].name + (active ? ", use this now" : ""));
+      });
+      const cue = $("sCue");
+      if (cue) cue.textContent = st.use ? "USE NOW: " + ITEMS[st.use].name.toUpperCase() :
+        st.tap ? "TAP THE HIGHLIGHTED OIL CAP" : st.check ? "CHECK THE DIPSTICK READING" :
+        st.pump ? "TAP THE BRAKE PEDAL THREE TIMES" : st.say.toUpperCase();
       const tap = $("sTap"), act = $("sAct"), meter = $("sMeter");
       tap.className = "stap"; act.className = "sact"; meter.classList.toggle("on", !!st.pour);
       if (st.tap) { const [x, y, w, h] = st.tap; Object.assign(tap.style, { left: x * 100 + "%", top: y * 100 + "%", width: w * 100 + "%", height: h * 100 + "%" }); tap.className = "stap on"; }

@@ -59,6 +59,8 @@
   let boss = null;
   const BOSS_S = 150;
   const bossSprite = new Image(); bossSprite.src = "tool-evilsocket.webp";
+  const hammerSprite = new Image(); hammerSprite.src = "tool-airhammer.webp";
+  const bossTip = () => boss && boss.hammer ? "BOSS LEVEL: the AIR HAMMER is coming at you! Double-jump over it when it charges." : "BOSS LEVEL: the BIG 12 is coming! Double-jump over it when it charges.";
 
   // ---------- endless ----------
   let endlessNext = 0, endlessMeters = 0;
@@ -117,8 +119,9 @@
         }
         if (runMode === "adventure" && level % 25 === 0) {
           chase = "none";
-          boss = { x: -170, mode: "wait", t: 200, charges: 0, spin: 0, speed: 6.2 + Math.min(level, 260) * 0.012 };
-          $("tip").textContent = "BOSS LEVEL: the BIG 12 is coming! Double-jump over it when it charges.";
+          boss = { x: -170, mode: "wait", t: 200, charges: 0, spin: 0, speed: 6.2 + Math.min(level, 260) * 0.012, hammer: level > 200 };
+          if (boss.hammer) { boss.x = W + 200; boss.speed = 5.4 + Math.min(level - 200, 200) * 0.008; }
+          $("tip").textContent = bossTip();
         }
         if (runMode === "daily") {
           $("level").textContent = "DAILY";
@@ -255,6 +258,7 @@
   // ---------- boss: the BIG 12 ----------
   function bossTick(dt) {
     const b = boss;
+    if (b.hammer) return hammerTick(dt);
     b.spin += dt * (b.mode === "charge" ? 0.22 : 0.05);
     if (b.mode === "wait") {
       b.x += (22 + Math.sin(frames * 0.05) * 8 - b.x) * 0.05 * dt;
@@ -277,7 +281,51 @@
       }
     }
   }
+  // ---------- boss: the AIR HAMMER (levels 225+) — charges head-on from the front ----------
+  function hammerTick(dt) {
+    const b = boss;
+    b.spin += dt;
+    if (b.mode === "wait") {
+      b.x += (W + 60 + Math.sin(frames * 0.05) * 10 - b.x) * 0.05 * dt;
+      b.t -= dt;
+      if (b.t <= 0 && scroll < world - 700) { b.mode = "warn"; b.t = 70; sfx("grab"); buzz("medium"); $("tip").textContent = "AIR HAMMER INCOMING! DOUBLE-JUMP!"; }
+    } else if (b.mode === "warn") {
+      b.x += (W - 10 + Math.sin(frames * 1.3) * 6 - b.x) * 0.15 * dt;
+      b.t -= dt;
+      if (b.t <= 0) { b.mode = "charge"; b.charges++; buzz("light"); }
+    } else if (b.mode === "charge") {
+      b.x -= (b.speed + 3) * dt;
+      if (b.x < -200) { b.mode = "wait"; b.x = W + 220; b.t = Math.max(90, 190 - b.charges * 12 - (level - 200) * 0.2); $("tip").textContent = "Dodged it! It's coming back…"; }
+    }
+    if (b.mode === "charge" && shield <= 0 && !(rocket > 0)) {
+      const bx = b.x - 8, by = ground - BOSS_S * 0.4, dx = bx - player.x, dy = by - player.y;
+      if (dx * dx + dy * dy < (BOSS_S * 0.3 + player.r * 0.75) ** 2) {
+        sfx("hit"); buzz("heavy"); stopMusic(); render();
+        crash("HAMMERED!", "The AIR HAMMER chiseled your 10mm right off the floor. When it charges, double-jump high over it, or grab a shield.", "TRY AGAIN", null, "tool:airhammer");
+        return "stop";
+      }
+    }
+  }
+  function drawHammer() {
+    const b = boss, dw = BOSS_S * 1.5, dh = dw * 0.668;
+    ctx.save();
+    if (b.mode === "warn" && Math.floor(frames / 6) % 2) {
+      ctx.fillStyle = "#ff3b30"; ctx.font = "900 44px system-ui,sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("!", Math.min(W - 30, b.x - 40), ground - BOSS_S - 20);
+    }
+    const shake = b.mode === "charge" ? Math.sin(b.spin * 2.6) * 4 : b.mode === "warn" ? Math.sin(frames * 1.7) * 2 : Math.sin(frames * 0.08) * 2;
+    ctx.translate(b.x, ground + 6 + shake);
+    if (b.mode === "charge") ctx.rotate(Math.sin(b.spin * 1.3) * 0.04);
+    if (hammerSprite.complete && hammerSprite.naturalWidth) ctx.drawImage(hammerSprite, -dw * 0.5, -dh, dw, dh);
+    ctx.restore();
+    if (b.mode === "charge") {
+      ctx.save(); ctx.globalAlpha = 0.35; ctx.fillStyle = "#c9b9a0";
+      for (let k = 1; k < 4; k++) { ctx.beginPath(); ctx.ellipse(b.x + 40 + k * 30, ground - 4, 18, 5, 0, 0, 7); ctx.fill(); }
+      ctx.restore();
+    }
+  }
   function drawBoss() {
+    if (boss.hammer) return drawHammer();
     const b = boss, s = BOSS_S;
     ctx.save();
     if (b.mode === "warn" && Math.floor(frames / 6) % 2) {
@@ -311,7 +359,7 @@
   };
   function resumeAfterCrash(msg) {
     continued = true; shield = 170; player.vy = Math.min(player.vy, 0);
-    if (boss) { boss.mode = "wait"; boss.x = -260; boss.t = 200; }
+    if (boss) { boss.mode = "wait"; boss.x = boss.hammer ? W + 260 : -260; boss.t = 200; }
     state = "running"; $("overlay").classList.add("hidden"); $("tip").textContent = msg;
     last = 0; startMusic(); rafId = requestAnimationFrame(tick);
   }
@@ -537,7 +585,7 @@
     baseStart();
     if (runMode === "endless") $("tip").textContent = "ENDLESS: run as far as you can! Best " + LS.get("tenmm-endless-best", 0) + " m";
     else if (runMode === "daily") { createLevelTip(); }
-    else if (boss) $("tip").textContent = "BOSS LEVEL: the BIG 12 is coming! Double-jump over it when it charges.";
+    else if (boss) $("tip").textContent = bossTip();
     if (window.mirrorOn) $("tip").textContent = "MIRROR LEVEL! " + $("tip").textContent;
   };
   function createLevelTip() {

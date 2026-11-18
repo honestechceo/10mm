@@ -64,7 +64,7 @@ jobs:
           p = 'ios/App/App/capacitor.config.json'
           c = json.load(open(p))
           lst = c.setdefault('packageClassList', [])
-          for name in ('CloudSavePlugin', 'GameCenterPlugin', 'RadioPlugin'):
+          for name in ('CloudSavePlugin', 'GameCenterPlugin', 'RadioPlugin', 'ReviewPlugin'):
               if name not in lst:
                   lst.append(name)
           json.dump(c, open(p, 'w'), indent=2)

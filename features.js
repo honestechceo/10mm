@@ -593,6 +593,21 @@
   // report progress whenever a level or bonus round ends
   const baseAfterWin = FX.afterWin;
   FX.afterWin = function () { baseAfterWin(); GC.sync(); };
+  // ask for a rating after a few happy moments (a win, never after a crash or an ad)
+  const R = native ? C.registerPlugin("Review") : null;
+  const RATE_AT = [5, 20, 50, 120];
+  const baseAfterWin2 = FX.afterWin;
+  FX.afterWin = function () {
+    baseAfterWin2();
+    if (!R || Feature.mode() !== "adventure" || !RATE_AT.includes(level)) return;
+    let asked = [];
+    try { asked = JSON.parse(localStorage.getItem("tenmm-rate") || "[]"); } catch (e) {}
+    if (asked.includes(level) || (asked.length && Date.now() - (+localStorage.getItem("tenmm-rate-at") || 0) < 30 * 86400000)) return;
+    asked.push(level);
+    localStorage.setItem("tenmm-rate", JSON.stringify(asked));
+    localStorage.setItem("tenmm-rate-at", Date.now());
+    setTimeout(() => { if (state !== "running") R.request().catch(() => {}); }, 1400);
+  };
   const baseBonusResult = bonusResult;
   bonusResult = function (won, t, done) { baseBonusResult(won, t, done); GC.sync(); };
 })();

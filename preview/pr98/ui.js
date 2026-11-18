@@ -236,6 +236,13 @@ function runBonus(done) {
   bonus.raf = requestAnimationFrame(tickB);
 }
 function bonusResult(won, t, done) {
+  if (window.__pr98Testing) {
+    popup(won ? "TEST PASSED!" : "TEST FINISHED", won ? "Bonus round completed. No coins or progress changed." : "Try again from the Test Rounds menu.", "BACK TO TESTS", () => {
+      if (typeof window.__pr98ShowTests === "function") window.__pr98ShowTests();
+      else showMenu();
+    }, won ? "win" : "toolbox");
+    return;
+  }
   let desc,
     art = "toolbox";
   if (won) {

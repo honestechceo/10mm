@@ -41,6 +41,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - name: Use the newest released Xcode on the runner
+        run: |
+          ls -d /Applications/Xcode*.app || true
+          # newest Xcode that isn't a beta (App Store uploads need a released Xcode)
+          pick=$(ls -d /Applications/Xcode_*.app 2>/dev/null | grep -vi beta | sort -V | tail -1)
+          if [ -n "$pick" ]; then sudo xcode-select -s "$pick/Contents/Developer"; echo "Using $pick"; fi
       - name: Xcode version
         run: xcodebuild -version
       - name: Install Capacitor

@@ -176,6 +176,8 @@ const magnetArt = new Image();
 magnetArt.src = "chaser-magnet.webp";
 chaserSprites.magnetArt = magnetArt;
 const heroSprites = {};
+// State must exist before sprite initialization and any early render callbacks.
+let state = "menu";
 // Optional 12-frame 3D skin atlas; existing WebP sprites remain the fallback.
 const ROLLING_SKIN_FOLDERS = {
   chrome:"shop_chrome", rusty:"junkyard_rust", black:"black_impact",
@@ -266,7 +268,6 @@ let level = Math.max(
     1,
     Math.min(MAX_LEVEL, +(localStorage.getItem("tenmm-escape-best") || 1)),
   ),
-  state = "menu",
   player = {
     x: 118,
     y: ground - 22,

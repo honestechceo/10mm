@@ -483,7 +483,7 @@ function crash(title, desc, _, __, art) {
   );
   if (window.Monetize && Monetize.canContinue && !continued) {
     $("menuExtra").style.display = "";
-    $("menuExtra").textContent = "WATCH AD: KEEP GOING";
+    $("menuExtra").textContent = "▶ WATCH AN AD TO KEEP GOING";
     $("menuExtra").onclick = async () => {
       const ok = await Monetize.watchToContinue();
       if (!ok) {
@@ -517,6 +517,11 @@ function popup(title, desc, button, callback, art) {
   $("go").textContent = button;
   $("overlay").classList.remove("hidden");
   $("go").onclick = callback;
+  // a jump tap that lands just as this screen appears must not press a button (like the ad button)
+  const ov = $("overlay");
+  ov.classList.add("cooldown");
+  clearTimeout(popup.t);
+  popup.t = setTimeout(() => ov.classList.remove("cooldown"), 900);
 }
 let audioCtx = null,
   lastGrabSoundCycle = -1,

@@ -8,8 +8,8 @@
   const COLS = 7, ROWS = 8, T = 50, BX = 0, BY = 162, TCELL = T / C;
   const PAN_TOP = 146;
   // retro look: the board is drawn on a low-res canvas and blown up with hard pixels.
-  // PX = logical units per pixel: 2.5 = chunky 16-bit, 1.25 = finer 32-bit.
-  const PX = window.__drainPX || 1.25;
+  // PX = logical units per pixel (2.5 = chunky Terraria-style pixels).
+  const PX = window.__drainPX || 2.5;
   // tiny 5x7 bitmap font so text looks like an old console game (each glyph = 35 bits, row by row)
   const FONT = {"A":15621670449,"B":32801506878,"C":16660316687,"D":32801080894,"E":33840644639,"F":33840644624,"G":16660547119,"H":18842895921,"I":33424543903,"J":7585466956,"K":18879369809,"L":17734058527,"M":19182306865,"N":19115132465,"O":15621211694,"P":32801505808,"Q":15621215821,"R":32801509969,"S":16660235326,"T":33424543876,"U":18842437166,"V":18842436932,"W":18842572458,"X":18834663985,"Y":18834657412,"Z":33321787935,"0":15692654126,"1":4701950094,"2":15603929375,"3":32247317566,"4":2359917634,"5":33854359086,"6":15587034670,"7":33321787656,"8":15621113390,"9":15621129262,"!":4433514500,"?":15604060164,".":4,"%":27718197619,"+":139432064,"-":1015808,"'":4437573632};
   const FLOOR = BY + ROWS * T;
@@ -206,8 +206,9 @@
           const d = ltr ? 1 : -1;
           let nx = -1, ny = -1;
           if (!isSolid(x, y + 1)) { nx = x; ny = y + 1; }
-          else if (!isSolid(x + d, y + 1)) { nx = x + d; ny = y + 1; }
-          else if (!isSolid(x - d, y + 1)) { nx = x - d; ny = y + 1; }
+          // diagonal only through an open side, so oil can't squeeze between parts that touch at the corners
+          else if (!isSolid(x + d, y + 1) && !isSolid(x + d, y)) { nx = x + d; ny = y + 1; }
+          else if (!isSolid(x - d, y + 1) && !isSolid(x - d, y)) { nx = x - d; ny = y + 1; }
           else if (!isSolid(x + d, y)) { nx = x + d; ny = y; if (!isSolid(x + 2 * d, y) && Math.random() < 0.6) nx = x + 2 * d; }
           else if (!isSolid(x - d, y)) { nx = x - d; ny = y; }
           if (nx >= 0) { const nk = idx(nx, ny); cell[nk] = 1; shade[nk] = shade[k]; cell[k] = 0; if (ny > y) moved++; }
@@ -220,22 +221,75 @@
     const oilCtx = oilCan.getContext("2d"), oilImg = oilCtx.createImageData(GW, GH);
     function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     function fitImg(im, cx, cy, box) { if (!ready(im)) return; const a = im.naturalWidth / im.naturalHeight, w = a > 1 ? box : box * a, h = a > 1 ? box / a : box; g.drawImage(im, cx - w / 2, cy - h / 2, w, h); }
-    function drawBack() {
-      g.fillStyle = "#2a3038"; g.fillRect(0, 0, LW, LH);
-      g.strokeStyle = "#20252c"; g.lineWidth = 2;
-      for (let y = 0, row = 0; y < LH; y += 22, row++) { g.beginPath(); g.moveTo(0, y); g.lineTo(LW, y); g.stroke(); for (let x = (row % 2) * 24; x < LW; x += 48) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke(); } }
-      if (ready(engImg)) { g.save(); g.globalAlpha = 0.6; const w = LW * 1.2, h = (w * engImg.naturalHeight) / engImg.naturalWidth; g.drawImage(engImg, (LW - w) / 2, 64 - h * 0.92, w, h); g.restore(); }
-      const pg = g.createLinearGradient(0, 56, 0, PAN_TOP + 10); pg.addColorStop(0, "#6a747e"); pg.addColorStop(1, "#2b3138");
-      g.fillStyle = "#59636d"; g.fillRect(-6, 56, LW + 12, PAN_TOP - 48); g.fillStyle = "#8a96a2"; g.fillRect(-6, 56, LW + 12, 5); g.fillStyle = "#2b3138"; g.fillRect(-6, PAN_TOP + 3, LW + 12, 5);
-      g.fillStyle = "#14181d"; g.fillRect(10, 68, LW - 20, PAN_TOP - 68);
-      g.fillStyle = "#9aa6b2"; for (let x = 18; x < LW; x += 38) g.fillRect(x - 3, 59, 6, 6);
-      txt("ENGINE OIL PAN", 12, 52, 1.25, "#e6edf3", "left");
-      // board frame like a tool chest drawer
-      g.fillStyle = "#b52a20"; g.fillRect(BX - 1, BY - 8, COLS * T + 2, ROWS * T + 14); g.fillStyle = "#e0503f"; g.fillRect(BX - 1, BY - 8, COLS * T + 2, 3);
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#1b232c" : "#202933"; g.fillRect(BX + c * T, BY + r * T, T, T); }
-      g.fillStyle = "#3b4048"; g.fillRect(0, FLOOR + 6, LW, LH - FLOOR);
-      g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
+    // ---- Terraria-style pixel textures, built once at low resolution ----
+    let seed = 7; const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    const TB = Math.round(T / PX); // block size in pixels
+    function makeTex(w, h, fn) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); fn(x, w, h); return c; }
+    const px1 = (x, col, i, j, w = 1, h = 1) => { x.fillStyle = col; x.fillRect(i, j, w, h); };
+    const shades = (hex, f) => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g2 = (n >> 8) & 255, b = n & 255, m = (v) => Math.max(0, Math.min(255, Math.round(v * f))); return "rgb(" + m(r) + "," + m(g2) + "," + m(b) + ")"; };
+    // ore-style block per part type: noisy base, darker rim, bright ore specks
+    const blockTex = TYPES.map((tp) => makeTex(TB, TB, (x, w) => {
+      for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.12 ? shades(tp.b, 0.88) : r < 0.88 ? tp.b : shades(tp.a, 0.9), i, j); }
+      for (let k = 0; k < 7; k++) { const i = 2 + Math.floor(rnd() * (w - 5)), j = 2 + Math.floor(rnd() * (w - 5)); px1(x, shades(tp.a, 1.25), i, j, 2, 2); px1(x, "#fff8", i, j); }
+      x.fillStyle = shades(tp.b, 0.55); x.fillRect(0, w - 2, w, 2); x.fillRect(w - 2, 0, 2, w);
+      x.fillStyle = shades(tp.a, 1.15); x.fillRect(0, 0, w, 1); x.fillRect(0, 0, 1, w);
+      x.fillStyle = "#0009"; x.strokeStyle = "#000"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, w - 1, w - 1);
+    }));
+    // stone brick (steel plates become gray brick you can only blast)
+    const brickTex = makeTex(TB, TB, (x, w) => {
+      px1(x, "#3a3f47", 0, 0, w, w);
+      const bh = Math.max(4, Math.round(w / 3));
+      for (let row = 0, y = 0; y < w; row++, y += bh) for (let bx = row % 2 ? -Math.floor(w / 4) : 0; bx < w; bx += Math.floor(w / 2)) {
+        for (let j = y + 1; j < Math.min(w, y + bh); j++) for (let i = Math.max(0, bx + 1); i < Math.min(w, bx + Math.floor(w / 2)); i++) px1(x, rnd() < 0.5 ? "#8b929b" : "#7b828b", i, j);
+        px1(x, "#a9b0b8", Math.max(0, bx + 1), y + 1, Math.floor(w / 2) - 1, 1);
+      }
+      x.strokeStyle = "#000"; x.strokeRect(0.5, 0.5, w - 1, w - 1);
+    });
+    // dirt back-wall behind the blocks (what you see once parts are cleared)
+    const wallTex = makeTex(TB * 2, TB * 2, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.3 ? "#2a1c14" : r < 0.8 ? "#33231a" : "#3d2a1f", i, j); } for (let k = 0; k < 10; k++) px1(x, "#1d130d", Math.floor(rnd() * w), Math.floor(rnd() * w), 2, 1); });
+    // gray stone for the engine pan walls, wood planks for the floor
+    const stoneTex = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.3 ? "#5d636b" : r < 0.8 ? "#6e757e" : "#868d96", i, j); } for (let k = 0; k < 4; k++) px1(x, "#4a4f56", Math.floor(rnd() * w), Math.floor(rnd() * w), 3, 1); });
+    const woodTex = makeTex(TB, 8, (x, w, h) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px1(x, j === 0 ? "#c98a4b" : j === h - 1 ? "#4a2a14" : rnd() < 0.15 ? "#7a4a24" : "#98602f", i, j); px1(x, "#4a2a14", w - 1, 0, 1, h); });
+    const clouds = [[30, 18, 30], [150, 30, 22], [250, 14, 34]];
+    // tile a texture across a rect in logical coords, snapped to the pixel grid
+    function tile(tex, x, y, w, h) {
+      g.save(); g.imageSmoothingEnabled = false; g.beginPath(); g.rect(x, y, w, h); g.clip();
+      const tw = tex.width * PX, th = tex.height * PX;
+      for (let yy = y; yy < y + h; yy += th) for (let xx = x; xx < x + w; xx += tw) g.drawImage(tex, xx, yy, tw, th);
+      g.restore();
     }
+    function torch(x, y) {
+      const fl = Math.floor(performance.now() / 120) % 3;
+      g.save(); g.globalCompositeOperation = "lighter";
+      for (const [r, a] of [[46, 0.06], [32, 0.08], [20, 0.1]]) { g.fillStyle = "rgba(255,170,60," + a + ")"; g.fillRect(x - r, y - r, r * 2, r * 2); }
+      g.restore();
+      g.fillStyle = "#6b4423"; g.fillRect(x - 2.5, y, 5, 14);
+      g.fillStyle = "#ff9d2e"; g.fillRect(x - 5, y - 8 - fl * 2.5, 10, 10 + fl * 2.5);
+      g.fillStyle = "#ffe27a"; g.fillRect(x - 2.5, y - 5 - fl * 2.5, 5, 6);
+    }
+    function drawBack() {
+      // sky with banded color and blocky clouds
+      const sky = ["#4f6fe8", "#5b7cf0", "#6a8af4", "#7c9af6"];
+      for (let i = 0; i < 4; i++) { g.fillStyle = sky[i]; g.fillRect(0, i * 15, LW, 15); }
+      g.fillStyle = "#e9f0ff";
+      for (const [cx, cy, w] of clouds) { const x = ((cx + performance.now() * 0.004) % (LW + 80)) - 40; g.fillRect(x, cy, w * 2, 10); g.fillRect(x + w * 0.4, cy - 7.5, w, 7.5); }
+      // grass + dirt surface line
+      g.fillStyle = "#3a9c2a"; g.fillRect(0, 52, LW, 5); g.fillStyle = "#62c742"; g.fillRect(0, 52, LW, 2.5);
+      // engine oil pan: stone chamber
+      tile(stoneTex, 0, 57, LW, PAN_TOP - 57 + 6);
+      tile(wallTex, 10, 68, LW - 20, PAN_TOP - 68);
+      g.fillStyle = "#0006"; g.fillRect(10, 68, LW - 20, 5);
+      for (let x = 18; x < LW; x += 38) { g.fillStyle = "#2b2f35"; g.fillRect(x - 3, 59, 6, 6); g.fillStyle = "#a9b0b8"; g.fillRect(x - 3, 59, 2.5, 2.5); }
+      txt("ENGINE OIL PAN", 12, 50, 1.25, "#fff", "left");
+      // board: dirt wall behind, wood beam frame on top
+      tile(wallTex, 0, BY - 8, LW, ROWS * T + 14);
+      tile(woodTex, 0, BY - 8, LW, 8);
+      // floor under the board and the shop floor
+      tile(woodTex, 0, FLOOR, LW, 8);
+      tile(stoneTex, 0, FLOOR + 8, LW, LH - FLOOR);
+      g.fillStyle = "#0005"; g.fillRect(0, FLOOR + 8, LW, LH - FLOOR);
+    }
+    function drawLights() { torch(18, FLOOR + 30); torch(LW - 18, FLOOR + 30); }
     function drawOil() {
       const px = oilImg.data, t = performance.now() * 0.002;
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
@@ -244,39 +298,26 @@
         const top = y === 0 || cell[idx(x, y - 1)] !== 1, sh = Math.sin(t + x * 0.35 + y * 0.2) * 12 + (shade[k] - 128) * 0.07;
         if (top) { px[o] = 255; px[o + 1] = 214; px[o + 2] = 110; }
         else { const b = sh > 4 ? 1 : sh < -4 ? -1 : 0; px[o] = 168 + b * 22; px[o + 1] = 98 + b * 16; px[o + 2] = 12; }
-        px[o + 3] = 250;
+        px[o + 3] = top ? 255 : 225;
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.imageSmoothingEnabled = false;
       g.drawImage(oilCan, 0, 0, LW, LH);
       g.imageSmoothingEnabled = true;
     }
-    // retro block: flat color, light top-left bevel, dark bottom-right bevel, black outline
-    function block(x, y, w, hi, mid, lo) {
-      const e = Math.max(2, PX * 1.6);
-      g.fillStyle = "#000"; g.fillRect(x - PX, y - PX, w + PX * 2, w + PX * 2);
-      g.fillStyle = lo; g.fillRect(x, y, w, w);
-      g.fillStyle = hi; g.fillRect(x, y, w - e, w - e);
-      g.fillStyle = mid; g.fillRect(x + e, y + e, w - e * 2, w - e * 2);
-    }
     function drawTile(tl, x, y, glow) {
-      const s = 1 - Math.max(0, tl.pop) * 0.015, w = Math.round(((T - 6) * s) / PX) * PX, x0 = Math.round((x + (T - w) / 2) / PX) * PX, y0 = Math.round((y + (T - w) / 2) / PX) * PX;
-      if (tl.t === STEEL) {
-        block(x0, y0, w, "#e1e7ed", "#9aa6b1", "#4b545e");
-        g.fillStyle = "#3e4750"; for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.fillRect(x0 + 7 + a * (w - 20), y0 + 7 + b * (w - 20), 6, 6);
-        return;
-      }
-      let a = "#ffe27a", b = "#e08a00";
-      if (typeof tl.t === "number") { a = TYPES[tl.t].a; b = TYPES[tl.t].b; }
-      if (glow) { g.fillStyle = "#fff8c0"; g.fillRect(x0 - PX * 2, y0 - PX * 2, w + PX * 4, w + PX * 4); }
-      block(x0, y0, w, "#ffffffcc", a, b);
-      g.fillStyle = a; g.fillRect(x0 + 4, y0 + 4, w - 8, w - 8);
-      g.fillStyle = b; g.fillRect(x0 + 4, y0 + w * 0.55, w - 8, w * 0.45 - 4);
-      if (typeof tl.t === "number") fitImg(imgs[tl.t], x0 + w / 2, y0 + w / 2 + 1, w - 10);
-      else {
-        fitImg(tl.t === ROCKET ? rocketImg : blastImg, x0 + w / 2, y0 + w / 2, w - 6);
+      const s = 1 - Math.max(0, tl.pop) * 0.015, w = Math.round((T * s) / PX) * PX, x0 = Math.round((x + (T - w) / 2) / PX) * PX, y0 = Math.round((y + (T - w) / 2) / PX) * PX;
+      g.imageSmoothingEnabled = false;
+      if (tl.t === STEEL) { g.drawImage(brickTex, x0, y0, w, w); return; }
+      if (typeof tl.t === "number") {
+        g.drawImage(blockTex[tl.t], x0, y0, w, w);
+        g.imageSmoothingEnabled = true; fitImg(imgs[tl.t], x0 + w / 2, y0 + w / 2, w - 14);
+      } else {
+        g.drawImage(blockTex[1], x0, y0, w, w);
+        g.imageSmoothingEnabled = true; fitImg(tl.t === ROCKET ? rocketImg : blastImg, x0 + w / 2, y0 + w / 2, w - 6);
         if (Math.floor(performance.now() / 160) % 2) { g.fillStyle = "#fff"; g.fillRect(x0, y0, w, PX); g.fillRect(x0, y0 + w - PX, w, PX); g.fillRect(x0, y0, PX, w); g.fillRect(x0 + w - PX, y0, PX, w); }
       }
+      if (glow) { g.fillStyle = "#fff"; g.fillRect(x0, y0, w, PX); g.fillRect(x0, y0 + w - PX, w, PX); g.fillRect(x0, y0, PX, w); g.fillRect(x0 + w - PX, y0, PX, w); g.fillStyle = "#ffffff30"; g.fillRect(x0, y0, w, w); }
     }
     let heroCache = null;
     const heroImg = () => { if (!heroCache) heroCache = load(typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp"); return heroCache; };
@@ -298,7 +339,7 @@
         if (tl.y > BY - T) { g.save(); g.beginPath(); g.rect(0, BY - 8, LW, LH); g.clip(); drawTile(tl, BX + c * T + wig, tl.y - (hl.has(k) ? 3 : 0), hl.has(k)); g.restore(); }
       }
       if (landing && !started) started = true;
-      drawOil();
+      drawOil(); drawLights();
       const panW = LW - 30, panX = 15, panY = LH - 58;
       const f = Math.min(1, inPan / target);
       if (f > 0) { const h = 6 + f * 22, x = panX + 26, y = panY + 44 - h, w = panW - 52; g.fillStyle = "#6b3a05"; g.fillRect(x, y, w, h); g.fillStyle = "#c27a12"; g.fillRect(x, y, w, h * 0.6); g.fillStyle = "#ffcf6e"; g.fillRect(x, y, w, 3); }

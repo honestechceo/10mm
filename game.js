@@ -2229,8 +2229,10 @@ function render() {
   ctx.rotate(Math.sin(player.angle) * 0.22);
   const hero = heroSprites.socket;
   if (hero && hero.complete && hero.naturalWidth) {
-    const extra = hero.naturalHeight > 430 ? ((hero.naturalHeight - 430) / 430) * 62 * (900 / hero.naturalWidth) : 0;
-    ctx.drawImage(hero, -87, -33 - extra, 131, 62 + extra);
+    // a composite (skin + looks) has headroom above and below the 900x430 sprite
+    const big = hero.naturalHeight > 430, k = 62 / 430;
+    if (big) ctx.drawImage(hero, -87, -33 - LOOK_HEAD * k, 131, hero.naturalHeight * k);
+    else ctx.drawImage(hero, -87, -33, 131, 62);
   } else {
     image("socket10", 0, 0, 52, 52);
   }
@@ -3471,7 +3473,7 @@ function equippedSkin() {
   return ownedSkins().includes(e) ? e : "chrome";
 }
 // ---------- face looks + disguises: pieces drawn on top of whatever skin is equipped ----------
-const LOOK_SLOTS = { eyes: "EYES", mouth: "MOUTH", head: "HEAD", ears: "BLING" };
+const LOOK_SLOTS = { aura: "AURA", eyes: "EYES", mouth: "MOUTH", head: "HEAD", ears: "BLING" };
 const LOOKS = [
   { id: "lashes", name: "Long Lashes", slot: "eyes", price: 150, at: ["eyes", 1.1, -0.12, "c"] },
   { id: "brows", name: "Angry Brows", slot: "eyes", price: 150, at: ["eyes", 1.05, -0.28, "c"] },
@@ -3488,13 +3490,16 @@ const LOOKS = [
   { id: "cowboy", name: "Cowboy Hat", slot: "head", price: 300, at: ["top", 1.15, 0.18, "b"] },
   { id: "hoops", name: "Gold Hoop", slot: "ears", price: 200, at: ["side", 0.3, 0, "t"] },
 ];
+// auras: a glowing ring + streaks drawn behind the socket; any aura works with any skin
+const AURA_LIST = [["pitcrew", "Pit Crew", 300], ["goldrush", "Gold Rush", 400], ["carbon", "Red Line", 300], ["storm", "Storm", 450], ["camo", "Toxic Green", 300], ["oldglory", "Old Glory", 400], ["flames", "Inferno", 500], ["slime", "Slime", 500], ["firered", "Fire Red", 300], ["haze", "Purple Haze", 450], ["frost", "Frostbite", 450], ["barnfind", "Sparks", 400], ["skull", "Ghost", 450], ["biohazard", "Biohazard", 500], ["menace", "Red Menace", 400], ["visor", "Iron", 400], ["checkered", "Checkered", 400], ["trackday", "Track Day", 400], ["galaxy", "Galaxy", 600], ["puertorico", "Puerto Rico", 400], ["electric", "Electric Blue", 300], ["pink", "Hot Pink", 300], ["royal", "Royal Purple", 300], ["titanium", "Rainbow", 600], ["blueline", "Thin Blue Line", 400]];
+for (const [k, n, p] of AURA_LIST) LOOKS.push({ id: "aura-" + k, img: "aura-" + k + ".webp", name: n + " Aura", slot: "aura", price: p, at: ["body", 1.1, 0, "ring"] });
 // where the face sits on the two families of socket art (900x430 sprites)
-const FACE_A = { eyes: [695, 175, 200], mouth: [680, 238, 160], top: [705, 95, 260], side: [835, 215, 200] };
-const FACE_B = { eyes: [705, 170, 200], mouth: [700, 280, 170], top: [710, 40, 270], side: [880, 205, 200] };
+const FACE_A = { body: [610, 240, 430], eyes: [695, 175, 200], mouth: [680, 238, 160], top: [705, 95, 260], side: [835, 215, 200] };
+const FACE_B = { body: [625, 225, 470], eyes: [705, 170, 200], mouth: [700, 280, 170], top: [710, 40, 270], side: [880, 205, 200] };
 const FACE_B_SKINS = new Set("pitcrew goldrush carbon storm camo oldglory flames slime firered haze frost barnfind skull biohazard menace visor checkered trackday galaxy puertorico electric pink royal titanium blueline".split(" "));
-const LOOK_HEAD = 150; // extra room above the sprite for hats
+const LOOK_HEAD = 150, LOOK_FOOT = 100; // extra room above (hats) and below (aura glow)
 const lookImgs = {};
-for (const l of LOOKS) { const im = new Image(); im.src = "look-" + l.id + ".webp"; lookImgs[l.id] = im; }
+for (const l of LOOKS) { const im = new Image(); im.src = l.img || "look-" + l.id + ".webp"; lookImgs[l.id] = im; }
 const LSget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const ownedLooks = () => LSget("tenmm-looks-owned", []);
 const equippedLooks = () => LSget("tenmm-looks", {});
@@ -3508,11 +3513,18 @@ function composeHero(done) {
   const go = () => {
     if (!all.every((im) => im.complete)) return;
     if (lookKey() !== key) return;
-    const c = document.createElement("canvas"); c.width = 900; c.height = 430 + LOOK_HEAD;
+    const c = document.createElement("canvas"); c.width = 900; c.height = 430 + LOOK_HEAD + LOOK_FOOT;
     const x = c.getContext("2d");
-    if (base.naturalWidth) x.drawImage(base, 0, LOOK_HEAD, 900, 430);
     const F = FACE_B_SKINS.has(equippedSkin()) ? FACE_B : FACE_A;
+    const aura = LOOKS.find((l) => l.id === eq.aura), aim = aura && lookImgs[aura.id];
+    if (aim && aim.naturalWidth) {
+      // ring sits around the socket body, streaks trail off behind it
+      const [cx, cy, bh] = F.body, ph = bh * aura.at[1], pw = (aim.naturalWidth * ph) / aim.naturalHeight;
+      x.drawImage(aim, cx + ph / 2 - pw, cy + LOOK_HEAD - ph / 2, pw, ph);
+    }
+    if (base.naturalWidth) x.drawImage(base, 0, LOOK_HEAD, 900, 430);
     for (const id of ids) {
+      if (id === eq.aura) continue;
       const L = LOOKS.find((l) => l.id === id), im = lookImgs[id];
       if (!L || !im.naturalWidth) continue;
       const [an, ws, dy, mode] = L.at, [ax, ay, aw] = F[an];
@@ -3568,7 +3580,8 @@ function renderLooks(box) {
   for (const L of LOOKS) {
     const card = document.createElement("div"), on = eq[L.slot] === L.id;
     card.className = "skin look" + (on ? " eq" : "");
-    const im = document.createElement("img"); im.src = "look-" + L.id + ".webp"; im.alt = L.name;
+    if (L.slot === "aura" && !box.querySelector(".aurahead")) { const ah = document.createElement("div"); ah.className = "lvhead aurahead"; ah.textContent = "AURAS: MIX WITH ANY FINISH"; box.append(ah); }
+    const im = document.createElement("img"); im.src = L.img || "look-" + L.id + ".webp"; im.alt = L.name;
     const nm = document.createElement("div"); nm.textContent = L.name;
     const sl = document.createElement("div"); sl.className = "lslot"; sl.textContent = LOOK_SLOTS[L.slot];
     const b = document.createElement("button");

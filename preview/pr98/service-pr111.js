@@ -241,30 +241,38 @@
       'https://raw.githubusercontent.com/honestechceo/10mm/polish/brake-service-review-20261118/preview/pr98/brake-art/brake_scene_' + String(n+1).padStart(2,'0') + '.webp');
     const brakeSceneCache = brakeSceneFiles.map(src => {
       const img = new Image();
+      img.decoding = 'async';
       img.src = src;
       return img;
     });
     const renderBrake = () => {
       if (j !== "brake") return;
       const stage = Math.max(0,i);
-      const carView = stage <= 2 || stage >= 10;
+      const scene = $("sScene");
       const art = brakeSceneCache[stage];
-      const hasArt = art && art.complete && art.naturalWidth > 0;
-      $("sScene").classList.toggle("carview", carView && !hasArt);
-      $("sScene").classList.toggle("illustrated-brake", !!hasArt);
-      if (hasArt) {
-        $("sImg").src = art.src;
-      } else if (carView) {
-        $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
-      } else {
-        $("sImg").src = svgUrl(brakeArt(stage));
-      }
-      $("sScene").classList.remove("lifted");
+      // Use the uploaded art as the primary scene. Do not wait for it to
+      // finish downloading before switching away from the old SVG car.
+      scene.classList.remove("carview", "lifted");
+      scene.classList.add("illustrated-brake");
       $("sJack").classList.remove("on");
-      $("sScene").dataset.brakeStage = String(stage);
-      if (art && !art.complete) art.addEventListener('load', () => {
-        if (i === stage && !over) renderBrake();
-      }, {once:true});
+      $("sCar").style.display = "none";
+      $("sImg").style.display = "block";
+      $("sImg").src = art.src;
+      scene.dataset.brakeStage = String(stage);
+      const fallback = () => {
+        if (i !== stage || over) return;
+        const carView = stage <= 2 || stage >= 10;
+        scene.classList.toggle("carview", carView);
+        scene.classList.remove("illustrated-brake");
+        $("sImg").style.display = "";
+        $("sCar").style.display = "";
+        if (carView) $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
+        else $("sImg").src = svgUrl(brakeArt(stage));
+        const cue = $("sCue");
+        if (cue) cue.textContent += " • SCENE IMAGE UNAVAILABLE";
+      };
+      if (art.complete && !art.naturalWidth) fallback();
+      else if (!art.complete) art.addEventListener("error", fallback, {once:true});
     };
     for (const id of tools) {
       const b = document.createElement("button");

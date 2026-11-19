@@ -170,9 +170,23 @@ def check(l):
     print(f"  surfaces {len(S)} reachable {len(seen)}  unreached tile surfaces: {unreached[:12]}")
     return ok
 
+def blocks_ok(l):
+    # every block you open from below needs open space under it and a floor 2-3 rows down to jump from
+    g = l.text(); ok = True
+    for y, r in enumerate(g):
+        for x, c in enumerate(r):
+            if c not in '?UCH': continue
+            if y + 1 >= len(g) or g[y + 1][x] in SOLID or g[y + 1][x] in ONEWAY:
+                print('  !! block at', (x, y), 'has no room underneath'); ok = False; continue
+            gap = next((d for d in range(1, 5) if y + d < len(g) and (g[y + d][x] in SOLID or g[y + d][x] in ONEWAY)), None)
+            if gap is None or gap < 2 or gap > 4:
+                print('  !! block at', (x, y), 'can\'t be reached from below (floor', gap, 'rows down)'); ok = False
+    return ok
+
 if __name__ == '__main__':
     allok = True
     for l in LEVELS:
         print(l.name)
         allok &= check(l)
+        allok &= blocks_ok(l)
     print('ALL OK' if allok else 'PROBLEMS FOUND')

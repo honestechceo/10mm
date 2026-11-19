@@ -658,5 +658,18 @@
     key.L = key.R = key.J = false;
     return { x: pl.x, y: pl.y, ground: pl.ground, on: pl.on ? movers.indexOf(pl.on) : -1, mode };
   }
-  window.LostBox = { _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW }), _play: play, _press: press, _key: key };
+  // test hook: stand under a block, jump (and double jump if needed) and report whether it opened
+  function probeBlock(i, cx, cy) {
+    startLevel(i); mode = "play";
+    let fy = cy + 1; while (fy < ROWS && !isSolid(cell(cx, fy)) && cell(cx, fy) !== "-") fy++;
+    for (const dbl of [false, true]) {
+      startLevel(i); mode = "play";
+      Object.assign(pl, { x: cx * T + T / 2, y: fy * T, vx: 0, vy: 0, ground: true, jumps: 0, inv: 99, on: null });
+      key.J = true; jumpBuf = 0.1;
+      for (let n = 0; n < 240; n++) { if (dbl && n === 30) jumpBuf = 0.1; stepPlayer(STEP); if (grid[cy][cx] !== window.LT_LEVELS[i].rows[cy][cx]) { key.J = false; return true; } }
+      key.J = false;
+    }
+    return false;
+  }
+  window.LostBox = { _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW }), _play: play, _press: press, _key: key };
 })();

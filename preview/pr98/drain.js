@@ -235,15 +235,15 @@
         const variation = Math.sin(x * .075 + y * .035 - time) * 8 + (shade[k] - 128) * .022;
         const nearSurface = y > 1 && cell[idx(x, y-1)] === 0 &&
           y + 2 < GH && cell[idx(x, y+1)] === 1 && cell[idx(x, y+2)] === 1;
-        px[o] = Math.max(0, Math.min(255, 132 + variation + (nearSurface ? 18 : 0)));
-        px[o+1] = Math.max(0, Math.min(255, 72 + variation * .55 + (nearSurface ? 14 : 0)));
+        px[o] = Math.max(0, Math.min(255, 100 + variation + (nearSurface ? 12 : 0)));
+        px[o+1] = Math.max(0, Math.min(255, 53 + variation * .55 + (nearSurface ? 10 : 0)));
         px[o+2] = Math.max(0, Math.min(255, 18 + variation * .16));
-        px[o+3] = 255;
+        px[o+3] = 220;
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.save();
       g.imageSmoothingEnabled = true;
-      g.filter = "blur(3.4px)";
+      g.filter = "blur(2.2px)";
       g.drawImage(oilCan, 0, 0, LW, LH);
       g.restore();
     }
@@ -376,7 +376,7 @@
         const encountered = inPan + missedOil;
         const efficiency = encountered ? inPan / encountered : 0;
         const stars = !won ? 0 : efficiency >= .98 && moves >= 60 ? 3 : efficiency >= .8 ? 2 : 1;
-        bonusResult(won, Math.ceil(moves) * 2, done);
+        bonusResult(won, Math.ceil(moves) * 2, done, {stars, efficiency, caught: inPan});
         const starsLabel = "★".repeat(stars) + "☆".repeat(3 - stars);
         $("details").textContent = "Oil caught: " + Math.round(efficiency * 100) + "% • " + starsLabel + " (" + stars + "/3 stars)";
         $("message").textContent = won ? "OIL DRAINED!" : "TIME IS UP!";

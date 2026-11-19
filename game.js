@@ -3392,6 +3392,7 @@ function resetProgress() {
 
 const SKINS = [
   { id: "chrome", name: "Shop Chrome", price: 0 },
+  { id: "golden10", name: "Golden 10MM", price: 0, lock: "CLEAR THE LOST TOOLBOX" },
   { id: "rusty", name: "Junkyard Rust", price: 100 },
   { id: "black", name: "Black Impact", price: 150 },
   { id: "candy", name: "Candy Red", price: 250 },

@@ -337,6 +337,13 @@ function showHome(intro) {
     else start();
   });
   $("hLevels").onclick = run(showLevels);
+  const lb = $("hLost");
+  if (lb && window.LostBox) {
+    let ls = {}; try { ls = JSON.parse(localStorage.getItem("tenmm-lt") || "{}"); } catch (e) {}
+    const d = (ls.done || []).length;
+    $("hLostSub").textContent = ls.golden ? "Golden 10MM earned! Replay any drawer" : d ? d + " of 5 drawers cleared" : "NEW! 5-level platform adventure";
+    lb.onclick = () => { audioReady(); stopMusic(); window.LostBox.open(); };
+  }
   $("hShop").onclick = run(showShop);
   $("hSettings").onclick = run(showSettings);
   $("hHow").onclick = run(showTutorial);

@@ -18,6 +18,13 @@ for (const entry of await readdir(root, { withFileTypes: true })) {
   await copyFile(join(root, entry.name), join(dest, entry.name));
   count++;
 }
+// asset folders that ship with the game (The Lost Toolbox art + levels)
+for (const dir of ['lt']) {
+  await mkdir(join(dest, dir), { recursive: true });
+  for (const entry of await readdir(join(root, dir), { withFileTypes: true })) {
+    if (entry.isFile() && extensions.has(extname(entry.name).toLowerCase())) { await copyFile(join(root, dir, entry.name), join(dest, dir, entry.name)); count++; }
+  }
+}
 if (!count) throw new Error('No web assets found');
 if (forApp) {
   await copyFile(join(root, 'node_modules/@capacitor/core/dist/capacitor.js'), join(dest, 'capacitor.js'));

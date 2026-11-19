@@ -238,7 +238,7 @@
     // When a scene asset is available, use it; retain the playable SVG scene
     // as a fallback so an incomplete upload cannot break the brake job.
     const brakeSceneFiles = Array.from({length:12}, (_,n) =>
-      'brake-art/brake_scene_' + String(n+1).padStart(2,'0') + '.webp');
+      'https://raw.githubusercontent.com/honestechceo/10mm/polish/brake-service-review-20261118/preview/pr98/brake-art/brake_scene_' + String(n+1).padStart(2,'0') + '.webp');
     const brakeSceneCache = brakeSceneFiles.map(src => {
       const img = new Image();
       img.src = src;

@@ -379,7 +379,6 @@
         bonusResult(won, Math.ceil(moves) * 2, done);
         const starsLabel = "★".repeat(stars) + "☆".repeat(3 - stars);
         $("details").textContent = "Oil caught: " + Math.round(efficiency * 100) + "% • " + starsLabel + " (" + stars + "/3 stars)";
-        $("details").textContent = $("details").textContent.replace(/^Found with [\d.]+s left!/, "Drained with " + Math.ceil(moves) + " seconds to spare!");
         $("message").textContent = won ? "OIL DRAINED!" : "TIME IS UP!";
         if (!won) $("details").textContent = "The drain pan didn't fill up in time. Keep going to reach the next bonus round.";
       }, won ? 1000 : 700);

@@ -60,7 +60,7 @@
     // Catch zone spans the full playable board, including the far-left and far-right columns.
     const PAN_LEFT = 7, PAN_RIGHT = LW - 7, PAN_RIM = LH - 49;
     let missedOil = 0;
-    let inPan = 0, moved = 0, started = false, oilToDrain = 0, streamY = PAN_TOP, drainedThroughStream = 0;
+    let inPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
     // tiles block oil where they are drawn; oil caught under a falling tile is pushed up
@@ -158,14 +158,14 @@
       if (!tl) return;
       idle = 0;
       if (tl.t === STEEL) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "STEEL! Blast it", life: 40, bad: 1 }); shake = 8; return; }
-      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); oilToDrain += 45; sfx("power"); buzz("heavy"); after(); return; }
+      if (tl.t === ROCKET || tl.t === BLAST) { fire(r, c, tl.t); sfx("power"); buzz("heavy"); after(); return; }
       const gp = group(r, c);
       if (gp.length < 2) { sfx("miss"); buzz("light"); pops.push({ x, y, t: "Needs a match", life: 40, bad: 1 }); tl.pop = 8; return; }
-      oilToDrain += gp.length * 10;
+      
       if (gp.length >= 5) moves = Math.min(210, moves + (gp.length >= 8 ? 10 : 5));
       for (const [rr, cc] of gp) remove(rr, cc);
       if (gp.length >= 6) for (const [rr, cc] of gp) for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const a = rr + dr, b = cc + dc; if (a >= 0 && a < ROWS && b >= 0 && b < COLS && grid[a][b] && grid[a][b].t === STEEL) remove(a, b); }
-      if (gp.length >= 6) { /* Cleared channel stays open; power effects activate immediately. */ oilToDrain += gp.length >= 8 ? 65 : 35; pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST!" : "TORQUE ROCKET!", life: 50 }); }
+      if (gp.length >= 6) { /* Cleared channel stays open; power effects activate immediately. */  pops.push({ x, y, t: gp.length >= 8 ? "OIL BLAST!" : "TORQUE ROCKET!", life: 50 }); }
       else if (gp.length >= 4) pops.push({ x, y, t: gp.length === 5 ? "GREAT!" : "NICE!", life: 40 });
       sfx(gp.length >= 6 ? "power" : "coin"); buzz(gp.length >= 6 ? "medium" : "light");
       after();
@@ -282,46 +282,8 @@
       }
       if (landing && !started) started = true;
       drawOil();
-      // Animated viscous oil: flowing ribbons, moving highlights, droplets and ripples.
-      // Keep streamY as the authoritative progress position for the drain logic.
-      if (oilToDrain > 0) {
-        const now = performance.now(), bottom = Math.min(streamY, LH - 42);
-        const startX = LW / 2, travel = Math.max(0, bottom - PAN_TOP);
-        const path = (offset) => {
-          g.beginPath();
-          for (let y = PAN_TOP; y <= bottom; y += 5) {
-            const q = (y - PAN_TOP) / Math.max(1, travel);
-            const x = startX + Math.sin(y * 0.034 - now * 0.006) * (1.5 + 2.2 * q) +
-              Math.sin(y * 0.081 + now * 0.004) * 1.3 + offset;
-            if (y === PAN_TOP) g.moveTo(x, y); else g.lineTo(x, y);
-          }
-          if (travel > 0) g.lineTo(startX + Math.sin(bottom * 0.034 - now * 0.006) * 3 + offset, bottom);
-        };
-        g.save(); g.lineCap = "round"; g.lineJoin = "round";
-        const oilGradient = g.createLinearGradient(startX - 9, 0, startX + 10, 0);
-        oilGradient.addColorStop(0, "#2b1609"); oilGradient.addColorStop(.22, "#673309");
-        oilGradient.addColorStop(.54, "#ac6619"); oilGradient.addColorStop(.78, "#e9a941");
-        oilGradient.addColorStop(1, "#4a2409");
-        path(0); g.strokeStyle = oilGradient; g.lineWidth = 11; g.stroke();
-        path(2.6); g.strokeStyle = "rgba(255,220,127,.65)"; g.lineWidth = 2.4; g.stroke();
-        path(-3); g.strokeStyle = "rgba(20,9,3,.65)"; g.lineWidth = 2.4; g.stroke();
-        // Drips stretch as they fall and periodically detach from the main stream.
-        for (let d = 0; d < 5; d++) {
-          const phase = ((now * .11 + d * 97) % 430) / 430;
-          const y = PAN_TOP + phase * travel;
-          if (y > bottom - 8 || y < PAN_TOP + 9) continue;
-          const x = startX + Math.sin(y * .034 - now * .006) * 3 + (d % 2 ? 7 : -7);
-          g.fillStyle = d % 2 ? "#b47424" : "#edb65a";
-          g.beginPath(); g.ellipse(x, y, 1.8 + phase * 1.5, 3 + phase * 4, 0, 0, Math.PI * 2); g.fill();
-        }
-        if (bottom >= LH - 44) {
-          const pulse = (now * .005) % 1;
-          g.strokeStyle = "rgba(255,191,78," + (0.65 * (1 - pulse)) + ")";
-          g.lineWidth = 2.5;
-          g.beginPath(); g.ellipse(startX, LH - 43, 6 + pulse * 21, 2 + pulse * 5, 0, 0, Math.PI * 2); g.stroke();
-        }
-        g.restore();
-      }
+      // The liquid visible in the cleared cells is the ONLY source of collected oil.
+      // No cosmetic shortcut stream can bypass the blocks.
       const panW = LW, panX = 0, panY = LH - 62;
       const f = Math.min(1, inPan / target);
       // Full-width drain trough, with the rim and liquid visible above the floor.
@@ -389,23 +351,10 @@
       idle++;
       markSolids();
       moved = 0; for (let i = 0; i < 6; i++) stepOil();
-      if (oilToDrain > 0) {
-        streamY = Math.min(LH - 42, streamY + 6);
-        if (streamY >= LH - 42) {
-          const drained = Math.min(oilToDrain, Math.max(1, dt * 95));
-          oilToDrain -= drained;
-          // Stream credit is earned only after its visible tip enters the catch tray.
-          const streamCatchX = LW / 2;
-          if (streamCatchX >= PAN_LEFT && streamCatchX <= PAN_RIGHT && streamY >= PAN_RIM) {
-            inPan += drained;
-            drainedThroughStream += drained;
-          } else missedOil += drained;
-        }
-      } else streamY = PAN_TOP;
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
       draw(); upd();
-      if (inPan >= target && drainedThroughStream >= Math.min(target * 0.4, 80) && oilToDrain <= 0) return finish(true);
-      if (moves <= 0 && oilToDrain <= 0) return finish(false);
+      if (inPan >= target) return finish(true);
+      if (moves <= 0) return finish(false);
       raf = requestAnimationFrame(loop);
     };
     function finish(won) {

@@ -281,25 +281,46 @@
       g.drawImage(mask, 0, 0, LW, LH);
       g.restore();
     }
+    // Draw unmistakable automotive TOOLS as low-resolution arcade sprites.
+    // Render once at 32px, then scale without smoothing for crisp 1986 pixels.
+    const toolSprites = [];
+    function toolSprite(type) {
+      if (toolSprites[type]) return toolSprites[type];
+      const cv = document.createElement("canvas"); cv.width = cv.height = 32;
+      const p = cv.getContext("2d"); p.lineCap = "square"; p.lineJoin = "miter";
+      const metal = "#e3edf3", edge = "#17283a", shine = "#8edfff";
+      const stroke = (color, width, pts) => {
+        p.strokeStyle = color; p.lineWidth = width; p.beginPath();
+        pts.forEach(([x,y],i)=>i?p.lineTo(x,y):p.moveTo(x,y)); p.stroke();
+      };
+      if (type === 0) { // open-end wrench, diagonal shaft and jaws
+        stroke(edge, 9, [[8,25],[23,10]]); stroke(metal, 5, [[8,25],[23,10]]);
+        stroke(edge, 7, [[18,5],[23,10],[29,10]]);
+        stroke(metal, 4, [[18,5],[23,10],[29,10]]);
+        p.fillStyle = edge; p.fillRect(5,24,6,5); p.fillStyle = shine; p.fillRect(7,25,3,2);
+      } else if (type === 1) { // Phillips screwdriver with a colored handle
+        stroke(edge, 6, [[20,8],[9,23]]); stroke(metal, 3, [[20,8],[9,23]]);
+        stroke(edge, 10, [[22,5],[27,10]]); stroke("#ffcf59", 7, [[22,5],[27,10]]);
+        p.fillStyle=shine; p.fillRect(8,23,3,3);
+      } else if (type === 2) { // crossed-jaw pliers
+        stroke(edge, 7, [[8,27],[17,15],[25,5]]); stroke(metal, 4, [[8,27],[17,15],[25,5]]);
+        stroke(edge, 7, [[26,27],[17,15],[9,5]]); stroke("#ffb06b", 4, [[26,27],[17,15],[9,5]]);
+        p.fillStyle=metal; p.fillRect(15,13,5,5); p.fillStyle=edge; p.fillRect(16,14,2,2);
+      } else if (type === 3) { // ratchet wrench with socket head
+        stroke(edge, 9, [[9,26],[21,11]]); stroke(metal, 6, [[9,26],[21,11]]);
+        p.fillStyle=edge; p.fillRect(16,3,14,14); p.fillStyle="#ffa3b4"; p.fillRect(18,5,10,10);
+        p.fillStyle=edge; p.fillRect(21,8,4,4); p.fillStyle=shine; p.fillRect(7,23,3,3);
+      } else { // hammer: block head and long handle
+        stroke(edge, 9, [[11,27],[20,9]]); stroke("#a5f2b6", 5, [[11,27],[20,9]]);
+        p.fillStyle=edge; p.fillRect(10,3,20,10); p.fillStyle=metal; p.fillRect(12,5,16,6);
+        p.fillStyle=shine; p.fillRect(13,5,10,2);
+      }
+      toolSprites[type] = cv; return cv;
+    }
     function pixelIcon(type) {
-      // Pixel silhouettes: wrench, hex nut, filter, funnel, bolt.
-      const patterns = [
-        ["1100000011","1110000111","0111001110","0011111100","0001111000","0001111000","0011111100","0111001110","1110000111","1100000011"],
-        ["0011111100","0111111110","1110000111","1100000011","1100000011","1100000011","1100000011","1110000111","0111111110","0011111100"],
-        ["0011111100","0111111110","1111111111","1100000011","1101111011","1101111011","1100000011","1111111111","0111111110","0011111100"],
-        ["1111111111","0111111110","0011111100","0001111000","0001111000","0001111000","0001111000","0001111000","0011111100","0011111100"],
-        ["0001111000","0001111000","1111111111","1111111111","0001111000","0001111000","0001111000","0001111000","0011111100","0011111100"]
-      ];
-      const pal = ["#a9eaff","#ffe08a","#ffb46a","#ffa1b1","#a0f7ba"];
-      const pattern = patterns[type] || patterns[0];
-      g.fillStyle = "#142031";
-      g.fillRect(-18, -18, 36, 36);
-      g.fillStyle = "#06101e";
-      for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++)
-        if (pattern[row][col] === "1") g.fillRect(-16 + col * 3.2 + 2, -16 + row * 3.2 + 2, 3.2, 3.2);
-      g.fillStyle = pal[type] || "#fff1ab";
-      for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++)
-        if (pattern[row][col] === "1") g.fillRect(-16 + col * 3.2, -16 + row * 3.2, 3, 3);
+      g.save(); g.imageSmoothingEnabled = false;
+      g.drawImage(toolSprite(type), -18, -18, 36, 36);
+      g.restore();
     }
     function drawTile(tl, x, y, glow) {
       const cx = x + T / 2, cy = y + T / 2, w = 44 - Math.max(0, tl.pop) * .4;

@@ -5,12 +5,16 @@
 (function () {
   "use strict";
   const T = 48, ROWS = 13;
+  const NLV = () => window.LT_LEVELS.length;
   // keep in sync with lt-tools/validate.py
   const P = { MAXV: 260, ACC: 1900, ACC_AIR: 1300, FRIC: 2400, G_HOLD: 1500, G: 2600, JUMP: 640, DJUMP: 560, MAXFALL: 1000, SPRING: 1050 };
   const PW = 30, PH = 44, STEP = 1 / 120;
-  const SOLID = "#=CU?RSD<>";
+  const SOLID = "#=CU?RSD<>i";
+  const SEMI = "-q"; // land from above only (q crumbles)
   const SAVE = "tenmm-lt";
-  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg" };
+  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg" };
+  const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
+  const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD"] };
 
   // ---------- art ----------
@@ -48,7 +52,7 @@
     root.innerHTML =
       '<canvas id="ltc"></canvas>' +
       '<div class="lthud"><span class="lthp" id="ltHp"></span><span class="ltname" id="ltName"></span><span class="ltcoin"><img src="lt/coin.webp" alt="">×<b id="ltCoins">0</b></span><button id="ltPause" aria-label="Pause">II</button></div>' +
-      '<div class="ltpow" id="ltPow"></div>' +
+      '<div class="ltpow" id="ltPow"></div><div class="ltboss" id="ltBoss"></div>' +
       '<div class="ltmsg" id="ltMsg"></div>' +
       '<div class="ltpad"><button class="ltl" data-k="L" aria-label="Move left">◀</button><button class="ltr" data-k="R" aria-label="Move right">▶</button><button class="ltj" data-k="J" aria-label="Jump">JUMP</button></div>' +
       '<div class="ltcard hidden" id="ltCard"></div>';
@@ -56,12 +60,29 @@
     cv = root.querySelector("#ltc"); ctx = cv.getContext("2d"); card = root.querySelector("#ltCard");
     ["Hp", "Name", "Coins", "Pow", "Msg"].forEach((k) => (hud[k] = root.querySelector("#lt" + k)));
     root.querySelector("#ltPause").onclick = () => pauseMenu();
-    for (const b of root.querySelectorAll(".ltpad button")) {
+    // Touch: every finger is tracked by where it is right now, so sliding a thumb from ◀ to ▶
+    // switches direction, and lifting any finger can never leave a direction stuck on.
+    const pad = root.querySelector(".ltpad"), btns = [...pad.querySelectorAll("button")];
+    const zoneAt = (x, y) => {
+      for (const b of btns) { const r = b.getBoundingClientRect(); if (x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 30 && y <= r.bottom + 30) return b.dataset.k; }
+      return null;
+    };
+    const syncTouches = (e) => {
+      e.preventDefault();
+      const held = { L: false, R: false, J: false };
+      for (const tch of e.touches) { const k = zoneAt(tch.clientX, tch.clientY); if (k) held[k] = true; }
+      for (const k of ["L", "R", "J"]) if (held[k] !== key[k]) press(k, held[k]);
+      btns.forEach((b) => b.classList.toggle("on", held[b.dataset.k]));
+    };
+    ["touchstart", "touchmove", "touchend", "touchcancel"].forEach((ev) => pad.addEventListener(ev, syncTouches, { passive: false }));
+    // mouse (simulator / desktop)
+    for (const b of btns) {
       const k = b.dataset.k;
-      const on = (e) => { e.preventDefault(); b.setPointerCapture && b.setPointerCapture(e.pointerId); press(k, true); b.classList.add("on"); };
-      const off = (e) => { e.preventDefault(); press(k, false); b.classList.remove("on"); };
-      b.addEventListener("pointerdown", on); b.addEventListener("pointerup", off); b.addEventListener("pointercancel", off); b.addEventListener("lostpointercapture", off);
+      b.addEventListener("mousedown", (e) => { e.preventDefault(); press(k, true); b.classList.add("on"); });
+      const up = () => { if (key[k]) { press(k, false); b.classList.remove("on"); } };
+      b.addEventListener("mouseup", up); b.addEventListener("mouseleave", up);
     }
+    window.addEventListener("blur", () => { key.L = key.R = key.J = false; btns.forEach((b) => b.classList.remove("on")); });
     window.addEventListener("keydown", (e) => {
       if (!open) return;
       const k = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J" }[e.code];
@@ -81,10 +102,11 @@
     // a wide-ish window onto the level: never taller than 1.15x its width, so you can see what's coming
     const wrap = cv.parentElement.getBoundingClientRect(), pad = root.querySelector(".ltpad").getBoundingClientRect().height;
     const avail = wrap.height - pad - 56;
-    cv.style.height = Math.max(200, Math.min(avail, wrap.width * 1.4)) + "px";
+    cv.style.height = Math.max(200, Math.min(avail, wrap.width * 1.6)) + "px";
     const r = cv.getBoundingClientRect();
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-    scale = cv.height / (ROWS * T);
+    // always show about 11.5 tiles across; any extra height becomes headroom above the level
+    scale = Math.min(cv.height / (ROWS * T), cv.width / (11.5 * T));
     viewW = cv.width / scale;
   }
 
@@ -132,11 +154,18 @@
         case "W": e({ k: "chaseOn", w: 20, h: 600 }); grid[y][x] = "."; break;
         case "w": e({ k: "chaseOff", w: 20, h: 600 }); grid[y][x] = "."; break;
         case "Z": e({ k: "spring", w: 44, h: 26 }); grid[y][x] = "."; break;
+        case "e": e({ k: "zap", w: T, h: 16, hurt: 1, ph: (x % 3) * 0.33 }); grid[y][x] = "."; break;
+        case "b": e({ k: "nut", w: 34, h: 30, y: by - T / 2 + 15, cy: by - T / 2, vx: -70, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
+        case "h": e({ k: "drone", w: 46, h: 40, y: by - T / 2 + 20, cy: by - T / 2, vx: -90, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
+        case "v": e({ k: "diver", w: 26, h: 44, y: by, hy: by, st: "hover", hurt: 1 }); grid[y][x] = "."; break;
+        case "B": e(Object.assign({ k: "boss", st: "wait", hp: kw.hp || 3, max: kw.hp || 3, spd: kw.spd || 1, kind: kw.boss || "walker", name: kw.name || "BOSS", w: 78, h: 78, vx: 0, vy: 0, face: -1, tt: 0, hurt: 1 }, kw.boss === "flyer" || kw.boss === "magnet" ? { y: 4 * T, hy: 4 * T, gy: by, w: 92, h: 70 } : { gy: by })); grid[y][x] = "."; break;
         case "L": movers.push({ k: "lift", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dy: (kw.dy || 3) * T, dx: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "M": movers.push({ k: "plat", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dx: (kw.dx || 3) * T, dy: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "U": ext[x + "," + y] = kw; break;
       }
     }
+    crumbles = []; boss = ents.find((e) => e.k === "boss") || null; arena = null;
+    if (boss) { boss.home = { x: boss.x, y: boss.y }; arena = { l: boss.x - 6 * T - T / 2, r: boss.x + 6 * T + T / 2, on: false, done: false }; }
     for (const e of ents) if (e.k === "coin" && collected.has(i + ":" + Math.round(e.x0) + ":" + Math.round(e.y0))) e.alive = false;
     blockKw = ext;
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
@@ -146,9 +175,33 @@
     bgImg = img(BG[L.bg] || "bg-garage.jpg");
     timeScale = 1; chase = null; t = 0;
   }
-  let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 };
+  let zoom = 1;
+  const VW = () => viewW / zoom;
+  let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 }, crumbles = [], arena = null, boss = null;
+  function crumble(cx, cy) {
+    if (crumbles.some((c) => c.cx === cx && c.cy === cy)) return;
+    // a whole run of crumbling tiles goes together
+    let a = cx, b = cx;
+    while (cell(a - 1, cy) === "q") a--;
+    while (cell(b + 1, cy) === "q") b++;
+    for (let x = a; x <= b; x++) if (!crumbles.some((c) => c.cx === x && c.cy === cy)) crumbles.push({ cx: x, cy, t: 0.55, back: 0 });
+  }
+  function stepCrumbles(dt) {
+    for (const c of crumbles) {
+      if (c.t > 0) { c.t -= dt; if (c.t <= 0) { grid[c.cy][c.cx] = "."; c.back = 3.2; puff(c.cx * T + T / 2, c.cy * T + 10, 3, "#b8a07a"); } }
+      else if (c.back > 0) {
+        c.back -= dt;
+        if (c.back <= 0) {
+          const inside = pl.x + PW / 2 > c.cx * T && pl.x - PW / 2 < (c.cx + 1) * T && pl.y > c.cy * T && pl.y - PH < (c.cy + 1) * T;
+          if (inside) c.back = 0.3; else { grid[c.cy][c.cx] = "q"; c.done = 1; }
+        }
+      }
+    }
+    crumbles = crumbles.filter((c) => !c.done);
+  }
   function spawnPlayer() {
     pl = { x: cp.x, y: cp.y, vx: 0, vy: 0, face: 1, ground: true, coyote: 0, jumps: 0, held: false, inv: 1.0, hitT: 0, landT: 0, djT: 0, anim: 0, on: null };
+    zoom = 1;
     cam = Math.max(0, Math.min(W * T - viewW, pl.x - viewW * 0.35));
     hp = 3;
     pow = { speed: 0, slow: 0, magnet: 0, spring: 0, shield: pow && pow.shield ? 1 : 0 };
@@ -166,11 +219,11 @@
     const maxv = P.MAXV * sp;
     if (dir) {
       pl.face = dir;
-      const a = (pl.ground ? P.ACC : P.ACC_AIR) * sp * (Math.sign(pl.vx) === -dir ? 1.6 : 1);
+      const a = (pl.ground ? P.ACC * (pl.wasSlick ? 0.35 : 1) : P.ACC_AIR) * sp * (Math.sign(pl.vx) === -dir ? (pl.wasSlick ? 1 : 1.6) : 1);
       pl.vx += dir * a * dt;
       if (Math.abs(pl.vx) > maxv) pl.vx = Math.sign(pl.vx) * Math.max(maxv, Math.abs(pl.vx) - P.FRIC * dt);
     } else if (pl.ground) {
-      const f = P.FRIC * dt;
+      const f = P.FRIC * (pl.wasSlick ? 0.12 : 1) * dt;
       pl.vx = Math.abs(pl.vx) <= f ? 0 : pl.vx - Math.sign(pl.vx) * f;
     } else pl.vx *= 1 - 0.8 * dt;
     // conveyors push whatever stands on them
@@ -201,7 +254,7 @@
     // vertical
     const wasGround = pl.ground, oldY = pl.y;
     let ny = pl.y + pl.vy * dt;
-    pl.ground = false; pl.belt = 0;
+    pl.ground = false; pl.belt = 0; pl.slick = false;
     if (pl.on && pl.vy >= 0) { ny = pl.on.y; pl.ground = true; pl.vy = 0; }
     else pl.on = null;
     if (!pl.ground) {
@@ -217,7 +270,7 @@
         for (let cy = Math.floor(oldY / T); cy <= Math.floor(ny / T); cy++) {
           for (let cx = x0; cx <= x1; cx++) {
             const ch = cell(cx, cy), y = cy * T;
-            if ((isSolid(ch) || ch === "-") && y >= oldY - 0.5 && y <= ny && (top === null || y < top)) { top = y; pl.belt = ch === ">" ? 1 : ch === "<" ? -1 : pl.belt; }
+            if ((isSolid(ch) || SEMI.includes(ch)) && y >= oldY - 0.5 && y <= ny && (top === null || y < top)) { top = y; pl.belt = ch === ">" ? 1 : ch === "<" ? -1 : pl.belt; pl.slick = ch === "i"; if (ch === "q") crumble(cx, cy); }
           }
           if (top !== null) break;
         }
@@ -232,6 +285,12 @@
       }
     }
     pl.y = ny;
+    if (pl.ground) pl.wasSlick = pl.slick; 
+    // arena walls: once the boss fight starts you can't walk back out
+    if (arena && arena.on) {
+      if (pl.x - PW / 2 < arena.l) { pl.x = arena.l + PW / 2; pl.vx = Math.max(0, pl.vx); }
+      if (pl.x + PW / 2 > arena.r) { pl.x = arena.r - PW / 2; pl.vx = Math.min(0, pl.vx); }
+    }
     // the head can still be inside a block after riding a lift up: push out
     const stuck = overlapSolid(pl.x, pl.y);
     if (stuck && !pl.on) pl.y = stuck.cy * T;
@@ -287,11 +346,11 @@
         e.vy = Math.min(900, (e.vy || 0) + 2400 * hd);
         let nx = e.x + e.vx * hd;
         const front = Math.floor((nx + Math.sign(e.vx) * e.w / 2) / T), row = Math.floor((e.y - 4) / T);
-        if (isSolid(cell(front, row)) || isSolid(cell(front, row - 1)) || (e.edge && e.onG && !isSolid(cell(front, Math.floor(e.y / T))) && cell(front, Math.floor(e.y / T)) !== "-")) { e.vx = -e.vx; nx = e.x; }
+        if (isSolid(cell(front, row)) || isSolid(cell(front, row - 1)) || (e.edge && e.onG && !isSolid(cell(front, Math.floor(e.y / T))) && !SEMI.includes(cell(front, Math.floor(e.y / T))))) { e.vx = -e.vx; nx = e.x; }
         e.x = nx;
         let ny = e.y + e.vy * hd; e.onG = false;
         const cx = Math.floor(e.x / T);
-        for (let cy = Math.floor(e.y / T); cy <= Math.floor(ny / T); cy++) { const ch = cell(cx, cy); if ((isSolid(ch) || ch === "-") && cy * T >= e.y - 1) { ny = cy * T; e.vy = 0; e.onG = true; break; } }
+        for (let cy = Math.floor(e.y / T); cy <= Math.floor(ny / T); cy++) { const ch = cell(cx, cy); if ((isSolid(ch) || SEMI.includes(ch)) && cy * T >= e.y - 1) { ny = cy * T; e.vy = 0; e.onG = true; break; } }
         e.y = ny; e.rot = (e.rot || 0) + (e.vx * hd) / 17;
         if (e.y > ROWS * T + 100) e.alive = false;
       }
@@ -306,10 +365,30 @@
           if (!e.falling) { e.falling = true; e.y = -20; e.vy = 0; e.kind = ["screw", "nut", "filter"][Math.floor(Math.random() * 3)]; }
           e.vy += 1500 * hd; e.y += e.vy * hd;
           const ch = cell(Math.floor(e.col / T), Math.floor(e.y / T));
-          if (isSolid(ch) || ch === "-" || e.y > ROWS * T) { if (e.y < ROWS * T) puff(e.col, Math.floor(e.y / T) * T, 3, "#aaa"); e.falling = false; e.y = -200; }
+          if (isSolid(ch) || SEMI.includes(ch) || e.y > ROWS * T) { if (e.y < ROWS * T) puff(e.col, Math.floor(e.y / T) * T, 3, "#aaa"); e.falling = false; e.y = -200; }
         }
         e.x = e.col;
       }
+      if (e.fly && !e.dead) {
+        // flyers patrol back and forth, turning at walls or after a few tiles, bobbing as they go
+        e.x += e.vx * hd;
+        if (Math.abs(e.x - e.x0) > (e.k === "drone" ? 4 : 3) * T || isSolid(cell(Math.floor((e.x + Math.sign(e.vx) * e.w / 2) / T), Math.floor(e.cy / T)))) { e.vx = -e.vx; e.x += e.vx * hd * 2; }
+        e.y = e.cy + e.h / 2 + Math.sin(t * (e.k === "nut" ? 4 : 2.2) + e.ph * 6) * (e.k === "nut" ? 26 : 10);
+        e.rot = (e.rot || 0) + hd * 6;
+      }
+      if (e.k === "diver") {
+        // hangs from the ceiling; drops when you walk under it, then winds back up
+        if (e.st === "hover") { e.y = e.hy + Math.sin(t * 3 + e.ph * 6) * 4; if (Math.abs(pl.x - e.x) < 70 && pl.y > e.y && mode === "play") { e.st = "warn"; e.tt = 0.32; } }
+        else if (e.st === "warn") { e.tt -= hd; e.shake = 1; if (e.tt <= 0) { e.st = "dive"; e.vy = 0; e.shake = 0; } }
+        else if (e.st === "dive") {
+          e.vy = Math.min(1100, (e.vy || 0) + 2600 * hd); const ny = e.y + e.vy * hd, cy = Math.floor(ny / T), ch = cell(Math.floor(e.x / T), cy);
+          if (isSolid(ch) || SEMI.includes(ch) || ny > ROWS * T) { e.y = Math.min(ny, cy * T); e.st = "stuck"; e.tt = 0.7; puff(e.x, e.y, 5, "#ccc"); say("land"); } else e.y = ny;
+        } else if (e.st === "stuck") { e.tt -= hd; if (e.tt <= 0) e.st = "up"; }
+        else if (e.st === "up") { e.y -= 160 * hd; if (e.y <= e.hy) { e.y = e.hy; e.st = "hover"; } }
+      }
+      if (e.k === "zap") { e.cyc = ((t * timeScale) / 2.8 + e.ph) % 1; e.on = e.cyc > 0.55; e.warn = e.cyc > 0.42 && !e.on; }
+      if (e.k === "bolt") { e.vy = Math.min(900, e.vy + 1400 * hd); e.y += e.vy * hd; e.x += (e.vx || 0) * hd; const ch = cell(Math.floor(e.x / T), Math.floor(e.y / T)); if (isSolid(ch) || e.y > ROWS * T) { e.alive = false; puff(e.x, Math.floor(e.y / T) * T, 4, "#7ad7ff"); } }
+      if (e.k === "boss") { stepBoss(e, hd, dt); }
       if (e.k === "pu" && e.rise < 1) { e.rise = Math.min(1, e.rise + dt * 3); }
       if (e.k === "coin" && pow.magnet > 0) {
         const dx = pl.x - e.x, dy = pl.y - PH / 2 - (e.y - 13), d = Math.hypot(dx, dy);
@@ -331,6 +410,8 @@
   function collide(e, dt) {
     const b = box(e), px0 = pl.x - PW / 2, px1 = pl.x + PW / 2, py0 = pl.y - PH, py1 = pl.y;
     if (e.k === "drop" && !e.falling) return;
+    if (e.k === "zap" && !e.on) return;
+    if (e.k === "boss" && (e.st === "wait" || e.st === "dead")) return;
     if (e.k === "chaseOn") { if (pl.x > e.x && !chase && !e.used) { e.used = 1; chase = { x: cam - 120 }; toast("RUN! The giant magnet is coming!"); say("grab"); haptic("medium"); } return; }
     if (e.k === "chaseOff") { if (pl.x > e.x && chase) { chase = null; toast("You lost the magnet!"); say("win"); } return; }
     const shrink = e.round ? 6 : e.hurt ? 4 : 0;
@@ -340,10 +421,16 @@
       case "pu": e.alive = false; givePower(e.pu); return;
       case "check": if (!e.on) { ents.forEach((o) => o.k === "check" && (o.on = false)); e.on = true; cp = { x: e.x, y: e.y }; toast("CHECKPOINT!"); say("win"); haptic("success"); } return;
       case "spring": if (pl.vy >= 0 && py1 - b.y0 < 26) { pl.vy = -P.SPRING * (key.J ? 1.1 : 1); pl.jumps = 1; pl.ground = false; pl.on = null; e.squash = 0.2; say("flap"); } return;
-      case "exit": if (mode === "play" && px1 > b.x0 + 26 && px0 < b.x1 - 26 && py1 > b.y0 + 30) enterDrawer(e); return;
+      case "exit": if (arena && !arena.done) return; if (mode === "play" && px1 > b.x0 + 26 && px0 < b.x1 - 26 && py1 > b.y0 + 30) enterDrawer(e); return;
     }
     // hazards: stomp the stompable ones from above
-    const fromAbove = pl.vy > 60 && py1 - b.y0 < 20;
+    const fromAbove = pl.vy > 60 && py1 - b.y0 < (e.k === "boss" ? 30 : 20);
+    if (e.k === "boss") {
+      if (fromAbove && e.inv <= 0 && bossStompable(e)) { bossHit(e); return; }
+      // stunned, dazed or overheated bosses don't hurt you
+      if (e.st === "stun" || e.st === "dazed" || e.st === "hot" || e.inv > 0) { if (fromAbove) { pl.vy = -P.JUMP * 0.7; pl.jumps = 1; } return; }
+      hurt(e); return;
+    }
     if ((e.stomp || e.bounce) && fromAbove) {
       pl.vy = -P.JUMP * (key.J ? 0.95 : 0.7); pl.jumps = 1; pl.held = key.J;
       if (e.stomp) { e.dead = 0.6; e.vx = 0; coinsRun++; hud.Coins.textContent = coinsRun; say("hit"); haptic("medium"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); }
@@ -351,6 +438,70 @@
       return;
     }
     if (e.hurt) hurt(e);
+  }
+  // ---------- bosses ----------
+  function bossStompable(e) { return e.kind === "roller" ? e.st === "hot" : true; }
+  function bossHit(e) {
+    e.hp--; e.inv = 0.9; pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; say("hit"); haptic("heavy");
+    for (let i = 0; i < 6; i++) fx.push({ k: "chip", x: e.x, y: e.y - e.h / 2, vx: (Math.random() - 0.5) * 400, vy: -200 - Math.random() * 300, t: 0.6, c: i % 2 ? "#ffd23f" : "#fff", s: 7 });
+    if (e.hp <= 0) {
+      e.st = "dead"; e.tt = 1.2; say("win"); haptic("success");
+      for (let i = 0; i < 10; i++) ents.push({ k: "coin", x: e.x + (i - 4.5) * 20, y: e.y - 40 - (i % 3) * 18, x0: -1, y0: -1, w: 26, h: 26, alive: true, ph: 0 });
+      arena.on = false; arena.done = true; toast("DRAWER UNLOCKED!");
+    } else { e.st = "stun"; e.tt = 0.7; toast(e.hp === 1 ? "One more hit!" : e.hp + " hits to go!"); }
+  }
+  function startBoss() {
+    arena.on = true; boss.st = "intro"; boss.tt = 1.1; boss.inv = 0;
+    toast(boss.name + "!"); say("grab"); haptic("medium");
+    const tip = { walker: "Stomp it on the head!", charger: "Jump over its charge, stomp it when it stops!", flyer: "Dodge the sparks. Stomp it when it swoops down!", roller: "Stay away until it overheats, then stomp!", magnet: "Don't get pulled in! Stomp it when it swoops!" }[boss.kind];
+    setTimeout(() => mode === "play" && arena && arena.on && toast(tip), 1300);
+  }
+  function stepBoss(e, hd, dt) {
+    if (arena && !arena.on && !arena.done && e.st === "wait" && pl.x > arena.l + 2 * T && mode === "play") startBoss();
+    if (e.st === "wait") { e.y = (e.hy || e.home.y) + Math.sin(t * 2) * (e.hy ? 6 : 0); return; }
+    if (e.st === "dead") { e.tt -= dt; e.y += 90 * dt; e.rot = (e.rot || 0) + dt * 6; if (e.tt <= 0) e.alive = false; return; }
+    e.inv = Math.max(0, (e.inv || 0) - dt);
+    const sp = e.spd * (1 + (e.max - e.hp) * 0.12), L0 = arena.l + T, R0 = arena.r - T;
+    const ground = () => { e.vy = Math.min(1000, e.vy + 2400 * hd); e.y += e.vy * hd; if (e.y >= e.home.y) { const hard = e.vy > 380; e.y = e.home.y; e.vy = 0; return hard ? 2 : 1; } return 0; };
+    const walls = () => { if (e.x < L0) { e.x = L0; return -1; } if (e.x > R0) { e.x = R0; return 1; } return 0; };
+    e.tt -= hd;
+    if (e.st === "intro") { if (e.tt <= 0) { e.st = "move"; e.tt = 1.2; } return; }
+    if (e.st === "stun") { if (e.kind === "flyer" || e.kind === "magnet") { e.y = Math.max(e.y - 120 * hd, e.hy); } else ground(); if (e.tt <= 0) { e.st = "move"; e.tt = 1.0; } return; }
+    e.face = pl.x < e.x ? -1 : 1;
+    switch (e.kind) {
+      case "walker": // waddles at you, hops now and then
+        e.x += e.face * 95 * sp * hd; walls();
+        if (ground() && e.tt <= 0) { e.vy = -760; e.tt = 1.7 / sp; puff(e.x, e.y, 4, "#ddd"); }
+        break;
+      case "charger": // stares, shakes, then charges across the arena and smacks the wall
+        ground();
+        if (e.st === "move") { if (e.tt <= 0) { e.st = "wind"; e.tt = 0.55; e.dir = e.face; } }
+        else if (e.st === "wind") { e.shake = 1; if (e.tt <= 0) { e.st = "charge"; e.shake = 0; } }
+        else if (e.st === "charge") { e.x += e.dir * 430 * sp * hd; if (walls()) { e.st = "dazed"; e.tt = 1.3; say("hit"); haptic("medium"); puff(e.x + e.dir * 30, e.y - 30, 8, "#fff"); } }
+        else if (e.st === "dazed") { if (e.tt <= 0) { e.st = "move"; e.tt = 0.9 / sp; } }
+        break;
+      case "flyer": case "magnet": // hovers high and drops sparks; every few seconds swoops down low
+        if (e.kind === "magnet" && e.st !== "swoop") { const d = e.x - pl.x; if (Math.abs(d) < 9 * T && pl.ground) pl.x += Math.sign(d) * 70 * sp * dt; }
+        if (e.st === "move") {
+          e.x += ((Math.sin(t * 0.9 * sp) * 0.5 + 0.5) * (R0 - L0) + L0 - e.x) * 2 * hd; e.y = e.hy + Math.sin(t * 3) * 10;
+          e.drop = (e.drop || 1.2) - hd;
+          if (e.drop <= 0) { e.drop = (e.kind === "magnet" ? 1.1 : 1.5) / sp; ents.push({ k: "bolt", x: e.x, y: e.y, vx: (pl.x - e.x) * 0.25, vy: 0, w: 22, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, art: e.kind === "magnet" ? "screw" : "nut" }); }
+          if (e.tt <= 0) { e.st = "swoop"; e.tx = Math.max(L0, Math.min(R0, pl.x)); e.tt = 2.2; }
+        } else if (e.st === "swoop") {
+          const low = e.gy - 8; e.x += (e.tx - e.x) * 3 * hd; e.y += (low - e.y) * 3.2 * hd;
+          if (e.tt <= 0) { e.st = "rise"; }
+        } else if (e.st === "rise") { e.y += (e.hy - e.y) * 3 * hd; if (Math.abs(e.y - e.hy) < 6) { e.st = "move"; e.tt = 3.4 / sp; } }
+        break;
+      case "roller": // bounces around the arena; after a while it overheats and sits still: stomp it then
+        if (e.st === "move") {
+          if (!e.vx) e.vx = e.face * 260;
+          e.x += e.vx * sp * hd; const w = walls(); if (w) { e.vx = -w * 260; say("land"); }
+          const g = ground(); if (g === 2) e.vy = -520; else if (g && Math.random() < hd * 1.2) e.vy = -650;
+          e.rot = (e.rot || 0) + e.vx * hd / 30;
+          if (e.tt <= -2.8 / sp) { e.st = "hot"; e.tt = 2.8; e.vx = 0; toast("It's overheating! Stomp it!"); }
+        } else if (e.st === "hot") { ground(); e.shake = 1; if (e.tt <= 0) { e.st = "move"; e.tt = 0; e.shake = 0; } }
+        break;
+    }
   }
   function givePower(k) {
     say("power"); haptic("success");
@@ -414,11 +565,19 @@
     pl.inv -= dt; pl.hitT -= dt; pl.landT -= dt; pl.djT -= dt;
     stepPlayer(dt);
     stepEnts(dt);
-    // camera: follow, but don't drift back unless the player really heads back
-    const lo = cam + viewW * 0.3, hi = cam + viewW * 0.5;
-    if (pl.x > hi) cam += (pl.x - hi);
-    else if (pl.x < lo) cam -= (lo - pl.x);
-    cam = Math.max(0, Math.min(W * T - viewW, cam));
+    // camera: follow, but don't drift back unless the player really heads back.
+    // In a boss fight it zooms out a little and frames the whole arena.
+    const zT = arena && arena.on ? Math.max(0.74, Math.min(1, viewW / (arena.r - arena.l + T / 2))) : 1;
+    zoom += (zT - zoom) * Math.min(1, dt * 3);
+    const vw = VW();
+    if (arena && arena.on) cam += ((arena.l + arena.r) / 2 - vw / 2 - cam) * Math.min(1, dt * 4);
+    else {
+      const lo = cam + vw * 0.3, hi = cam + vw * 0.5;
+      if (pl.x > hi) cam += (pl.x - hi);
+      else if (pl.x < lo) cam -= (lo - pl.x);
+    }
+    cam = Math.max(0, Math.min(W * T - vw, cam));
+    stepCrumbles(dt);
     updHud();
   }
   function resetHazards() {
@@ -426,6 +585,9 @@
     for (const e of ents) if (e.walker) { if (!e.dead && e.alive) { e.x = e.x0; e.y = e.y0; e.vy = 0; } }
     for (const e of ents) if (e.k === "chaseOn" && pl.x < e.x) e.used = 0;
     chase = null;
+    ents = ents.filter((e) => e.k !== "bolt");
+    for (const e of ents) if (e.k === "diver") { e.st = "hover"; e.y = e.hy; }
+    if (boss && arena && !arena.done) { Object.assign(boss, { st: "wait", hp: boss.max, x: boss.home.x, y: boss.hy || boss.home.y, vx: 0, vy: 0, inv: 0, tt: 0, shake: 0, alive: true }); arena.on = false; }
   }
   let hudKey = "";
   function updHud() {
@@ -433,6 +595,9 @@
     if (k !== hudKey) { hudKey = k; hud.Hp.innerHTML = "●".repeat(Math.max(0, hp)).split("").map(() => '<i class="on"></i>').join("") + '<i></i>'.repeat(Math.max(0, 3 - hp)) + (pow.shield ? '<img src="lt/pu-shield.webp" alt="shield">' : ""); }
     const list = ["speed", "slow", "magnet", "spring"].filter((p) => pow[p] > 0).map((p) => '<span><img src="lt/pu-' + p + '.webp" alt="">' + Math.ceil(pow[p]) + "</span>").join("");
     if (hud.Pow._v !== list) { hud.Pow.innerHTML = list; hud.Pow._v = list; }
+    const bb = root.querySelector("#ltBoss"), showB = boss && arena && arena.on && boss.st !== "dead";
+    bb.classList.toggle("on", !!showB);
+    if (showB) { const k2 = boss.name + boss.hp; if (bb._v !== k2) { bb._v = k2; bb.innerHTML = "<b>" + boss.name + "</b><span>" + '<i class="on"></i>'.repeat(boss.hp) + "<i></i>".repeat(boss.max - boss.hp) + "</span>"; } }
   }
   function toast(m) { hud.Msg.textContent = m; hud.Msg.classList.add("on"); msgT = 1.8; }
 
@@ -442,29 +607,31 @@
     const H = ROWS * T;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = "#0d141d"; ctx.fillRect(0, 0, cv.width, cv.height);
-    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    const vw = VW(), oy = cv.height / (scale * zoom) - H;
+    ctx.setTransform(scale * zoom, 0, 0, scale * zoom, 0, 0);
+    ctx.translate(0, oy);
     // background panorama with parallax
     if (ready(bgImg)) {
       // the panorama's own floor line (~76% down) sits behind our ground (row 11), and it's
       // dimmed so nothing in the background reads as something you can touch
-      const bh = H * 1.11, bw = (bgImg.naturalWidth / bgImg.naturalHeight) * bh;
+      const bh = (H + oy) * 1.11, bw = (bgImg.naturalWidth / bgImg.naturalHeight) * bh;
       let bx = -(cam * 0.35) % bw;
-      for (; bx < viewW; bx += bw) ctx.drawImage(bgImg, bx, 0, bw, bh);
-      ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = "rgba(128,128,128,.55)"; ctx.fillRect(0, 0, viewW, H); ctx.restore();
-      ctx.fillStyle = "rgba(10,16,28,.64)"; ctx.fillRect(0, 0, viewW, H);
+      for (; bx < vw; bx += bw) ctx.drawImage(bgImg, bx, -oy, bw, bh);
+      ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = "rgba(128,128,128,.55)"; ctx.fillRect(0, -oy, vw, H + oy); ctx.restore();
+      ctx.fillStyle = "rgba(10,16,28,.64)"; ctx.fillRect(0, -oy, vw, H + oy);
     }
     ctx.save(); ctx.translate(-Math.round(cam), 0);
-    const c0 = Math.max(0, Math.floor(cam / T) - 1), c1 = Math.min(W - 1, Math.ceil((cam + viewW) / T) + 1);
+    const c0 = Math.max(0, Math.floor(cam / T) - 1), c1 = Math.min(W - 1, Math.ceil((cam + vw) / T) + 1);
     for (let y = 0; y < ROWS; y++) for (let x = c0; x <= c1; x++) drawCell(x, y, grid[y][x]);
     // the drawer you came out of
-    if (Math.abs(startPos.x - cam - viewW / 2) < viewW) { ctx.globalAlpha = 0.9; fitImg(mode === "intro" ? "drawer1" : "drawer3", startPos.x - 6, startPos.y, 92); ctx.globalAlpha = 1; }
+    if (Math.abs(startPos.x - cam - vw / 2) < vw) { ctx.globalAlpha = 0.9; fitImg(mode === "intro" ? "drawer1" : "drawer3", startPos.x - 6, startPos.y, 92); ctx.globalAlpha = 1; }
     for (const m of movers) drawMover(m);
-    for (const e of ents) if (e.alive && e.x > cam - 200 && e.x < cam + viewW + 200) drawEnt(e);
+    for (const e of ents) if (e.alive && e.x > cam - 200 && e.x < cam + vw + 200) drawEnt(e);
     drawPlayer();
     for (const f of fx) drawFx(f);
     if (chase) drawChase();
     ctx.restore();
-    if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, 0, viewW, H); }
+    if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, -oy, vw, H + oy); }
   }
   function drawCell(x, y, ch) {
     if (ch === "." || ch === "H") return;
@@ -480,6 +647,19 @@
       case "C": drawImg("t-crate", X, Y + dy, T, T); return;
       case "?": case "U": drawImg("qblock", X, Y + dy, T, T); return;
       case "S": drawImg("usedblk", X, Y + dy, T, T); return;
+      case "i": {
+        const im = img("t-square"); if (top && ready(im)) ctx.drawImage(im, X, Y, T + 0.5, T + 0.5); else { ctx.fillStyle = "#363d46"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); }
+        const c = SLICK[window.LT_LEVELS[lvI].bg] || ["rgba(40,20,0,.55)", "#ffcf6e"];
+        if (top) { ctx.fillStyle = c[0]; ctx.fillRect(X, Y, T + 0.5, 12); ctx.fillStyle = c[1]; ctx.globalAlpha = 0.7; ctx.fillRect(X + ((x * 13) % 30), Y + 3, 10, 2); ctx.globalAlpha = 1; }
+        return;
+      }
+      case "q": {
+        const cr = crumbles.find((k) => k.cx === x && k.cy === y), sh = cr && cr.t > 0 ? (Math.random() - 0.5) * 4 : 0;
+        ctx.fillStyle = "#8b6a3e"; ctx.fillRect(X + sh, Y, T, 16); ctx.fillStyle = "#b8925a"; ctx.fillRect(X + sh, Y, T, 5);
+        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(X + sh + 1, Y + 1, T - 2, 14);
+        ctx.strokeStyle = "#3b2a14"; ctx.beginPath(); ctx.moveTo(X + sh + 14, Y + 2); ctx.lineTo(X + sh + 20, Y + 9); ctx.lineTo(X + sh + 16, Y + 14); ctx.moveTo(X + sh + 34, Y + 3); ctx.lineTo(X + sh + 30, Y + 12); ctx.stroke();
+        return;
+      }
       case "D": drawImg("drum", X + 2, Y, T - 4, T); return;
       case ">": case "<": {
         ctx.fillStyle = "#1c2027"; ctx.fillRect(X, Y, T, T); ctx.fillStyle = "#f2c230"; ctx.fillRect(X, Y, T, 5);
@@ -523,6 +703,47 @@
         if (e.falling) fitImg(e.kind || "nut", e.x, e.y, 30);
         return;
       }
+      case "nut": case "drone": {
+        ctx.save(); ctx.translate(e.x, e.y - e.h / 2);
+        if (e.dead) { ctx.scale(1, 0.5); ctx.globalAlpha = Math.max(0, e.dead / 0.6); }
+        if (e.k === "nut") ctx.rotate(Math.sin(e.rot) * 0.3); else if (e.vx > 0) ctx.scale(-1, 1);
+        // little propeller so you can tell they fly
+        ctx.fillStyle = "#cfd6de"; const pw = 22 * Math.abs(Math.cos(t * 30)); ctx.fillRect(-pw, -e.h / 2 - 10, pw * 2, 4); ctx.fillRect(-1.5, -e.h / 2 - 8, 3, 8);
+        fitImg(e.k === "nut" ? "nut" : "meter", 0, e.h / 2 + 4, e.k === "nut" ? 40 : 46);
+        ctx.restore(); return;
+      }
+      case "diver": {
+        const sx = e.shake ? (Math.random() - 0.5) * 5 : 0;
+        ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(e.x, 0); ctx.lineTo(e.x, e.y - e.h); ctx.stroke();
+        ctx.save(); ctx.translate(e.x + sx, e.y - e.h / 2); ctx.rotate(Math.PI); const im = img("screw"); if (ready(im)) { const w = 38, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, -w / 2, -h / 2, w, h); } ctx.restore();
+        if (e.st === "hover" && Math.abs(pl.x - e.x) < 160) { ctx.fillStyle = "rgba(255,60,40,.22)"; ctx.fillRect(e.x - 18, e.y, 36, groundBelow(e.x) - e.y); }
+        return;
+      }
+      case "zap": {
+        const y = e.y, x0 = e.x - T / 2;
+        ctx.fillStyle = "#1a2433"; ctx.fillRect(x0 + 2, y - 6, T - 4, 6); ctx.fillStyle = "#3b82f6"; ctx.fillRect(x0 + 6, y - 5, T - 12, 3);
+        if (e.on || e.warn) {
+          ctx.strokeStyle = e.on ? "#bfe9ff" : "rgba(120,190,255,.5)"; ctx.lineWidth = e.on ? 3 : 2; ctx.beginPath();
+          for (let k = 0; k < (e.on ? 3 : 1); k++) { let px = x0 + 4, py = y - 4; ctx.moveTo(px, py); for (let s2 = 0; s2 < 6; s2++) { px += (T - 8) / 6; py = y - 4 - Math.random() * (e.on ? 26 : 10); ctx.lineTo(px, py); } }
+          ctx.stroke();
+          if (e.on) { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(90,170,255,.25)"; ctx.fillRect(x0, y - 30, T, 30); ctx.restore(); }
+        }
+        return;
+      }
+      case "bolt": fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
+      case "boss": {
+        const art = BOSS_ART[e.kind], sh = e.shake || e.st === "wind" || e.st === "hot" ? (Math.random() - 0.5) * 6 : 0;
+        if (e.st === "wait" && !(arena && arena.on)) { ctx.globalAlpha = 0.95; }
+        ctx.save(); ctx.translate(e.x + sh, e.y);
+        if (e.inv > 0 && Math.floor(e.inv * 16) % 2) ctx.globalAlpha = 0.4;
+        if (e.st === "hot") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,80,30," + (0.3 + 0.2 * Math.sin(t * 20)) + ")"; ctx.beginPath(); ctx.arc(0, -e.h / 2, e.w * 0.75, 0, 7); ctx.fill(); ctx.restore(); }
+        if (e.kind === "roller") { ctx.translate(0, -e.h / 2); ctx.rotate(e.rot || 0); fitImg(art, 0, e.h / 2 + 8, e.w + 44); }
+        else if (e.kind === "flyer" || e.kind === "magnet") { ctx.rotate(Math.sin(t * 2) * 0.08); fitImg(art, 0, 12, e.w + 56); }
+        else { if (e.face > 0 && e.kind === "charger") ctx.scale(-1, 1); if (e.st === "dead") ctx.rotate(e.rot || 0); fitImg(art, 0, 4, e.w + 56); }
+        ctx.restore(); ctx.globalAlpha = 1;
+        if (e.st === "stun" || e.st === "dazed") for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; fitImg("star", e.x + Math.cos(a) * 34, e.y - e.h - 6 + Math.sin(a) * 8, 18); }
+        return;
+      }
       case "pu": { const y = e.y - e.rise * 34; fitImg("pu-" + e.pu, e.x, y + Math.sin(t * 4) * 2, 36); return; }
       case "check": { ctx.fillStyle = "#c8ced6"; ctx.fillRect(e.x - 2, e.y - 64, 4, 64); ctx.fillStyle = e.on ? "#3fd36b" : "#e5402b"; ctx.beginPath(); ctx.moveTo(e.x + 2, e.y - 64); ctx.lineTo(e.x + 30, e.y - 56); ctx.lineTo(e.x + 2, e.y - 46); ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); fitImg("coin", e.x + 13, e.y - 49, 12); return; }
       case "spring": { const s = e.squash > 0 ? 0.6 : 1; e.squash = (e.squash || 0) - 1 / 60; const im = img("spring"); if (ready(im)) ctx.drawImage(im, e.x - 24, e.y - 30 * s, 48, 30 * s); return; }
@@ -531,16 +752,19 @@
         let k = near ? "drawer1" : "drawer0";
         if (mode === "drawer") k = drawerT < 0.5 ? "drawer1" : drawerT < 1.1 ? "drawer2" : "drawer3";
         if (near && mode !== "drawer") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,200,60," + (0.12 + 0.08 * Math.sin(t * 5)) + ")"; ctx.beginPath(); ctx.arc(e.x, e.y - 40, 90, 0, 7); ctx.fill(); ctx.restore(); }
+        const locked = arena && !arena.done;
+        if (locked) k = "drawer0";
         fitImg(k, e.x, e.y, 112);
+        if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
-        ctx.fillStyle = lvI === 4 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
-        const lab = lvI === 4 ? "GOLDEN DRAWER" : "DRAWER " + (lvI + 2);
+        ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
+        const lab = arena && !arena.done ? "BEAT THE BOSS" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
         ctx.strokeText(lab, e.x, e.y - 112); ctx.fillText(lab, e.x, e.y - 112);
         return;
       }
     }
   }
-  function groundBelow(x) { const cx = Math.floor(x / T); for (let y = 0; y < ROWS; y++) { const ch = cell(cx, y); if (isSolid(ch) || ch === "-") return y * T; } return ROWS * T; }
+  function groundBelow(x) { const cx = Math.floor(x / T); for (let y = 0; y < ROWS; y++) { const ch = cell(cx, y); if (isSolid(ch) || SEMI.includes(ch)) return y * T; } return ROWS * T; }
   function drawChase() {
     const im = img("magnet"); const x = chase.x, y = ROWS * T * 0.55 + Math.sin(t * 6) * 10;
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,60,60,.12)"; ctx.fillRect(x - 600, 0, 680, ROWS * T); ctx.restore();
@@ -585,21 +809,24 @@
   function hideCard() { card.classList.add("hidden"); }
   function menu() {
     mode = "menu"; grid = grid || null;
-    const s = load(), unlocked = tester() ? 5 : Math.min(5, s.done.length + 1);
+    const s = load(), n = NLV();
+    // a drawer opens once the one before it is cleared
+    const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
     const names = window.LT_LEVELS.map((l) => l.name);
-    let h = '<div class="ltlogo">THE LOST TOOLBOX</div><p>Five drawers of platform action. Find the drawer at the end of each level and jump in.</p><div class="ltdrawers">';
-    names.forEach((n, i) => {
-      const done = s.done.includes(i), lock = i >= unlocked;
-      h += '<button class="ltdr' + (done ? " done" : "") + (i === 4 ? " gold" : "") + '"' + (lock ? " disabled" : "") + ' data-i="' + i + '"><b>' + (i === 4 ? "GOLDEN DRAWER" : "DRAWER " + (i + 1)) + "</b><span>" + n + "</span><small>" + (lock ? "LOCKED" : done ? "✓ CLEARED · best " + (s.coins[i] || 0) + " coins" : "PLAY") + "</small></button>";
+    let h = '<div class="ltlogo">THE LOST TOOLBOX</div><p>' + n + ' drawers of platform action. Beat the boss guarding each drawer, then jump in.</p><div class="ltdrawers">';
+    names.forEach((nm, i) => {
+      const done = s.done.includes(i), lock = !open(i);
+      if (i === 5) h += '<div class="ltpart">PART 2 · THE DEEP DRAWERS</div>';
+      h += '<button class="ltdr' + (done ? " done" : "") + (i === 4 ? " gold" : "") + '"' + (lock ? " disabled" : "") + ' data-i="' + i + '"><b>' + (i === 4 ? "GOLDEN DRAWER" : "DRAWER " + (i + 1)) + "</b><span>" + nm + "</span><small>" + (lock ? "LOCKED" : done ? "✓ CLEARED · best " + (s.coins[i] || 0) + " coins" : "PLAY") + "</small></button>";
     });
-    h += "</div>" + (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear all 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
+    h += "</div>" + (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
     show(h);
     card.querySelectorAll(".ltdr").forEach((b) => (b.onclick = () => play(+b.dataset.i)));
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }
@@ -618,14 +845,15 @@
     card.querySelector("#ltMenu").onclick = menu;
   }
   function showClear() {
-    const c = clearInfo, last5 = lvI === 4;
-    let h = '<div class="ltlogo">' + (last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "p-golden0" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
+    const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
+    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 || fin ? "p-golden0" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
-    h += last5 ? '<button class="ltbtn" id="ltNext">ALL DRAWERS</button>' : '<button class="ltbtn" id="ltNext">OPEN DRAWER ' + (lvI + 2) + '</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>';
+    if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';
+    h += fin ? '<button class="ltbtn" id="ltNext">ALL DRAWERS</button>' : '<button class="ltbtn" id="ltNext">OPEN DRAWER ' + (lvI + 2) + '</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>';
     show(h);
     say("win"); haptic("success");
-    card.querySelector("#ltNext").onclick = () => (last5 ? menu() : play(lvI + 1));
+    card.querySelector("#ltNext").onclick = () => (fin ? menu() : play(lvI + 1));
     const m = card.querySelector("#ltMenu"); if (m) m.onclick = menu;
   }
   function openLostBox() {
@@ -671,5 +899,5 @@
     }
     return false;
   }
-  window.LostBox = { _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW }), _play: play, _press: press, _key: key };
+  window.LostBox = { _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key };
 })();

@@ -7,7 +7,7 @@ window.__ltReach = function (li) {
   const T = 48, PW = 30;
   const info = LostBox._probeSetup(li), rows = info.rows, W = info.W, M = info.movers;
   const L = window.LT_LEVELS[li].rows;
-  const SOLID = "#=CU?RSD<>", stand = (ch) => SOLID.includes(ch) || ch === "-";
+  const SOLID = "#=CU?RSD<>i", stand = (ch) => SOLID.includes(ch) || ch === "-" || ch === "q";
   const S = [];
   for (let y = 1; y < rows.length; y++) {
     let x = 0;

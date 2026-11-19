@@ -10,8 +10,8 @@ from levels import LEVELS
 T = 48
 P = dict(MAXV=260, ACC=1900, ACC_AIR=1300, G_HOLD=1500, G=2600, JUMP=640, DJUMP=560, MAXFALL=1000, SPRING=1050)
 PW, PH = 30, 44
-SOLID = set('#=CU?RSD<>')       # full solids
-ONEWAY = set('-')                # semisolid: land from above only
+SOLID = set('#=CU?RSD<>i')       # full solids
+ONEWAY = set('-q')                # semisolid: land from above only
 DT = 1 / 120
 
 def solid_at(grid, cx, cy, extra):

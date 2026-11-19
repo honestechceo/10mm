@@ -23,7 +23,7 @@
   const STEEL = "steel", ROCKET = "rocket", BLAST = "blast";
   const load = (s) => { const i = new Image(); i.src = s; return i; };
   const imgs = TYPES.map((t) => load(t.img));
-  const rocketImg = load("power-rocket.webp"), blastImg = load("power-oil.webp"), panImg = load("svc-pan.webp"), engImg = load("scene-engine-closed.webp");
+  const rocketImg = load("power-rocket.webp"), blastImg = load("power-oil.webp");
   const ready = (im) => im && im.complete && im.naturalWidth;
 
   window.runDrainIntro = function (done) {
@@ -85,8 +85,12 @@
     // liquid grid
     const cell = new Uint8Array(GW * GH), shade = new Uint8Array(GW * GH), solid = new Uint8Array(GW * GH);
     const idx = (x, y) => y * GW + x;
+    // engine oil pan: sloped sides, drain hole in the middle of the bottom
+    const PT = Math.floor(64 / C), PB = Math.floor(PAN_TOP / C), HX = Math.floor(GW / 2), HW = 3;
+    const panL = (y) => 2 + Math.round(((y - PT) / (PB - PT)) * 7), panR = (y) => GW - 1 - panL(y);
+    const inPanArea = (x, y) => y >= PT && y < PB && x >= panL(y) && x <= panR(y);
     let total = 0;
-    for (let y = Math.floor(72 / C); y < Math.floor(PAN_TOP / C); y++) for (let x = 2; x < GW - 2; x++) if (Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
+    for (let y = Math.floor(76 / C); y < PB; y++) for (let x = 0; x < GW; x++) if (inPanArea(x, y) && Math.random() < 0.94) { cell[idx(x, y)] = 1; shade[idx(x, y)] = Math.random() * 255; total++; }
     const target = Math.floor(total * 0.6), PAN_Y = Math.floor((LH - 34) / C);
     let inPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
@@ -94,9 +98,9 @@
     // tiles block oil where they are drawn; oil caught under a falling tile is pushed up
     function markSolids() {
       solid.fill(0);
-      for (let y = Math.floor(60 / C); y < Math.floor(PAN_TOP / C); y++) solid[idx(0, y)] = solid[idx(1, y)] = solid[idx(GW - 1, y)] = solid[idx(GW - 2, y)] = 1;
-      // until the parts have landed, the engine's drain plug is in
-      if (!started) for (let x = 0; x < GW; x++) solid[idx(x, Math.floor(PAN_TOP / C))] = 1;
+      for (let y = PT; y < PB; y++) for (let x = 0; x < GW; x++) if (!inPanArea(x, y)) solid[idx(x, y)] = 1;
+      // pan bottom is solid except the drain hole; until the parts land, the plug is still in
+      for (let x = 0; x < GW; x++) if (!started || Math.abs(x - HX + 0.5) > HW) solid[idx(x, PB)] = 1;
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         const tl = grid[r][c];
         if (!tl || tl.y + T < BY - 20) continue;
@@ -250,8 +254,7 @@
     // gray stone for the engine pan walls, wood planks for the floor
     const stoneTex = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.3 ? "#5d636b" : r < 0.8 ? "#6e757e" : "#868d96", i, j); } for (let k = 0; k < 4; k++) px1(x, "#4a4f56", Math.floor(rnd() * w), Math.floor(rnd() * w), 3, 1); });
     const woodTex = makeTex(TB, 8, (x, w, h) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px1(x, j === 0 ? "#c98a4b" : j === h - 1 ? "#4a2a14" : rnd() < 0.15 ? "#7a4a24" : "#98602f", i, j); px1(x, "#4a2a14", w - 1, 0, 1, h); });
-    const clouds = [[30, 18, 30], [150, 30, 22], [250, 14, 34]];
-    // tile a texture across a rect in logical coords, snapped to the pixel grid
+        // tile a texture across a rect in logical coords, snapped to the pixel grid
     function tile(tex, x, y, w, h) {
       g.save(); g.imageSmoothingEnabled = false; g.beginPath(); g.rect(x, y, w, h); g.clip();
       const tw = tex.width * PX, th = tex.height * PX;
@@ -267,27 +270,68 @@
       g.fillStyle = "#ff9d2e"; g.fillRect(x - 5, y - 8 - fl * 2.5, 10, 10 + fl * 2.5);
       g.fillStyle = "#ffe27a"; g.fillRect(x - 2.5, y - 5 - fl * 2.5, 5, 6);
     }
+    const steelTex = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.15 ? "#8f98a2" : r < 0.85 ? "#a7b0ba" : "#c4ccd4", i, j); } for (let k = 0; k < 3; k++) px1(x, "#d9e0e6", Math.floor(rnd() * w), Math.floor(rnd() * w), 3, 1); });
+    const blockEng = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.2 ? "#2b2f36" : r < 0.85 ? "#353a42" : "#41474f", i, j); } px1(x, "#22262c", 0, w - 1, w, 1); });
+    let plug = null; // drain plug falls out once the parts land
     function drawBack() {
-      // sky with banded color and blocky clouds
-      const sky = ["#4f6fe8", "#5b7cf0", "#6a8af4", "#7c9af6"];
-      for (let i = 0; i < 4; i++) { g.fillStyle = sky[i]; g.fillRect(0, i * 15, LW, 15); }
-      g.fillStyle = "#e9f0ff";
-      for (const [cx, cy, w] of clouds) { const x = ((cx + performance.now() * 0.004) % (LW + 80)) - 40; g.fillRect(x, cy, w * 2, 10); g.fillRect(x + w * 0.4, cy - 7.5, w, 7.5); }
-      // grass + dirt surface line
-      g.fillStyle = "#3a9c2a"; g.fillRect(0, 52, LW, 5); g.fillStyle = "#62c742"; g.fillRect(0, 52, LW, 2.5);
-      // engine oil pan: stone chamber
-      tile(stoneTex, 0, 57, LW, PAN_TOP - 57 + 6);
-      tile(wallTex, 10, 68, LW - 20, PAN_TOP - 68);
-      g.fillStyle = "#0006"; g.fillRect(10, 68, LW - 20, 5);
-      for (let x = 18; x < LW; x += 38) { g.fillStyle = "#2b2f35"; g.fillRect(x - 3, 59, 6, 6); g.fillStyle = "#a9b0b8"; g.fillRect(x - 3, 59, 2.5, 2.5); }
-      txt("ENGINE OIL PAN", 12, 50, 1.25, "#fff", "left");
-      // board: dirt wall behind, wood beam frame on top
-      tile(wallTex, 0, BY - 8, LW, ROWS * T + 14);
+      // engine block above (dark cast iron with a crossmember)
+      tile(blockEng, 0, 0, LW, 58);
+      g.fillStyle = "#1c1f24"; g.fillRect(0, 22, LW, 10); g.fillStyle = "#4d545d"; g.fillRect(0, 22, LW, 2.5);
+      txt("ENGINE OIL PAN", 12, 16, 1.25, "#fff", "left");
+      // pan flange bolted to the block
+      tile(steelTex, 0, 56, LW, 9);
+      g.fillStyle = "#5f6872"; g.fillRect(0, 62.5, LW, 2.5); g.fillStyle = "#dfe5ea"; g.fillRect(0, 56, LW, 2.5);
+      for (let x = 15; x < LW; x += 40) { g.fillStyle = "#2b2f35"; g.fillRect(x - 4, 57, 8, 6); g.fillStyle = "#c4ccd4"; g.fillRect(x - 4, 57, 3, 2.5); }
+      // back wall of the board first (behind the falling oil)
+      tile(wallTex, 0, PAN_TOP, LW, BY - PAN_TOP + ROWS * T + 6);
+      // pan interior + sloped steel sides + bottom with drain hole
+      g.fillStyle = "#15181d"; for (let y = PT; y < PB; y++) g.fillRect(panL(y) * C, y * C, (panR(y) - panL(y) + 1) * C, C);
+      for (let y = PT; y < PB; y++) {
+        const l = panL(y) * C, r = (panR(y) + 1) * C;
+        tile(steelTex, 0, y * C, l, C); tile(steelTex, r, y * C, LW - r, C);
+        g.fillStyle = "#5f6872"; g.fillRect(l - 2.5, y * C, 2.5, C); g.fillRect(r, y * C, 2.5, C);
+      }
+      // outside the slope it's just under-car darkness
+      for (let y = PT; y <= PB; y++) { const cut = (panL(y) - 2) * C; if (cut > 0) { g.fillStyle = "#0b0d12"; g.fillRect(0, y * C, cut, C); g.fillRect(LW - cut, y * C, cut, C); } }
+      const by = PB * C, hl = (HX - HW) * C, hr = (HX + HW) * C, bl = (panL(PB - 1) - 2) * C;
+      tile(steelTex, bl, by, LW - bl * 2, 7.5);
+      g.fillStyle = "#5f6872"; g.fillRect(bl, by + 5, LW - bl * 2, 2.5);
+      // drain hole: dark threaded opening
+      g.fillStyle = "#000"; g.fillRect(hl, by, hr - hl, 7.5);
+      g.fillStyle = "#6b737c"; g.fillRect(hl - 5, by, 5, 7.5); g.fillRect(hr, by, 5, 7.5);
+      g.fillStyle = "#3a4048"; for (let yy = by; yy < by + 7.5; yy += 2.5) { g.fillRect(hl - 5, yy, 5, 1.25); g.fillRect(hr, yy, 5, 1.25); }
+      // board frame and floor
       tile(woodTex, 0, BY - 8, LW, 8);
-      // floor under the board and the shop floor
       tile(woodTex, 0, FLOOR, LW, 8);
       tile(stoneTex, 0, FLOOR + 8, LW, LH - FLOOR);
       g.fillStyle = "#0005"; g.fillRect(0, FLOOR + 8, LW, LH - FLOOR);
+    }
+    // the drain plug: hex head + threads + washer, sits in the hole until the round starts, then drops out
+    function drawPlug() {
+      const by = PB * C, hx = HX * C;
+      if (!started) plug = { x: hx, y: by + 2, vy: 0, r: 0 };
+      else if (plug && plug.y < LH + 30) { plug.vy += 0.5; plug.y += plug.vy; plug.x += 0.9; plug.r += 1; }
+      if (!plug || plug.y > LH + 20) return;
+      const x = Math.round(plug.x / PX) * PX, y = Math.round(plug.y / PX) * PX;
+      g.fillStyle = "#000"; g.fillRect(x - 12.5, y - 1.25, 25, 17.5);
+      g.fillStyle = "#b9a06a"; g.fillRect(x - 7.5, y, 15, 5);           // threads (brass-ish)
+      g.fillStyle = "#8a7444"; g.fillRect(x - 7.5, y + 2.5, 15, 1.25);
+      g.fillStyle = "#c9ced4"; g.fillRect(x - 11.25, y + 5, 22.5, 2.5);  // washer
+      g.fillStyle = "#9aa3ad"; g.fillRect(x - 8.75, y + 7.5, 17.5, 7.5);  // hex head
+      g.fillStyle = "#dfe5ea"; g.fillRect(x - 8.75, y + 7.5, 17.5, 2.5);
+      g.fillStyle = "#5f6872"; g.fillRect(x - 1.25, y + 7.5, 2.5, 7.5);
+    }
+    // the catch pan on the floor: black plastic drain pan with a red rim, fills as oil lands
+    function drawCatchPan(f) {
+      const x0 = 30, x1 = LW - 30, top = LH - 44, bot = LH - 8;
+      for (let y = top; y < bot; y += 2.5) { const k = (y - top) / (bot - top), inset = Math.round((k * 16) / PX) * PX; g.fillStyle = y < top + 5 ? "#c0392b" : "#1c1e22"; g.fillRect(x0 + inset, y, x1 - x0 - inset * 2, 2.5); }
+      g.fillStyle = "#000"; g.fillRect(x0 - 2.5, top - 2.5, x1 - x0 + 5, 2.5); g.fillRect(x0 + 15, bot, x1 - x0 - 30, 2.5);
+      g.fillStyle = "#e85a4a"; g.fillRect(x0, top, x1 - x0, 2.5);
+      // oil inside
+      if (f > 0) { const h = Math.round((4 + f * 24) / PX) * PX, y = top + 5 + (26 - h * 0.9); g.fillStyle = "#6b3a05"; g.fillRect(x0 + 10, Math.max(top + 5, y), x1 - x0 - 20, bot - Math.max(top + 5, y) - 5); g.fillStyle = "#ffcf6e"; g.fillRect(x0 + 10, Math.max(top + 5, y), x1 - x0 - 20, 2.5); g.fillStyle = "#c27a12"; g.fillRect(x0 + 10, Math.max(top + 5, y) + 2.5, x1 - x0 - 20, 5); }
+      // grate + label
+      g.fillStyle = "#3a3d44"; for (let x = x0 + 40; x < x1 - 40; x += 12.5) g.fillRect(x, top + 5, 2.5, 5);
+      g.fillStyle = "#000"; g.fillRect(LW / 2 - 25, bot - 15, 50, 10); txt("OIL", LW / 2, bot - 6.5, 1.25, "#ffd23f", "center", null);
     }
     function drawLights() { torch(18, FLOOR + 30); torch(LW - 18, FLOOR + 30); }
     function drawOil() {
@@ -340,10 +384,8 @@
       }
       if (landing && !started) started = true;
       drawOil(); drawLights();
-      const panW = LW - 30, panX = 15, panY = LH - 58;
       const f = Math.min(1, inPan / target);
-      if (f > 0) { const h = 6 + f * 22, x = panX + 26, y = panY + 44 - h, w = panW - 52; g.fillStyle = "#6b3a05"; g.fillRect(x, y, w, h); g.fillStyle = "#c27a12"; g.fillRect(x, y, w, h * 0.6); g.fillStyle = "#ffcf6e"; g.fillRect(x, y, w, 3); }
-      if (ready(panImg)) g.drawImage(panImg, panX - 4, panY, panW + 8, ((panW + 8) * panImg.naturalHeight) / panImg.naturalWidth);
+      drawCatchPan(f); drawPlug();
       const hero = heroImg();
       if (ready(hero)) {
         const bob = Math.sin(performance.now() / 260) * 2, w = 74, hx = LW - w - 4, hy = 8 + bob;

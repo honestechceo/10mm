@@ -235,12 +235,18 @@ function runBonus(done) {
   last = performance.now();
   bonus.raf = requestAnimationFrame(tickB);
 }
-function bonusResult(won, t, done) {
+function bonusResult(won, t, done, drainRating) {
   if (window.__pr98Testing) {
-    popup(won ? "TEST PASSED!" : "TEST FINISHED", won ? "Bonus round completed. No coins or progress changed." : "Try again from the Test Rounds menu.", "BACK TO TESTS", () => {
+    const isDrain = drainRating && typeof drainRating.stars === "number";
+    const label = isDrain ? "OIL DRAINED!" : won ? "TEST PASSED!" : "TEST FINISHED";
+    const desc = isDrain
+      ? "Oil captured: " + drainRating.caught + " units. Catch efficiency: " + Math.round(drainRating.efficiency * 100) +
+        "%. Rating: " + "★".repeat(drainRating.stars) + "☆".repeat(3 - drainRating.stars) + " (" + drainRating.stars + "/3 stars)."
+      : won ? "Bonus round completed. No coins or progress changed." : "Try again from the Test Rounds menu.";
+    popup(label, desc, "BACK TO TESTS", () => {
       if (typeof window.__pr98ShowTests === "function") window.__pr98ShowTests();
       else showMenu();
-    }, won ? "win" : "toolbox");
+    }, isDrain ? "toolbox" : won ? "win" : "toolbox");
     return;
   }
   let desc,

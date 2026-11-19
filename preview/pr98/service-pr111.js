@@ -13,7 +13,7 @@
     ragblue: { name: "BLUE • Dipstick rag", img: "svc-rag-blue.webp", kind: "tool" },
     ragred: { name: "RED • Spill cleanup rag", img: "svc-rag-red.webp", kind: "tool" },
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
-    lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
+    lugwrench: { name: "1/2-inch air impact gun", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
     brush: { name: "Hub cleaning brush", img: "svc-wrenches.webp", kind: "tool" },
     grease: { name: "Brake pin grease", img: "svc-oil-full.webp", kind: "tool" },
@@ -30,6 +30,9 @@
   const iconSvg = (body) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ff8757"/><stop offset="1" stop-color="#a71b17"/></linearGradient></defs>'+body+'</svg>');
   ITEMS.brush.img = iconSvg('<g transform="rotate(-35 80 80)"><rect x="65" y="70" width="30" height="75" rx="11" fill="url(#g)" stroke="#2d1010" stroke-width="5"/><rect x="56" y="31" width="48" height="48" rx="8" fill="#394b5a" stroke="#cbd8df" stroke-width="5"/>'+Array.from({length:8},(_,i)=>'<path d="M'+(60+i*6)+' 31 V10" stroke="#e8c16d" stroke-width="5" stroke-linecap="round"/>').join('')+'</g>');
   ITEMS.grease.img = iconSvg('<g transform="rotate(-23 80 80)"><path d="M50 36 H110 L118 115 H42Z" fill="#f4f6f8" stroke="#293647" stroke-width="6"/><path d="M49 55 H111 V100 H49Z" fill="url(#g)"/><text x="80" y="75" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">BRAKE</text><text x="80" y="93" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">GREASE</text><path d="M58 36 L66 15 H94 L102 36Z" fill="#c6d3df" stroke="#293647" stroke-width="5"/><path d="M56 116 H104 L97 145 H63Z" fill="#e3e9ed" stroke="#293647" stroke-width="5"/></g>');
+  // Brake-round wheel tool: realistic pneumatic 1/2-inch impact wrench,
+  // replacing the former four-way lug wrench tile.
+  ITEMS.lugwrench.img = iconSvg('<defs><linearGradient id="impact" x2="1" y2="1"><stop stop-color="#aebbc8"/><stop offset=".45" stop-color="#596c7f"/><stop offset="1" stop-color="#263545"/></linearGradient></defs><g transform="rotate(-14 80 80)"><path d="M26 45 H48 V32 H117 Q135 32 138 49 V77 Q135 91 118 91 H89 L83 131 Q81 144 68 144 H56 Q46 142 49 128 L55 91 H43 Q29 88 26 76Z" fill="url(#impact)" stroke="#142332" stroke-width="6"/><rect x="12" y="53" width="23" height="25" rx="3" fill="#c7d0d7" stroke="#253746" stroke-width="5"/><rect x="2" y="58" width="13" height="15" rx="2" fill="#778b9b" stroke="#253746" stroke-width="3"/><path d="M55 42 H115 M58 51 H114" stroke="#e8f3fa" stroke-width="4" opacity=".6"/><path d="M94 34 V87 M105 34 V87 M116 35 V86" stroke="#182d40" stroke-width="4"/><path d="M58 91 H83 L79 109 H54Z" fill="#e4a72d" stroke="#243647" stroke-width="4"/><path d="M56 117 H80 L76 136 H52Z" fill="#202d39" stroke="#111c29" stroke-width="4"/><circle cx="65" cy="78" r="6" fill="#f1bd43"/><path d="M62 143 V151" stroke="#b4c0c9" stroke-width="5"/></g>');
   ITEMS.sparkplug.img = iconSvg('<g transform="rotate(28 80 80)"><rect x="66" y="24" width="28" height="33" rx="4" fill="#f1f4f7" stroke="#334352" stroke-width="6"/><path d="M62 57 H98 L108 88 98 102 H62 L52 88Z" fill="#aab9c7" stroke="#243544" stroke-width="6"/><path d="M66 104 H94 V143 H66Z" fill="#c3ccd4" stroke="#243544" stroke-width="5"/><path d="M69 112 H91 M69 123 H91 M69 134 H91" stroke="#566b7e" stroke-width="5"/><path d="M80 24 V9 H99" stroke="#293c4d" stroke-width="6" fill="none"/></g>');
   ITEMS.battery.img = iconSvg('<rect x="24" y="44" width="112" height="91" rx="12" fill="#344d66" stroke="#142536" stroke-width="8"/><rect x="38" y="28" width="23" height="18" rx="4" fill="#e44d3e"/><rect x="99" y="28" width="23" height="18" rx="4" fill="#d6e1e9"/><path d="M39 67 H121 V113 H39Z" fill="#e4ad34"/><path d="M55 90 H75 M65 80 V100 M94 90 H110" stroke="#192638" stroke-width="7"/>');
   ITEMS.coolant.img = iconSvg('<path d="M48 38 H112 L125 126 Q125 139 112 139 H48 Q35 139 35 126Z" fill="#72d7a3" stroke="#24433e" stroke-width="7"/><path d="M55 27 H105 V40 H55Z" fill="#273c4d"/><path d="M45 72 H115 V112 H45Z" fill="#f2f8f3"/><text x="80" y="97" font-family="Arial" font-size="16" font-weight="900" text-anchor="middle" fill="#215e45">COOLANT</text>');
@@ -166,7 +169,7 @@
   const BRAKE_STEPS = [
     { say: "Put on mechanic gloves", use: "gloves", scene: "car" },
     { say: "Raise and securely support the vehicle at approved lift points", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Remove the front wheel and expose the brake assembly", use: "lugwrench", scene: "car" },
+    { say: "Use the 1/2-inch air impact gun to remove the front wheel", use: "lugwrench", scene: "car" },
     { say: "Support the caliper and remove its mounting bolts", use: "ratchet", scene: "svc-brakes-worn.webp" },
     { say: "Remove the worn brake pads; inspect the hardware", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Worn pads removed; caliper safely supported.") },
     { say: "Retract the caliper piston with the proper tool", use: "piston", scene: "svc-brakes-worn.webp" },

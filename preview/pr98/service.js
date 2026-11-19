@@ -229,10 +229,10 @@
     const renderBrake = () => {
       if (j !== "brake") return;
       const stage = Math.max(0,i);
-      const carView = stage <= 2 || stage >= 9;
+      const carView = stage <= 2 || stage >= 10;
       $("sScene").classList.toggle("carview", carView);
       if (carView) {
-        $("sCar").src = svgUrl(suvArt(stage===2 || stage===9 || stage===10, false));
+        $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
         $("sScene").classList.remove("lifted");
         $("sJack").classList.remove("on");
       } else $("sImg").src = svgUrl(brakeArt(stage));
@@ -353,7 +353,7 @@
       if (over) return;
       over = true; cancelAnimationFrame(raf); if (fillTimer !== null) clearTimeout(fillTimer); stopMusic();
       if (won) {
-        try { localStorage.setItem(practiceKey, "1"); } catch (e) {}
+        if (!window.__pr98Testing) try { localStorage.setItem(practiceKey, "1"); } catch (e) {}
         sfx("win"); buzz("success"); el.classList.add("won");
       }
       setTimeout(() => {
@@ -373,7 +373,7 @@
           desc = "Time's up! The customer is still waiting. Your parts were " + (i > 3 ? "partly used, so grab new ones in the levels." : "saved, so try again from the Service Bay.");
           if (!window.__pr98Testing && i <= 3) for (const st of steps.slice(0, i + 1)) if (st.consume) { G.cart[st.consume] = (G.cart[st.consume] || 0) + 1; save(); }
         }
-        popup(won ? "JOB DONE!" : "TIME'S UP!", desc, "SERVICE BAY", showGarage, won ? "win" : "toolbox");
+        popup(won ? "JOB DONE!" : "TIME'S UP!", desc, window.__pr98Testing ? "BACK TO TESTS" : "SERVICE BAY", window.__pr98Testing && window.__pr98ShowTests ? window.__pr98ShowTests : showGarage, won ? "win" : "toolbox");
         $("eyebrow").textContent = JOBS[j].name;
         $("menuSettings").style.display = ""; $("menuSettings").textContent = "MAIN MENU"; $("menuSettings").onclick = showMenu;
       }, won ? 1100 : 700);

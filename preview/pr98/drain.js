@@ -60,7 +60,7 @@
     // Catch zone spans the full playable board, including the far-left and far-right columns.
     const PAN_LEFT = 7, PAN_RIGHT = LW - 7, PAN_RIM = LH - 49;
     let missedOil = 0;
-    let inPan = 0, moved = 0, started = false;
+    let inPan = 0, displayedPan = 0, moved = 0, started = false;
     const isSolid = (x, y) => x < 0 || x >= GW || y < 0 || y >= GH || cell[idx(x, y)] !== 0 || solid[idx(x, y)];
 
     // tiles block oil where they are drawn; oil caught under a falling tile is pushed up
@@ -243,7 +243,7 @@
       oilCtx.putImageData(oilImg, 0, 0);
       g.save();
       g.imageSmoothingEnabled = true;
-      g.filter = "blur(2.6px)";
+      g.filter = "blur(3.4px)";
       g.drawImage(oilCan, 0, 0, LW, LH);
       g.restore();
     }
@@ -293,7 +293,7 @@
       // The liquid visible in the cleared cells is the ONLY source of collected oil.
       // No cosmetic shortcut stream can bypass the blocks.
       const panW = LW, panX = 0, panY = LH - 62;
-      const f = Math.min(1, inPan / target);
+      const f = Math.min(1, displayedPan / target);
       // Full-width drain trough, with the rim and liquid visible above the floor.
       g.save();
       const steel = g.createLinearGradient(0, panY, 0, LH);
@@ -345,7 +345,7 @@
 
     const upd = () => {
       $("dMoves").textContent = Math.ceil(moves) + "s"; $("dMoves").className = moves <= 3 ? "low" : "";
-      const pct = Math.min(100, Math.floor((inPan / target) * 100));
+      const pct = Math.min(100, Math.floor((displayedPan / target) * 100));
       $("dFill").style.width = pct + "%"; $("dPct").textContent = pct + "%";
     };
     let lastFrame = 0;
@@ -360,8 +360,10 @@
       markSolids();
       moved = 0; for (let i = 0; i < 6; i++) stepOil();
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
+      // Animate the displayed level without ever crediting oil that hasn't landed.
+      displayedPan += Math.min(Math.max(0, inPan - displayedPan), Math.max(0.3, target * dt * .4));
       draw(); upd();
-      if (inPan >= target) return finish(true);
+      if (inPan >= target && displayedPan >= target - .5) return finish(true);
       if (moves <= 0) return finish(false);
       raf = requestAnimationFrame(loop);
     };
@@ -371,7 +373,12 @@
       if (won) { sfx("win"); buzz("success"); } else { sfx("hit"); buzz("heavy"); }
       setTimeout(() => {
         el.className = "hidden";
+        const encountered = inPan + missedOil;
+        const efficiency = encountered ? inPan / encountered : 0;
+        const stars = !won ? 0 : efficiency >= .98 && moves >= 60 ? 3 : efficiency >= .8 ? 2 : 1;
         bonusResult(won, Math.ceil(moves) * 2, done);
+        const starsLabel = "★".repeat(stars) + "☆".repeat(3 - stars);
+        $("details").textContent = "Oil caught: " + Math.round(efficiency * 100) + "% • " + starsLabel + " (" + stars + "/3 stars)";
         $("details").textContent = $("details").textContent.replace(/^Found with [\d.]+s left!/, "Drained with " + Math.ceil(moves) + " seconds to spare!");
         $("message").textContent = won ? "OIL DRAINED!" : "TIME IS UP!";
         if (!won) $("details").textContent = "The drain pan didn't fill up in time. Keep going to reach the next bonus round.";

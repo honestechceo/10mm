@@ -2543,6 +2543,7 @@ function tick(t) {
   rafId = requestAnimationFrame(tick);
 }
 function showMenu() {
+  $("message").onclick = null;
   cancelAnimationFrame(rafId);
   stopMusic();
   state = "menu";
@@ -3690,13 +3691,28 @@ function renderShop() {
 }
 function showLevels() {
   state = "levels";
+
   $("overlay").classList.remove("hidden");
   $("opts").classList.remove("on");
   setArt("map");
   $("eyebrow").textContent = "LEVEL SELECT";
   $("message").textContent = "PICK A GARAGE";
-  $("details").textContent =
-    "Replay any level you have unlocked (" + best + " of " + MAX_LEVEL + ").";
+  const tester = localStorage.getItem("tenmm-tester") === "1";
+  $("details").textContent = tester
+    ? "TESTER MODE: every level is open. Tap the title 7 times to turn it off."
+    : "Replay any level you have unlocked (" + best + " of " + MAX_LEVEL + ").";
+  // hidden tester switch: tap the title 7 times quickly. Opens every level without touching real progress.
+  $("message").onclick = () => {
+    const now = Date.now();
+    showLevels.taps = (now - (showLevels.last || 0) < 1500 ? (showLevels.taps || 0) : 0) + 1;
+    showLevels.last = now;
+    if (showLevels.taps >= 7) {
+      showLevels.taps = 0;
+      localStorage.setItem("tenmm-tester", tester ? "0" : "1");
+      buzz("success");
+      showLevels();
+    }
+  };
   $("menuExtra").style.display = "none";
   $("menuSettings").style.display = "none";
   $("menuLevels").style.display = "none";
@@ -3716,7 +3732,8 @@ function showLevels() {
     const b = document.createElement("button");
     b.textContent = n;
     if (window.FX) FX.decorateLevelButton(b, n);
-    b.disabled = n > best;
+    const tester = localStorage.getItem("tenmm-tester") === "1";
+    b.disabled = n > best && !tester;
     if (n === level) b.className = "cur";
     b.onclick = () => {
       level = n;

@@ -211,6 +211,13 @@ for (const kind of [
   "wetsign",
   "dolly",
   "cart",
+  "piston",
+  "creeper",
+  "tubeman",
+  "brush",
+  "hubcap",
+  "drum",
+  "battery",
 ]) {
   const im = new Image();
   im.src = "tool-" + kind + ".webp";
@@ -1094,6 +1101,13 @@ const HAZ = {
     name: "a rolling snowball",
     art: [2.1, 1.4, 0.3, 0.18],
   },
+  piston: { w: 50, h: 56, move: "bounce", name: "a hopping piston", art: [1.55, 1.53, 0.45, 0.24] },
+  creeper: { w: 86, h: 40, move: "roll", vx: 1.8, name: "a runaway creeper", art: [1.28, 1.43, 0.47, 0.22] },
+  tubeman: { w: 42, h: 70, name: "a wacky tube man", art: [2.1, 1.26, 0.6, 0.17] },
+  brush: { w: 70, h: 52, move: "roll", vx: 1.2, name: "a car-wash brush", art: [1.21, 1.6, 0.48, 0.28] },
+  hubcap: { w: 50, h: 52, move: "roll", vx: 2.2, name: "a rolling hubcap", art: [1.6, 1.58, 0.38, 0.31] },
+  drum: { w: 64, h: 56, move: "roll", vx: 1.4, name: "a leaky oil drum", art: [1.55, 1.57, 0.45, 0.24] },
+  battery: { w: 64, h: 58, name: "a sparking EV battery", art: [1.92, 2.05, 0.32, 0.48] },
 };
 const THEME_HAZ = [
   null,
@@ -1104,14 +1118,15 @@ const THEME_HAZ = [
   "wetsign",
   "dolly",
   "snowball",
-  "tire",
-  "cone",
+  // levels 201-400: one new hazard per location
+  "piston",
+  "creeper",
   "cart",
-  "ball",
-  "wetsign",
-  "tire",
-  "dolly",
-  "cone",
+  "tubeman",
+  "brush",
+  "hubcap",
+  "drum",
+  "battery",
 ];
 function themeIndex(l) {
   return Math.min(THEMES.length - 1, Math.floor((l - 1) / 25));

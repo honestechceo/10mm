@@ -46,6 +46,8 @@ function themeOf(l) {
 }
 function loadTheme(t) {
   if (themeArt[t.key]) return;
+  // panoramas are big: keep only the current location (and the next one) in memory
+  for (const k in themeArt) if (k !== t.key && k !== themeOf(Math.min(MAX_LEVEL, level + 1)).key) { themeArt[k].src = ""; delete themeArt[k]; }
   const im = new Image();
   themeArt[t.key] = im;
   im.onload = () => {

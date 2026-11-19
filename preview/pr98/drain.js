@@ -35,6 +35,12 @@
     el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL <small>1986 ARCADE EDITION • CLEAR PARTS TO OPEN THE DRAIN.</small></div><div class="dmoves"><span>TIME</span><b id="dMoves">0</b></div></div>' +
       '<div class="dhint">MATCH 2+ • OPEN THE CHANNEL • CATCH THE OIL</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
+    el.style.cssText = "font-family:monospace;background:#080e1d;color:#f8d27c";
+    el.querySelector(".bhead").style.cssText = "font-family:monospace;color:#f8c456;text-shadow:3px 3px #593116";
+    el.querySelector(".dhint").style.cssText = "font-family:monospace;color:#8be1e5;letter-spacing:1px";
+    el.querySelector(".dmeter").style.cssText = "font-family:monospace;color:#f8c456";
+    wrap.style.cssText += ";border:4px solid #4a718b;box-shadow:0 0 0 3px #102538,0 0 24px #0e718077";
+    
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
       can.style.width = LW * s + "px"; can.style.height = LH * s + "px";
@@ -261,14 +267,14 @@
       mg.clearRect(0, 0, mask.width, mask.height);
       mg.globalCompositeOperation = "source-over";
       mg.imageSmoothingEnabled = true;
-      mg.filter = "blur(3px)";
+      mg.filter = "blur(1.3px)";
       mg.drawImage(oilCan, 0, 0, mask.width, mask.height);
       mg.filter = "none";
       mg.globalCompositeOperation = "source-in";
       const liquid = mg.createLinearGradient(0, 0, mask.width, mask.height);
-      liquid.addColorStop(0, "#6b3612");
-      liquid.addColorStop(.42, "#8b4917");
-      liquid.addColorStop(.76, "#a36224");
+      liquid.addColorStop(0, "#71360e");
+      liquid.addColorStop(.42, "#b66b1d");
+      liquid.addColorStop(.76, "#d98d2d");
       liquid.addColorStop(1, "#62300f");
       mg.fillStyle = liquid; mg.fillRect(0, 0, mask.width, mask.height);
       g.globalAlpha = .94;

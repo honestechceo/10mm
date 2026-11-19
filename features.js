@@ -137,6 +137,8 @@
     },
     tick(dt, speed) {
       if (slick > 0) slick -= dt;
+      // the rocket burns out before the finish so you can land and get under or into the goal
+      if (rocket > 0 && runMode !== "endless" && scroll > world - 1100) { rocket = 0; player.vy = 1; shield = Math.max(shield, 100); if (typeof toast === "function") toast("Rocket burned out. Land it!"); }
       if (rocket > 0) {
         rocket -= dt;
         player.vy = 0;

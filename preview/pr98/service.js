@@ -13,7 +13,8 @@
     ragblue: { name: "BLUE • Dipstick rag", img: "svc-rag-blue.webp", kind: "tool" },
     ragred: { name: "RED • Spill cleanup rag", img: "svc-rag-red.webp", kind: "tool" },
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
-    lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
+    torquewrench: { name: "1/2-inch torque wrench", img: "svc-ratchet.webp", kind: "tool" },
+    lugwrench: { name: "1/2-inch air impact gun", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
     brush: { name: "Hub cleaning brush", img: "svc-wrenches.webp", kind: "tool" },
     grease: { name: "Brake pin grease", img: "svc-oil-full.webp", kind: "tool" },
@@ -30,14 +31,25 @@
   const iconSvg = (body) => "data:image/svg+xml;charset=utf-8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 160"><defs><linearGradient id="g" x2="1" y2="1"><stop stop-color="#ff8757"/><stop offset="1" stop-color="#a71b17"/></linearGradient></defs>'+body+'</svg>');
   ITEMS.brush.img = iconSvg('<g transform="rotate(-35 80 80)"><rect x="65" y="70" width="30" height="75" rx="11" fill="url(#g)" stroke="#2d1010" stroke-width="5"/><rect x="56" y="31" width="48" height="48" rx="8" fill="#394b5a" stroke="#cbd8df" stroke-width="5"/>'+Array.from({length:8},(_,i)=>'<path d="M'+(60+i*6)+' 31 V10" stroke="#e8c16d" stroke-width="5" stroke-linecap="round"/>').join('')+'</g>');
   ITEMS.grease.img = iconSvg('<g transform="rotate(-23 80 80)"><path d="M50 36 H110 L118 115 H42Z" fill="#f4f6f8" stroke="#293647" stroke-width="6"/><path d="M49 55 H111 V100 H49Z" fill="url(#g)"/><text x="80" y="75" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">BRAKE</text><text x="80" y="93" text-anchor="middle" font-family="Arial" font-size="15" font-weight="900" fill="white">GREASE</text><path d="M58 36 L66 15 H94 L102 36Z" fill="#c6d3df" stroke="#293647" stroke-width="5"/><path d="M56 116 H104 L97 145 H63Z" fill="#e3e9ed" stroke="#293647" stroke-width="5"/></g>');
+  // Brake-round wheel tool: realistic pneumatic 1/2-inch impact wrench,
+  // replacing the former four-way lug wrench tile.
+  ITEMS.lugwrench.img = iconSvg('<defs><linearGradient id="impact" x2="1" y2="1"><stop stop-color="#aebbc8"/><stop offset=".45" stop-color="#596c7f"/><stop offset="1" stop-color="#263545"/></linearGradient></defs><g transform="rotate(-14 80 80)"><path d="M26 45 H48 V32 H117 Q135 32 138 49 V77 Q135 91 118 91 H89 L83 131 Q81 144 68 144 H56 Q46 142 49 128 L55 91 H43 Q29 88 26 76Z" fill="url(#impact)" stroke="#142332" stroke-width="6"/><rect x="12" y="53" width="23" height="25" rx="3" fill="#c7d0d7" stroke="#253746" stroke-width="5"/><rect x="2" y="58" width="13" height="15" rx="2" fill="#778b9b" stroke="#253746" stroke-width="3"/><path d="M55 42 H115 M58 51 H114" stroke="#e8f3fa" stroke-width="4" opacity=".6"/><path d="M94 34 V87 M105 34 V87 M116 35 V86" stroke="#182d40" stroke-width="4"/><path d="M58 91 H83 L79 109 H54Z" fill="#e4a72d" stroke="#243647" stroke-width="4"/><path d="M56 117 H80 L76 136 H52Z" fill="#202d39" stroke="#111c29" stroke-width="4"/><circle cx="65" cy="78" r="6" fill="#f1bd43"/><path d="M62 143 V151" stroke="#b4c0c9" stroke-width="5"/></g>');
+  ITEMS.torquewrench.img = iconSvg('<g transform="rotate(-36 80 80)"><rect x="70" y="22" width="20" height="114" rx="8" fill="#9aabb9" stroke="#223544" stroke-width="5"/><rect x="64" y="84" width="32" height="53" rx="7" fill="#263a50" stroke="#142536" stroke-width="5"/><path d="M67 96 H93 M67 109 H93 M67 121 H93" stroke="#f1bb3c" stroke-width="3"/><rect x="57" y="18" width="46" height="21" rx="5" fill="#c3d0d8" stroke="#293c4b" stroke-width="5"/><rect x="92" y="23" width="27" height="12" rx="2" fill="#9aabb9" stroke="#293c4b" stroke-width="4"/><rect x="113" y="17" width="22" height="24" rx="4" fill="#394c60" stroke="#192b3c" stroke-width="4"/></g>');
   ITEMS.sparkplug.img = iconSvg('<g transform="rotate(28 80 80)"><rect x="66" y="24" width="28" height="33" rx="4" fill="#f1f4f7" stroke="#334352" stroke-width="6"/><path d="M62 57 H98 L108 88 98 102 H62 L52 88Z" fill="#aab9c7" stroke="#243544" stroke-width="6"/><path d="M66 104 H94 V143 H66Z" fill="#c3ccd4" stroke="#243544" stroke-width="5"/><path d="M69 112 H91 M69 123 H91 M69 134 H91" stroke="#566b7e" stroke-width="5"/><path d="M80 24 V9 H99" stroke="#293c4d" stroke-width="6" fill="none"/></g>');
   ITEMS.battery.img = iconSvg('<rect x="24" y="44" width="112" height="91" rx="12" fill="#344d66" stroke="#142536" stroke-width="8"/><rect x="38" y="28" width="23" height="18" rx="4" fill="#e44d3e"/><rect x="99" y="28" width="23" height="18" rx="4" fill="#d6e1e9"/><path d="M39 67 H121 V113 H39Z" fill="#e4ad34"/><path d="M55 90 H75 M65 80 V100 M94 90 H110" stroke="#192638" stroke-width="7"/>');
   ITEMS.coolant.img = iconSvg('<path d="M48 38 H112 L125 126 Q125 139 112 139 H48 Q35 139 35 126Z" fill="#72d7a3" stroke="#24433e" stroke-width="7"/><path d="M55 27 H105 V40 H55Z" fill="#273c4d"/><path d="M45 72 H115 V112 H45Z" fill="#f2f8f3"/><text x="80" y="97" font-family="Arial" font-size="16" font-weight="900" text-anchor="middle" fill="#215e45">COOLANT</text>');
   ITEMS.pliers.img = iconSvg('<g transform="rotate(-25 80 80)"><path d="M61 17 Q45 42 74 72 L53 140" stroke="#d9463b" stroke-width="19" fill="none" stroke-linecap="round"/><path d="M99 17 Q115 42 86 72 L107 140" stroke="#f4b73f" stroke-width="19" fill="none" stroke-linecap="round"/><circle cx="80" cy="73" r="12" fill="#cbd5df" stroke="#283b4e" stroke-width="5"/></g>');
+  // Brake-only polished automotive icons; oil-change assets remain unchanged.
+  const glossySvg = (body) => iconSvg('<defs><linearGradient id="steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset=".32" stop-color="#a9c1d4"/><stop offset=".67" stop-color="#536b80"/><stop offset="1" stop-color="#edf6ff"/></linearGradient><linearGradient id="red" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ff9879"/><stop offset=".45" stop-color="#f03925"/><stop offset="1" stop-color="#771318"/></linearGradient><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a8eaff"/><stop offset=".45" stop-color="#1679df"/><stop offset="1" stop-color="#102d6b"/></linearGradient></defs>'+body);
+  ITEMS.jack.img = glossySvg('<g stroke="#101b2b" stroke-width="5" stroke-linejoin="round"><path d="M22 115 L42 93 115 93 137 120 128 135 H28Z" fill="url(#red)"/><path d="M54 92 L81 58 103 92Z" fill="url(#steel)"/><rect x="72" y="49" width="32" height="12" rx="5" fill="url(#steel)"/><path d="M112 98 L141 27" stroke="#aabed0" stroke-width="9"/><circle cx="44" cy="136" r="12" fill="#1a2839"/><circle cx="118" cy="136" r="12" fill="#1a2839"/><path d="M35 109 H112" stroke="#ffc1a1" stroke-width="5"/></g>');
+  ITEMS.battery.img = glossySvg('<g stroke="#142439" stroke-width="5"><path d="M34 34 Q25 34 25 46 V129 Q25 138 37 138 H123 Q135 138 135 126 V44 Q135 34 123 34Z" fill="url(#red)"/><rect x="38" y="47" width="84" height="56" rx="7" fill="#17293b"/><rect x="46" y="55" width="68" height="39" rx="3" fill="#d6e8f3"/><path d="M48 81 L60 69 74 79 86 64 104 72" fill="none" stroke="#38aa74" stroke-width="5"/><rect x="45" y="19" width="20" height="17" rx="4" fill="url(#steel)"/><rect x="98" y="19" width="20" height="17" rx="4" fill="url(#steel)"/><path d="M42 114 H118" stroke="#ffd1c5" stroke-width="4"/></g>');
+  ITEMS.pliers.img = glossySvg('<g transform="rotate(-22 80 80)" stroke="#182536" stroke-linecap="round" stroke-linejoin="round"><path d="M70 78 L43 139" stroke-width="20" stroke="#15263a"/><path d="M90 78 L117 139" stroke-width="20" stroke="#15263a"/><path d="M70 78 L43 139 M90 78 L117 139" stroke-width="14" stroke="url(#red)"/><path d="M77 79 Q54 48 59 16 L81 48 100 14 Q112 48 83 79Z" fill="url(#steel)" stroke-width="5"/><circle cx="80" cy="77" r="9" fill="#cbdbe7" stroke-width="5"/></g>');
+  ITEMS.brush.img = glossySvg('<g transform="rotate(-32 80 80)" stroke="#1c2b3b" stroke-width="5"><rect x="66" y="75" width="29" height="69" rx="11" fill="url(#red)"/><rect x="53" y="46" width="55" height="35" rx="8" fill="url(#steel)"/>'+Array.from({length:12},(_,i)=>'<path d="M'+(57+i*4)+' 46 V17" stroke="#e7bd57" stroke-width="3"/>').join('')+'<path d="M71 96 V127" stroke="#ffd4c2" stroke-width="4"/></g>');
+  ITEMS.coolant.img = glossySvg('<path d="M47 40 H105 L124 57 V126 Q124 139 111 139 H45 Q32 139 32 126 V55Z" fill="#1c9d59" stroke="#132b34" stroke-width="7"/><path d="M58 29 H103 V43 H58Z" fill="#253b4d"/><path d="M48 72 H112 V110 H48Z" fill="#e5fff1" stroke="#12462f" stroke-width="3"/><text x="80" y="96" font-family="Arial" font-weight="900" font-size="15" fill="#17603d" text-anchor="middle">COOLANT</text><path d="M43 53 V126" stroke="#b8ffd1" stroke-width="5" opacity=".7"/>');
   ITEMS.belt.img = iconSvg('<ellipse cx="80" cy="80" rx="57" ry="43" fill="none" stroke="#151d27" stroke-width="23"/><ellipse cx="80" cy="80" rx="57" ry="43" fill="none" stroke="#596574" stroke-width="4" stroke-dasharray="8 6"/>');
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
-    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 110 },
+    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "torquewrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 155 },
   };
 
   const load = () => { try { return JSON.parse(localStorage.getItem("tenmm-garage")) || {}; } catch (e) { return {}; } };
@@ -157,18 +169,21 @@
     { say: "RED RAG: Wipe spilled oil around the fill cap", use: "ragred", scene: "scene-engine-closed.webp" },
   ];
   const BRAKE_STEPS = [
-    { say: "Put on your gloves", use: "gloves", scene: "car" },
-    { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
-    { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
-    { say: "PISTON TOOL: Support caliper, retract piston, remove worn pads and rotor", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => { s.label("Piston retracted; worn pads and rotor removed."); s.wait("Removing the worn rotor and pads…", 900); } },
-    { say: "HUB BRUSH: Clean rust and debris off the hub face", use: "brush", scene: "svc-brakes-worn.webp", after: (s) => s.label("Hub face cleaned for proper rotor seating.") },
-    { say: "BRAKE GREASE: Clean and lightly lubricate the caliper slide pins", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Slide pins serviced with compatible brake grease; keep grease off friction surfaces.") },
-    { say: "NEW PARTS: Install clean new rotor and brake pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
-    { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "LUG WRENCH: Reinstall wheel and snug lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
-    { say: "Lower the SUV and torque wheel nuts to vehicle specification", use: "jack", scene: "car", after: (s) => s.lift(false) },
-    { say: "Pump brake pedal until firm (3 taps); verify safe brake operation", pump: 3, scene: "car" },
+    { art:0, say:"Put on mechanic gloves", use:"gloves", scene:"car" },
+    { art:1, say:"Lift and securely support the SUV at approved lift points", use:"jack", scene:"car" },
+    { art:2, say:"Remove the front wheel with the 1/2-inch air impact gun", use:"lugwrench", scene:"car" },
+    { art:3, say:"Support the caliper and remove its bolts", use:"ratchet", scene:"svc-brakes-worn.webp" },
+    { art:4, say:"Remove worn pads and inspect the brake hardware", use:"ratchet", scene:"svc-brakes-worn.webp" },
+    { art:5, say:"Retract the caliper piston using the proper tool", use:"piston", scene:"svc-brakes-worn.webp" },
+    { art:6, say:"Remove old rotor and clean the hub mounting face", use:"brush", scene:"svc-brakes-worn.webp" },
+    { art:7, say:"Clean and lubricate caliper slide pins with compatible grease", use:"grease", scene:"svc-brakes-worn.webp" },
+    { art:8, say:"Install new rotor on the clean hub", use:"brakes", scene:"svc-brakes-new.webp" },
+    { art:9, say:"Install new brake pads and hardware", use:"brakes", consume:"brakes", scene:"svc-brakes-new.webp" },
+    { art:10, say:"Reinstall caliper and tighten bolts to vehicle specifications", use:"ratchet", scene:"svc-brakes-new.webp" },
+    { art:11, say:"Reinstall wheel and snug lug nuts with the impact gun", use:"lugwrench", scene:"car" },
+    { art:12, say:"Lower vehicle and remove lifting equipment safely", use:"jack", scene:"car" },
+    { art:13, say:"Torque wheel lug nuts in a star pattern to vehicle specification", use:"torquewrench", scene:"car" },
+    { art:14, say:"Pump brake pedal until firm (3 taps), then verify brake operation", pump:3, scene:"car" },
   ];
 
   let S = null;
@@ -180,7 +195,7 @@
     const steps = j === "oil" ? OIL_STEPS : BRAKE_STEPS;
     // First successful service teaches the player. Later services test their memory.
     const practiceKey = "tenmm-service-trained-" + j;
-    const trained = (G.done[j] || 0) > 0 || localStorage.getItem(practiceKey) === "1";
+    const trained = !window.__pr98Testing && ((G.done[j] || 0) > 0 || localStorage.getItem(practiceKey) === "1");
     const secs = JOBS[j].secs + (trained ? 0 : 25);
     // The tool tray is a puzzle, not an ordered checklist. Add distractors and shuffle
     // on every job launch; all required items remain present.
@@ -190,7 +205,7 @@
       const swap = Math.floor(Math.random() * (k + 1));
       [tools[k], tools[swap]] = [tools[swap], tools[k]];
     }
-    el.className = "";
+    el.className = j === "brake" ? "brake-polish" : "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
       '<div class="scue" id="sCue" aria-live="polite"></div><div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
@@ -201,14 +216,14 @@
     const artDefs = '<defs><linearGradient id="blue" x2=".2" y2="1"><stop stop-color="#94dcff"/><stop offset=".27" stop-color="#1766c5"/><stop offset=".65" stop-color="#003f94"/><stop offset="1" stop-color="#071c47"/></linearGradient><linearGradient id="metal" x2=".3" y2="1"><stop stop-color="#f2f6fc"/><stop offset=".5" stop-color="#73899e"/><stop offset="1" stop-color="#26384d"/></linearGradient><radialGradient id="rotor"><stop stop-color="#cad8e5"/><stop offset=".55" stop-color="#7b8c9b"/><stop offset=".8" stop-color="#dae5ee"/><stop offset="1" stop-color="#33485d"/></radialGradient><radialGradient id="rust"><stop stop-color="#81502d"/><stop offset=".5" stop-color="#a45d34"/><stop offset=".8" stop-color="#6d3a26"/><stop offset="1" stop-color="#302b2a"/></radialGradient><linearGradient id="glass" x2=".8" y2="1"><stop stop-color="#c2efff"/><stop offset=".35" stop-color="#3879b0"/><stop offset="1" stop-color="#0b1c35"/></linearGradient></defs>';
     const wheel = (x,y) => '<g transform="translate('+x+' '+y+')"><circle r="75" fill="#0a0e18" stroke="#202a39" stroke-width="9"/><circle r="60" fill="#26384b" stroke="#0a1018" stroke-width="8"/><circle r="49" fill="url(#metal)" stroke="#e4effa" stroke-width="4"/>'+Array.from({length:10},(_,n)=>'<path d="M-7 -43 L7 -43 11 -15 -11 -15Z" fill="#1a2636" transform="rotate('+(n*36)+')"/>').join('')+'<circle r="13" fill="#1b293d" stroke="#b9c9d8" stroke-width="5"/></g>';
     const suvArt = (raised, wheelOff) => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
-      '<rect width="800" height="430" fill="#111d2b"/><path d="M0 70 H800 M0 145 H800 M0 220 H800" stroke="#263d56" stroke-width="5" opacity=".7"/><path d="M55 0 V350 M755 0 V350" stroke="#37495d" stroke-width="13"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
+      '<rect width="800" height="430" fill="#15293b"/><path d="M0 0 H800 V330 H0Z" fill="#1b3246"/><path d="M0 36 H800 M0 118 H800 M0 201 H800" stroke="#3c5264" stroke-width="8" opacity=".55"/><rect x="13" y="40" width="70" height="263" rx="7" fill="#9d2226" stroke="#1a2837" stroke-width="8"/><path d="M23 90 H73 M23 145 H73 M23 200 H73" stroke="#e55b4b" stroke-width="5"/><rect x="729" y="20" width="31" height="318" rx="5" fill="#1762b3" stroke="#102743" stroke-width="7"/><rect x="731" y="95" width="26" height="20" fill="#ffd052"/><path d="M0 339 H800 V430 H0Z" fill="#344450"/><path d="M0 342 H800" stroke="#e6b44b" stroke-width="6"/><path d="M0 70 H800 M0 145 H800 M0 220 H800" stroke="#263d56" stroke-width="5" opacity=".7"/><path d="M55 0 V350 M755 0 V350" stroke="#37495d" stroke-width="13"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
       '<g transform="translate(0 '+(raised?-37:0)+')"><path d="M82 207 L153 186 245 102 Q260 86 290 86 H503 Q538 86 558 104 L635 188 709 206 Q752 218 754 254 L744 320 H52 L48 255 Q49 226 82 207Z" fill="url(#blue)" stroke="#081529" stroke-width="12"/>'+
       '<path d="M257 111 H500 Q520 111 534 127 L589 194 H182Z" fill="url(#glass)" stroke="#07172e" stroke-width="10"/><path d="M398 111 V194" stroke="#081a33" stroke-width="10"/><path d="M166 210 H640" stroke="#7acbff" stroke-width="6" opacity=".75"/><path d="M71 263 H735" stroke="#041c45" stroke-width="8"/><path d="M72 233 L161 214 161 246 70 257Z" fill="#e6f9ff" stroke="#193953" stroke-width="6"/><path d="M648 217 L726 233 734 254 650 242Z" fill="#f34b35"/><path d="M64 292 H745" stroke="#2a9ff2" stroke-width="6"/><path d="M317 194 V312 M550 194 V312" stroke="#061a3d" stroke-width="5"/><path d="M536 224 h37" stroke="#d7f5ff" stroke-width="6" stroke-linecap="round"/>'+
       (wheelOff ? '<g transform="translate(210 320)"><circle r="75" fill="#0b1724" stroke="#23384c" stroke-width="9"/><circle r="57" fill="#925b36" stroke="#3a302a" stroke-width="8"/><circle r="23" fill="#b2c3d0" stroke="#243a50" stroke-width="7"/></g>' : wheel(210,320))+wheel(612,320)+'</g>'+
       (raised?'<g><path d="M320 363 L395 320 470 363Z" fill="#9e1d1a" stroke="#280b10" stroke-width="6"/><rect x="335" y="356" width="142" height="17" rx="6" fill="#e43e2b"/><circle cx="348" cy="374" r="12" fill="#141b27"/><circle cx="462" cy="374" r="12" fill="#141b27"/><path d="M454 347 L532 301" stroke="#fa533a" stroke-width="15" stroke-linecap="round"/></g>':'')+
       '</svg>';
     const brakeArt = (stage) => {
-      const fresh = stage >= 8, bare = stage === 6 || stage === 7, noCaliper = stage >= 4 && stage <= 7;
+      const fresh = stage >= 7, bare = stage === 5 || stage === 6, noCaliper = stage >= 4 && stage <= 7;
       const rotor = fresh ? 'url(#rotor)' : 'url(#rust)';
       const caliper = '#765b4c'; // Original caliper stays the same, even after rotor/pad replacement.
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
@@ -221,22 +236,74 @@
         Array.from({length:5},(_,n)=>'<circle cx="'+(400+48*Math.cos(n*2*Math.PI/5))+'" cy="'+(242+48*Math.sin(n*2*Math.PI/5))+'" r="9" fill="#d2d9df" stroke="#263545" stroke-width="4"/>').join('')+
         '<circle cx="400" cy="242" r="17" fill="#1d2a37" stroke="#a7b8c6" stroke-width="5"/>'+
         (!noCaliper?'<g><path d="M218 153 Q175 167 173 206 V291 Q180 333 236 334 H290 Q312 325 312 304 V180 Q301 148 273 150Z" fill="'+caliper+'" stroke="#1a2530" stroke-width="10"/><path d="M195 207 H285 V267 H195Z" fill="#252d37" stroke="#c0a28c" stroke-width="7"/><circle cx="241" cy="177" r="13" fill="#a9b8c6"/><circle cx="241" cy="313" r="13" fill="#a9b8c6"/></g>':'<path d="M194 165 V318 H277" stroke="#6c7984" stroke-width="23" fill="none"/>')+
-        (stage===6?'<g><circle cx="400" cy="242" r="76" fill="none" stroke="#f0b43a" stroke-width="5" stroke-dasharray="12 12"/><path d="M540 170 L493 211" stroke="#ffda57" stroke-width="14" stroke-linecap="round"/><path d="M492 211 L465 225" stroke="#b6cbd9" stroke-width="20" stroke-linecap="round"/></g>':'')+
-        (stage===7?'<g><rect x="516" y="135" width="206" height="104" rx="15" fill="#263546" stroke="#e9c14b" stroke-width="5"/><path d="M540 163 H696 M540 209 H696" stroke="#b9c8d5" stroke-width="15" stroke-linecap="round"/><circle cx="553" cy="163" r="9" fill="#d7b15b"/><circle cx="553" cy="209" r="9" fill="#d7b15b"/><path d="M580 164 L647 185" stroke="#f8d351" stroke-width="8" stroke-linecap="round"/><text x="620" y="259" font-size="18" font-family="Arial" font-weight="bold" fill="#ffe076" text-anchor="middle">CLEAN + GREASE PINS</text></g>':'')+
+        (stage===5?'<g><circle cx="400" cy="242" r="76" fill="none" stroke="#f0b43a" stroke-width="5" stroke-dasharray="12 12"/><path d="M540 170 L493 211" stroke="#ffda57" stroke-width="14" stroke-linecap="round"/><path d="M492 211 L465 225" stroke="#b6cbd9" stroke-width="20" stroke-linecap="round"/></g>':'')+
+        (stage===6?'<g><rect x="516" y="135" width="206" height="104" rx="15" fill="#263546" stroke="#e9c14b" stroke-width="5"/><path d="M540 163 H696 M540 209 H696" stroke="#b9c8d5" stroke-width="15" stroke-linecap="round"/><circle cx="553" cy="163" r="9" fill="#d7b15b"/><circle cx="553" cy="209" r="9" fill="#d7b15b"/><path d="M580 164 L647 185" stroke="#f8d351" stroke-width="8" stroke-linecap="round"/><text x="620" y="259" font-size="18" font-family="Arial" font-weight="bold" fill="#ffe076" text-anchor="middle">CLEAN + GREASE PINS</text></g>':'')+
         '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="23" text-anchor="middle" fill="#fff">'+(['WHEEL REMOVED • WORN BRAKES','REMOVE CALIPER BOLTS','SUPPORT CALIPER • RETRACT PISTON','CLEAN EXPOSED HUB','CLEAN + GREASE SLIDE PINS','FIT NEW ROTOR + PADS','REINSTALL ORIGINAL CALIPER','REINSTALL WHEEL'][Math.max(0,Math.min(7,stage-2))])+'</text></svg>';
     };
     $("sCar").src = svgUrl(suvArt(false, false));
+    // Scene files are intentionally separate from the instructional UI: the
+    // original storyboard has baked-in, inconsistent step numbers.
+    // When a scene asset is available, use it; retain the playable SVG scene
+    // as a fallback so an incomplete upload cannot break the brake job.
+    const brakeSceneFiles = Array.from({length:12}, (_,n) =>
+      'https://raw.githubusercontent.com/honestechceo/10mm/polish/brake-service-review-20261118/preview/pr98/brake-art/brake_scene_' + String(n+1).padStart(2,'0') + '.webp');
+    const brakeSceneCache = brakeSceneFiles.map(src => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.src = src;
+      return img;
+    });
+    // The final three actions have their own playable illustrations rather than
+    // repeating the wheel-installation image. The oil-change renderer is untouched.
+    const finalBrakeScene = (stage) => {
+      const caption = stage === 12 ? "LOWER VEHICLE • REMOVE JACK" :
+        stage === 13 ? "FINAL TORQUE • STAR PATTERN" : "PUMP PEDAL UNTIL FIRM";
+      const overlay = stage === 12
+        ? '<path d="M350 65 V170 M326 146 L350 174 374 146" stroke="#ffca44" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+        : stage === 13
+        ? '<g transform="translate(205 281) rotate(-35)"><rect x="-9" y="-135" width="18" height="125" rx="7" fill="#dce6ef" stroke="#1a2d40" stroke-width="5"/><rect x="-15" y="-80" width="30" height="60" rx="6" fill="#273e57"/><path d="M0 -130 H72" stroke="#dce6ef" stroke-width="18" stroke-linecap="round"/></g><path d="M170 290 L235 235 M170 235 L235 290" stroke="#ffca44" stroke-width="5" stroke-dasharray="8 7"/>'
+        : '<g transform="translate(565 70)"><rect x="0" y="0" width="165" height="190" rx="20" fill="#15273b" stroke="#f5bf3b" stroke-width="6"/><path d="M80 25 V100" stroke="#b7cad8" stroke-width="18" stroke-linecap="round"/><rect x="33" y="96" width="96" height="28" rx="9" fill="#d7e1e9" stroke="#293c50" stroke-width="5"/><path d="M80 140 V173 M62 157 L80 176 98 157" stroke="#f5bf3b" stroke-width="8" fill="none"/></g>';
+      return svgUrl(suvArt(false, false).replace('</svg>',
+        overlay + '<rect x="90" y="380" width="620" height="42" rx="12" fill="#101b2b" stroke="#f5bf3b" stroke-width="3"/><text x="400" y="408" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="white">' + caption + '</text></svg>'));
+    };
     const renderBrake = () => {
       if (j !== "brake") return;
-      const stage = Math.max(0,i);
-      const carView = stage <= 2 || stage >= 9;
-      $("sScene").classList.toggle("carview", carView);
-      if (carView) {
-        $("sCar").src = svgUrl(suvArt(stage===2 || stage===9 || stage===10, false));
-        $("sScene").classList.remove("lifted");
+      const stage = Math.max(0, Math.min(14, BRAKE_STEPS[i]?.art ?? 0));
+      const scene = $("sScene");
+      const art = brakeSceneCache[stage];
+      if (stage >= 12) {
+        scene.classList.remove("carview", "lifted");
+        scene.classList.add("illustrated-brake");
         $("sJack").classList.remove("on");
-      } else $("sImg").src = svgUrl(brakeArt(stage));
-      $("sScene").dataset.brakeStage = String(stage);
+        $("sCar").style.display = "none";
+        $("sImg").style.display = "block";
+        $("sImg").src = finalBrakeScene(stage);
+        scene.dataset.brakeStage = String(stage);
+        return;
+      }
+      // Use the uploaded art as the primary scene. Do not wait for it to
+      // finish downloading before switching away from the old SVG car.
+      scene.classList.remove("carview", "lifted");
+      scene.classList.add("illustrated-brake");
+      $("sJack").classList.remove("on");
+      $("sCar").style.display = "none";
+      $("sImg").style.display = "block";
+      $("sImg").src = art.src;
+      scene.dataset.brakeStage = String(stage);
+      const fallback = () => {
+        if ((BRAKE_STEPS[i]?.art ?? 0) !== stage || over) return;
+        const carView = stage <= 2 || stage >= 10;
+        scene.classList.toggle("carview", carView);
+        scene.classList.remove("illustrated-brake");
+        $("sImg").style.display = "";
+        $("sCar").style.display = "";
+        if (carView) $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
+        else $("sImg").src = svgUrl(brakeArt(stage));
+        const cue = $("sCue");
+        if (cue) cue.textContent += " • SCENE IMAGE UNAVAILABLE";
+      };
+      if (art.complete && !art.naturalWidth) fallback();
+      else if (!art.complete) art.addEventListener("error", fallback, {once:true});
     };
     for (const id of tools) {
       const b = document.createElement("button");
@@ -353,7 +420,7 @@
       if (over) return;
       over = true; cancelAnimationFrame(raf); if (fillTimer !== null) clearTimeout(fillTimer); stopMusic();
       if (won) {
-        try { localStorage.setItem(practiceKey, "1"); } catch (e) {}
+        if (!window.__pr98Testing) try { localStorage.setItem(practiceKey, "1"); } catch (e) {}
         sfx("win"); buzz("success"); el.classList.add("won");
       }
       setTimeout(() => {
@@ -373,7 +440,7 @@
           desc = "Time's up! The customer is still waiting. Your parts were " + (i > 3 ? "partly used, so grab new ones in the levels." : "saved, so try again from the Service Bay.");
           if (!window.__pr98Testing && i <= 3) for (const st of steps.slice(0, i + 1)) if (st.consume) { G.cart[st.consume] = (G.cart[st.consume] || 0) + 1; save(); }
         }
-        popup(won ? "JOB DONE!" : "TIME'S UP!", desc, "SERVICE BAY", showGarage, won ? "win" : "toolbox");
+        popup(won ? "JOB DONE!" : "TIME'S UP!", desc, window.__pr98Testing ? "BACK TO TESTS" : "SERVICE BAY", window.__pr98Testing && window.__pr98ShowTests ? window.__pr98ShowTests : showGarage, won ? "win" : "toolbox");
         $("eyebrow").textContent = JOBS[j].name;
         $("menuSettings").style.display = ""; $("menuSettings").textContent = "MAIN MENU"; $("menuSettings").onclick = showMenu;
       }, won ? 1100 : 700);

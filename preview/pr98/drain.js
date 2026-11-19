@@ -238,13 +238,6 @@
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.save();
-      // First pass: soft shadow beneath the fluid helps separate it from the
-      // dark game board without outlining individual simulation pixels.
-      g.globalAlpha = .35;
-      g.filter = "blur(3px)";
-      g.drawImage(oilCan, 0, 1.4, LW, LH);
-      g.restore();
-      g.save();
       // Fluid silhouette is softened in screen-space, not cell-by-cell.
       // source-in restricts all color to the real particle footprint.
       const mask = fluidMask;

@@ -164,18 +164,18 @@
     { say: "RED RAG: Wipe spilled oil around the fill cap", use: "ragred", scene: "scene-engine-closed.webp" },
   ];
   const BRAKE_STEPS = [
-    { say: "Put on your gloves", use: "gloves", scene: "car" },
-    { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
-    { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
-    { say: "PISTON TOOL: Support caliper, retract piston, remove worn pads and rotor", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => { s.label("Piston retracted; worn pads and rotor removed."); s.wait("Removing the worn rotor and pads…", 900); } },
-    { say: "HUB BRUSH: Clean rust and debris off the hub face", use: "brush", scene: "svc-brakes-worn.webp", after: (s) => s.label("Hub face cleaned for proper rotor seating.") },
-    { say: "BRAKE GREASE: Clean and lightly lubricate the caliper slide pins", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Slide pins serviced with compatible brake grease; keep grease off friction surfaces.") },
-    { say: "NEW PARTS: Install clean new rotor and brake pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
-    { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "LUG WRENCH: Reinstall wheel and snug lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
-    { say: "Lower the SUV and torque wheel nuts to vehicle specification", use: "jack", scene: "car", after: (s) => s.lift(false) },
-    { say: "Pump brake pedal until firm (3 taps); verify safe brake operation", pump: 3, scene: "car" },
+    { say: "Put on mechanic gloves", use: "gloves", scene: "car" },
+    { say: "Raise and securely support the vehicle at approved lift points", use: "jack", scene: "car", after: (s) => s.lift(true) },
+    { say: "Remove the front wheel and expose the brake assembly", use: "lugwrench", scene: "car" },
+    { say: "Support the caliper and remove its mounting bolts", use: "ratchet", scene: "svc-brakes-worn.webp" },
+    { say: "Remove the worn brake pads; inspect the hardware", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Worn pads removed; caliper safely supported.") },
+    { say: "Retract the caliper piston with the proper tool", use: "piston", scene: "svc-brakes-worn.webp" },
+    { say: "Remove the old rotor and clean the hub mounting face", use: "brush", scene: "svc-brakes-worn.webp" },
+    { say: "Inspect and lubricate the slide pins with compatible brake grease", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Keep grease off pads and rotor friction surfaces.") },
+    { say: "Install the new rotor on the clean hub", use: "brakes", scene: "svc-brakes-new.webp" },
+    { say: "Install new pads and the correct hardware", use: "brakes", consume: "brakes", scene: "svc-brakes-new.webp" },
+    { say: "Reinstall caliper and torque fasteners to vehicle specifications", use: "ratchet", scene: "svc-brakes-new.webp" },
+    { say: "Reinstall wheel, lower vehicle, torque lug nuts, then pump pedal firm (3 taps) and verify brakes", pump: 3, scene: "car", before: (s) => s.lift(false) },
   ];
 
   let S = null;

@@ -161,14 +161,14 @@
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
     { say: "LUG WRENCH: Remove the wheel to expose the brake assembly", use: "lugwrench", scene: "car", next: "svc-brakes-worn.webp" },
     { say: "RATCHET: Remove the caliper bolts", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Caliper unbolted; old pads exposed.") },
-    { say: "PISTON TOOL: Retract the caliper piston; remove old pads and rotor", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => { s.label("Piston retracted; worn pads and rotor removed."); s.wait("Removing the worn rotor and pads…", 900); } },
+    { say: "PISTON TOOL: Support caliper, retract piston, remove worn pads and rotor", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => { s.label("Piston retracted; worn pads and rotor removed."); s.wait("Removing the worn rotor and pads…", 900); } },
     { say: "HUB BRUSH: Clean rust and debris off the hub face", use: "brush", scene: "svc-brakes-worn.webp", after: (s) => s.label("Hub face cleaned for proper rotor seating.") },
     { say: "BRAKE GREASE: Clean and lightly lubricate the caliper slide pins", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Slide pins serviced with compatible brake grease; keep grease off friction surfaces.") },
-    { say: "NEW PARTS: Remove old rotor and pads; install replacements", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
+    { say: "NEW PARTS: Install clean new rotor and brake pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("New rotor and pads installed.") },
     { say: "RATCHET: Reinstall caliper bolts", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "LUG WRENCH: Reinstall wheel and tighten lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
-    { say: "Lower the car", use: "jack", scene: "car", after: (s) => s.lift(false) },
-    { say: "Pump the brake pedal 3 times", pump: 3, scene: "car" },
+    { say: "LUG WRENCH: Reinstall wheel and snug lug nuts", use: "lugwrench", scene: "svc-brakes-new.webp", next: "car" },
+    { say: "Lower the SUV and torque wheel nuts to vehicle specification", use: "jack", scene: "car", after: (s) => s.lift(false) },
+    { say: "Pump brake pedal until firm (3 taps); verify safe brake operation", pump: 3, scene: "car" },
   ];
 
   let S = null;
@@ -204,11 +204,11 @@
       '<rect width="800" height="430" fill="#111d2b"/><path d="M0 70 H800 M0 145 H800 M0 220 H800" stroke="#263d56" stroke-width="5" opacity=".7"/><path d="M55 0 V350 M755 0 V350" stroke="#37495d" stroke-width="13"/><path d="M0 355 H800" stroke="#ffc72c" stroke-width="5"/><path d="M0 370 H800" stroke="#253546" stroke-width="4"/><ellipse cx="400" cy="365" rx="345" ry="24" fill="#000" opacity=".45"/>'+
       '<g transform="translate(0 '+(raised?-37:0)+')"><path d="M82 207 L153 186 245 102 Q260 86 290 86 H503 Q538 86 558 104 L635 188 709 206 Q752 218 754 254 L744 320 H52 L48 255 Q49 226 82 207Z" fill="url(#blue)" stroke="#081529" stroke-width="12"/>'+
       '<path d="M257 111 H500 Q520 111 534 127 L589 194 H182Z" fill="url(#glass)" stroke="#07172e" stroke-width="10"/><path d="M398 111 V194" stroke="#081a33" stroke-width="10"/><path d="M166 210 H640" stroke="#7acbff" stroke-width="6" opacity=".75"/><path d="M71 263 H735" stroke="#041c45" stroke-width="8"/><path d="M72 233 L161 214 161 246 70 257Z" fill="#e6f9ff" stroke="#193953" stroke-width="6"/><path d="M648 217 L726 233 734 254 650 242Z" fill="#f34b35"/><path d="M64 292 H745" stroke="#2a9ff2" stroke-width="6"/><path d="M317 194 V312 M550 194 V312" stroke="#061a3d" stroke-width="5"/><path d="M536 224 h37" stroke="#d7f5ff" stroke-width="6" stroke-linecap="round"/>'+
-      wheel(210,320)+wheel(612,320)+'</g>'+
+      (wheelOff ? '<g transform="translate(210 320)"><circle r="75" fill="#0b1724" stroke="#23384c" stroke-width="9"/><circle r="57" fill="#925b36" stroke="#3a302a" stroke-width="8"/><circle r="23" fill="#b2c3d0" stroke="#243a50" stroke-width="7"/></g>' : wheel(210,320))+wheel(612,320)+'</g>'+
       (raised?'<g><path d="M320 363 L395 320 470 363Z" fill="#9e1d1a" stroke="#280b10" stroke-width="6"/><rect x="335" y="356" width="142" height="17" rx="6" fill="#e43e2b"/><circle cx="348" cy="374" r="12" fill="#141b27"/><circle cx="462" cy="374" r="12" fill="#141b27"/><path d="M454 347 L532 301" stroke="#fa533a" stroke-width="15" stroke-linecap="round"/></g>':'')+
       '</svg>';
     const brakeArt = (stage) => {
-      const fresh = stage >= 7, bare = stage === 5 || stage === 6, noCaliper = stage >= 4 && stage <= 7;
+      const fresh = stage >= 8, bare = stage === 6 || stage === 7, noCaliper = stage >= 4 && stage <= 8;
       const rotor = fresh ? 'url(#rotor)' : 'url(#rust)';
       const caliper = '#765b4c'; // Original caliper stays the same, even after rotor/pad replacement.
       return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 430">'+artDefs+
@@ -221,8 +221,8 @@
         Array.from({length:5},(_,n)=>'<circle cx="'+(400+48*Math.cos(n*2*Math.PI/5))+'" cy="'+(242+48*Math.sin(n*2*Math.PI/5))+'" r="9" fill="#d2d9df" stroke="#263545" stroke-width="4"/>').join('')+
         '<circle cx="400" cy="242" r="17" fill="#1d2a37" stroke="#a7b8c6" stroke-width="5"/>'+
         (!noCaliper?'<g><path d="M218 153 Q175 167 173 206 V291 Q180 333 236 334 H290 Q312 325 312 304 V180 Q301 148 273 150Z" fill="'+caliper+'" stroke="#1a2530" stroke-width="10"/><path d="M195 207 H285 V267 H195Z" fill="#252d37" stroke="#c0a28c" stroke-width="7"/><circle cx="241" cy="177" r="13" fill="#a9b8c6"/><circle cx="241" cy="313" r="13" fill="#a9b8c6"/></g>':'<path d="M194 165 V318 H277" stroke="#6c7984" stroke-width="23" fill="none"/>')+
-        (stage===5?'<g><circle cx="400" cy="242" r="76" fill="none" stroke="#f0b43a" stroke-width="5" stroke-dasharray="12 12"/><path d="M540 170 L493 211" stroke="#ffda57" stroke-width="14" stroke-linecap="round"/><path d="M492 211 L465 225" stroke="#b6cbd9" stroke-width="20" stroke-linecap="round"/></g>':'')+
-        (stage===6?'<g><rect x="516" y="135" width="206" height="104" rx="15" fill="#263546" stroke="#e9c14b" stroke-width="5"/><path d="M540 163 H696 M540 209 H696" stroke="#b9c8d5" stroke-width="15" stroke-linecap="round"/><circle cx="553" cy="163" r="9" fill="#d7b15b"/><circle cx="553" cy="209" r="9" fill="#d7b15b"/><path d="M580 164 L647 185" stroke="#f8d351" stroke-width="8" stroke-linecap="round"/><text x="620" y="259" font-size="18" font-family="Arial" font-weight="bold" fill="#ffe076" text-anchor="middle">CLEAN + GREASE PINS</text></g>':'')+
+        (stage===6?'<g><circle cx="400" cy="242" r="76" fill="none" stroke="#f0b43a" stroke-width="5" stroke-dasharray="12 12"/><path d="M540 170 L493 211" stroke="#ffda57" stroke-width="14" stroke-linecap="round"/><path d="M492 211 L465 225" stroke="#b6cbd9" stroke-width="20" stroke-linecap="round"/></g>':'')+
+        (stage===7?'<g><rect x="516" y="135" width="206" height="104" rx="15" fill="#263546" stroke="#e9c14b" stroke-width="5"/><path d="M540 163 H696 M540 209 H696" stroke="#b9c8d5" stroke-width="15" stroke-linecap="round"/><circle cx="553" cy="163" r="9" fill="#d7b15b"/><circle cx="553" cy="209" r="9" fill="#d7b15b"/><path d="M580 164 L647 185" stroke="#f8d351" stroke-width="8" stroke-linecap="round"/><text x="620" y="259" font-size="18" font-family="Arial" font-weight="bold" fill="#ffe076" text-anchor="middle">CLEAN + GREASE PINS</text></g>':'')+
         '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="23" text-anchor="middle" fill="#fff">'+(['WHEEL REMOVED • ORIGINAL WORN BRAKES','CALIPER BOLTS • REMOVE','RETRACT PISTON • REMOVE OLD PARTS','HUB EXPOSED • REMOVE RUST','CLEAN + GREASE ORIGINAL SLIDE PINS','NEW ROTOR + PADS • ORIGINAL CALIPER','REINSTALL THE ORIGINAL CALIPER','REINSTALL WHEEL'][Math.max(0,Math.min(7,stage-2))])+'</text></svg>';
     };
     $("sCar").src = svgUrl(suvArt(false, false));

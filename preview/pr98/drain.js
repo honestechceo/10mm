@@ -224,27 +224,46 @@
       g.fillStyle = "#3b4048"; g.fillRect(0, FLOOR + 6, LW, LH - FLOOR);
       g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
     }
+    const fluidMask = document.createElement("canvas"); fluidMask.width = LW * 2; fluidMask.height = LH * 2;
+    const fluidCtx = fluidMask.getContext("2d");
     function drawOil() {
-      // Render the physics particles as a single smooth, dark amber liquid.
-      // Do not highlight every exposed pixel: that produced the striped stair-step
-      // pattern when oil moved down the narrow channels.
-      const px = oilImg.data, time = performance.now() * .0015;
+      // Render ONLY actual simulated particles. Blend the low-res physics grid
+      // into a continuous fluid silhouette, then shade the liquid as one body.
+      // No independent streams or visual oil that can bypass solid blocks.
+      const px = oilImg.data, t = performance.now() * .001;
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
         const k = idx(x, y), o = k * 4;
-        if (cell[k] !== 1) { px[o] = 0; px[o+1] = 0; px[o+2] = 0; px[o+3] = 0; continue; }
-        const variation = Math.sin(x * .075 + y * .035 - time) * 8 + (shade[k] - 128) * .022;
-        const nearSurface = y > 1 && cell[idx(x, y-1)] === 0 &&
-          y + 2 < GH && cell[idx(x, y+1)] === 1 && cell[idx(x, y+2)] === 1;
-        px[o] = Math.max(0, Math.min(255, 100 + variation + (nearSurface ? 12 : 0)));
-        px[o+1] = Math.max(0, Math.min(255, 53 + variation * .55 + (nearSurface ? 10 : 0)));
-        px[o+2] = Math.max(0, Math.min(255, 18 + variation * .16));
-        px[o+3] = 220;
+        if (cell[k] !== 1) { px[o+3] = 0; continue; }
+        px[o] = 255; px[o+1] = 255; px[o+2] = 255; px[o+3] = 255;
       }
       oilCtx.putImageData(oilImg, 0, 0);
       g.save();
-      g.imageSmoothingEnabled = true;
-      g.filter = "blur(2.2px)";
-      g.drawImage(oilCan, 0, 0, LW, LH);
+      // First pass: soft shadow beneath the fluid helps separate it from the
+      // dark game board without outlining individual simulation pixels.
+      g.globalAlpha = .35;
+      g.filter = "blur(3px)";
+      g.drawImage(oilCan, 0, 1.4, LW, LH);
+      g.restore();
+      g.save();
+      // Fluid silhouette is softened in screen-space, not cell-by-cell.
+      // source-in restricts all color to the real particle footprint.
+      const mask = fluidMask;
+      const mg = fluidCtx;
+      mg.clearRect(0, 0, mask.width, mask.height);
+      mg.globalCompositeOperation = "source-over";
+      mg.imageSmoothingEnabled = true;
+      mg.filter = "blur(3px)";
+      mg.drawImage(oilCan, 0, 0, mask.width, mask.height);
+      mg.filter = "none";
+      mg.globalCompositeOperation = "source-in";
+      const liquid = mg.createLinearGradient(0, 0, mask.width, mask.height);
+      liquid.addColorStop(0, "#6b3612");
+      liquid.addColorStop(.42, "#8b4917");
+      liquid.addColorStop(.76, "#a36224");
+      liquid.addColorStop(1, "#62300f");
+      mg.fillStyle = liquid; mg.fillRect(0, 0, mask.width, mask.height);
+      g.globalAlpha = .94;
+      g.drawImage(mask, 0, 0, LW, LH);
       g.restore();
     }
     function drawTile(tl, x, y, glow) {

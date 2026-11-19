@@ -351,6 +351,9 @@ function createLevel() {
     level <= 3
       ? 1750 + level * 310
       : 4800 + Math.min(7200, (level - 1) * 38) + Math.min(2400, Math.max(0, level - 200) * 12);
+  // Extend the playable course independently of the scrolling background art.
+  // Levels 50–199: +25%; levels 200+: +50%.
+  world = Math.round(world * (level >= 200 ? 1.5 : level >= 50 ? 1.25 : 1));
   obstacles = [];
   powerups = [];
   coins = [];

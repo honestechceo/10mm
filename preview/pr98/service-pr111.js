@@ -233,17 +233,38 @@
         '<rect x="10" y="375" width="780" height="45" rx="10" fill="#0d1726" stroke="#f3bd33" stroke-width="3"/><text x="400" y="406" font-family="Arial,sans-serif" font-weight="900" font-size="23" text-anchor="middle" fill="#fff">'+(['WHEEL REMOVED • WORN BRAKES','REMOVE CALIPER BOLTS','SUPPORT CALIPER • RETRACT PISTON','CLEAN EXPOSED HUB','CLEAN + GREASE SLIDE PINS','FIT NEW ROTOR + PADS','REINSTALL ORIGINAL CALIPER','REINSTALL WHEEL'][Math.max(0,Math.min(7,stage-2))])+'</text></svg>';
     };
     $("sCar").src = svgUrl(suvArt(false, false));
+    // Scene files are intentionally separate from the instructional UI: the
+    // original storyboard has baked-in, inconsistent step numbers.
+    // When a scene asset is available, use it; retain the playable SVG scene
+    // as a fallback so an incomplete upload cannot break the brake job.
+    const brakeSceneFiles = Array.from({length:12}, (_,n) =>
+      'brake-art/brake_scene_' + String(n+1).padStart(2,'0') + '.webp');
+    const brakeSceneCache = brakeSceneFiles.map(src => {
+      const img = new Image();
+      img.src = src;
+      return img;
+    });
     const renderBrake = () => {
       if (j !== "brake") return;
       const stage = Math.max(0,i);
       const carView = stage <= 2 || stage >= 10;
-      $("sScene").classList.toggle("carview", carView);
-      if (carView) {
+      const art = brakeSceneCache[stage];
+      const hasArt = art && art.complete && art.naturalWidth > 0;
+      $("sScene").classList.toggle("carview", carView && !hasArt);
+      $("sScene").classList.toggle("illustrated-brake", !!hasArt);
+      if (hasArt) {
+        $("sImg").src = art.src;
+      } else if (carView) {
         $("sCar").src = svgUrl(suvArt(stage===2 || stage===10, false));
-        $("sScene").classList.remove("lifted");
-        $("sJack").classList.remove("on");
-      } else $("sImg").src = svgUrl(brakeArt(stage));
+      } else {
+        $("sImg").src = svgUrl(brakeArt(stage));
+      }
+      $("sScene").classList.remove("lifted");
+      $("sJack").classList.remove("on");
       $("sScene").dataset.brakeStage = String(stage);
+      if (art && !art.complete) art.addEventListener('load', () => {
+        if (i === stage && !over) renderBrake();
+      }, {once:true});
     };
     for (const id of tools) {
       const b = document.createElement("button");

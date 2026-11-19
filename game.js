@@ -3500,7 +3500,7 @@ for (const [k, n, p] of AURA_LIST) LOOKS.push({ id: "aura-" + k, img: "aura-" + 
 // where the face sits on the two families of socket art (900x430 sprites)
 const FACE_A = { body: [610, 240, 430], eyes: [695, 175, 200], mouth: [680, 238, 160], top: [705, 95, 260], side: [835, 215, 200] };
 const FACE_B = { body: [625, 225, 470], eyes: [705, 170, 200], mouth: [700, 280, 170], top: [710, 40, 270], side: [880, 205, 200] };
-const FACE_B_SKINS = new Set("pitcrew goldrush carbon storm camo oldglory flames slime firered haze frost barnfind skull biohazard menace visor checkered trackday galaxy puertorico electric pink royal titanium blueline".split(" "));
+const FACE_B_SKINS = new Set("chrome pitcrew goldrush carbon storm camo oldglory flames slime firered haze frost barnfind skull biohazard menace visor checkered trackday galaxy puertorico electric pink royal titanium blueline".split(" "));
 const LOOK_HEAD = 150, LOOK_FOOT = 100; // extra room above (hats) and below (aura glow)
 const lookImgs = {};
 for (const l of LOOKS) { const im = new Image(); im.src = l.img || "look-" + l.id + ".webp"; lookImgs[l.id] = im; }

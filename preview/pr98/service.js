@@ -13,6 +13,7 @@
     ragblue: { name: "BLUE • Dipstick rag", img: "svc-rag-blue.webp", kind: "tool" },
     ragred: { name: "RED • Spill cleanup rag", img: "svc-rag-red.webp", kind: "tool" },
     jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
+    torquewrench: { name: "1/2-inch torque wrench", img: "svc-ratchet.webp", kind: "tool" },
     lugwrench: { name: "1/2-inch air impact gun", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
     brush: { name: "Hub cleaning brush", img: "svc-wrenches.webp", kind: "tool" },
@@ -33,6 +34,7 @@
   // Brake-round wheel tool: realistic pneumatic 1/2-inch impact wrench,
   // replacing the former four-way lug wrench tile.
   ITEMS.lugwrench.img = iconSvg('<defs><linearGradient id="impact" x2="1" y2="1"><stop stop-color="#aebbc8"/><stop offset=".45" stop-color="#596c7f"/><stop offset="1" stop-color="#263545"/></linearGradient></defs><g transform="rotate(-14 80 80)"><path d="M26 45 H48 V32 H117 Q135 32 138 49 V77 Q135 91 118 91 H89 L83 131 Q81 144 68 144 H56 Q46 142 49 128 L55 91 H43 Q29 88 26 76Z" fill="url(#impact)" stroke="#142332" stroke-width="6"/><rect x="12" y="53" width="23" height="25" rx="3" fill="#c7d0d7" stroke="#253746" stroke-width="5"/><rect x="2" y="58" width="13" height="15" rx="2" fill="#778b9b" stroke="#253746" stroke-width="3"/><path d="M55 42 H115 M58 51 H114" stroke="#e8f3fa" stroke-width="4" opacity=".6"/><path d="M94 34 V87 M105 34 V87 M116 35 V86" stroke="#182d40" stroke-width="4"/><path d="M58 91 H83 L79 109 H54Z" fill="#e4a72d" stroke="#243647" stroke-width="4"/><path d="M56 117 H80 L76 136 H52Z" fill="#202d39" stroke="#111c29" stroke-width="4"/><circle cx="65" cy="78" r="6" fill="#f1bd43"/><path d="M62 143 V151" stroke="#b4c0c9" stroke-width="5"/></g>');
+  ITEMS.torquewrench.img = iconSvg('<g transform="rotate(-36 80 80)"><rect x="70" y="22" width="20" height="114" rx="8" fill="#9aabb9" stroke="#223544" stroke-width="5"/><rect x="64" y="84" width="32" height="53" rx="7" fill="#263a50" stroke="#142536" stroke-width="5"/><path d="M67 96 H93 M67 109 H93 M67 121 H93" stroke="#f1bb3c" stroke-width="3"/><rect x="57" y="18" width="46" height="21" rx="5" fill="#c3d0d8" stroke="#293c4b" stroke-width="5"/><rect x="92" y="23" width="27" height="12" rx="2" fill="#9aabb9" stroke="#293c4b" stroke-width="4"/><rect x="113" y="17" width="22" height="24" rx="4" fill="#394c60" stroke="#192b3c" stroke-width="4"/></g>');
   ITEMS.sparkplug.img = iconSvg('<g transform="rotate(28 80 80)"><rect x="66" y="24" width="28" height="33" rx="4" fill="#f1f4f7" stroke="#334352" stroke-width="6"/><path d="M62 57 H98 L108 88 98 102 H62 L52 88Z" fill="#aab9c7" stroke="#243544" stroke-width="6"/><path d="M66 104 H94 V143 H66Z" fill="#c3ccd4" stroke="#243544" stroke-width="5"/><path d="M69 112 H91 M69 123 H91 M69 134 H91" stroke="#566b7e" stroke-width="5"/><path d="M80 24 V9 H99" stroke="#293c4d" stroke-width="6" fill="none"/></g>');
   ITEMS.battery.img = iconSvg('<rect x="24" y="44" width="112" height="91" rx="12" fill="#344d66" stroke="#142536" stroke-width="8"/><rect x="38" y="28" width="23" height="18" rx="4" fill="#e44d3e"/><rect x="99" y="28" width="23" height="18" rx="4" fill="#d6e1e9"/><path d="M39 67 H121 V113 H39Z" fill="#e4ad34"/><path d="M55 90 H75 M65 80 V100 M94 90 H110" stroke="#192638" stroke-width="7"/>');
   ITEMS.coolant.img = iconSvg('<path d="M48 38 H112 L125 126 Q125 139 112 139 H48 Q35 139 35 126Z" fill="#72d7a3" stroke="#24433e" stroke-width="7"/><path d="M55 27 H105 V40 H55Z" fill="#273c4d"/><path d="M45 72 H115 V112 H45Z" fill="#f2f8f3"/><text x="80" y="97" font-family="Arial" font-size="16" font-weight="900" text-anchor="middle" fill="#215e45">COOLANT</text>');
@@ -47,7 +49,7 @@
   ITEMS.belt.img = iconSvg('<ellipse cx="80" cy="80" rx="57" ry="43" fill="none" stroke="#151d27" stroke-width="23"/><ellipse cx="80" cy="80" rx="57" ry="43" fill="none" stroke="#596574" stroke-width="4" stroke-dasharray="8 6"/>');
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
-    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 110 },
+    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "torquewrench", "ratchet", "piston", "brush", "grease", "brakes"], secs: 155 },
   };
 
   const load = () => { try { return JSON.parse(localStorage.getItem("tenmm-garage")) || {}; } catch (e) { return {}; } };
@@ -167,18 +169,21 @@
     { say: "RED RAG: Wipe spilled oil around the fill cap", use: "ragred", scene: "scene-engine-closed.webp" },
   ];
   const BRAKE_STEPS = [
-    { say: "Put on mechanic gloves", use: "gloves", scene: "car" },
-    { say: "Raise and securely support the vehicle at approved lift points", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Use the 1/2-inch air impact gun to remove the front wheel", use: "lugwrench", scene: "car" },
-    { say: "Support the caliper and remove its mounting bolts", use: "ratchet", scene: "svc-brakes-worn.webp" },
-    { say: "Remove the worn brake pads; inspect the hardware", use: "ratchet", scene: "svc-brakes-worn.webp", after: (s) => s.label("Worn pads removed; caliper safely supported.") },
-    { say: "Retract the caliper piston with the proper tool", use: "piston", scene: "svc-brakes-worn.webp" },
-    { say: "Remove the old rotor and clean the hub mounting face", use: "brush", scene: "svc-brakes-worn.webp" },
-    { say: "Inspect and lubricate the slide pins with compatible brake grease", use: "grease", scene: "svc-brakes-worn.webp", after: (s) => s.label("Keep grease off pads and rotor friction surfaces.") },
-    { say: "Install the new rotor on the clean hub", use: "brakes", scene: "svc-brakes-new.webp" },
-    { say: "Install new pads and the correct hardware", use: "brakes", consume: "brakes", scene: "svc-brakes-new.webp" },
-    { say: "Reinstall caliper and torque fasteners to vehicle specifications", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "Reinstall wheel, lower vehicle, torque lug nuts, then pump pedal firm (3 taps) and verify brakes", pump: 3, scene: "car", before: (s) => s.lift(false) },
+    { art:0, say:"Put on mechanic gloves", use:"gloves", scene:"car" },
+    { art:1, say:"Lift and securely support the SUV at approved lift points", use:"jack", scene:"car" },
+    { art:2, say:"Remove the front wheel with the 1/2-inch air impact gun", use:"lugwrench", scene:"car" },
+    { art:3, say:"Support the caliper and remove its bolts", use:"ratchet", scene:"svc-brakes-worn.webp" },
+    { art:4, say:"Remove worn pads and inspect the brake hardware", use:"ratchet", scene:"svc-brakes-worn.webp" },
+    { art:5, say:"Retract the caliper piston using the proper tool", use:"piston", scene:"svc-brakes-worn.webp" },
+    { art:6, say:"Remove old rotor and clean the hub mounting face", use:"brush", scene:"svc-brakes-worn.webp" },
+    { art:7, say:"Clean and lubricate caliper slide pins with compatible grease", use:"grease", scene:"svc-brakes-worn.webp" },
+    { art:8, say:"Install new rotor on the clean hub", use:"brakes", scene:"svc-brakes-new.webp" },
+    { art:9, say:"Install new brake pads and hardware", use:"brakes", consume:"brakes", scene:"svc-brakes-new.webp" },
+    { art:10, say:"Reinstall caliper and tighten bolts to vehicle specifications", use:"ratchet", scene:"svc-brakes-new.webp" },
+    { art:11, say:"Reinstall wheel and snug lug nuts with the impact gun", use:"lugwrench", scene:"car" },
+    { art:11, say:"Lower vehicle and remove lifting equipment safely", use:"jack", scene:"car" },
+    { art:11, say:"Torque wheel lug nuts in a star pattern to vehicle specification", use:"torquewrench", scene:"car" },
+    { art:11, say:"Pump brake pedal until firm (3 taps), then verify brake operation", pump:3, scene:"car" },
   ];
 
   let S = null;
@@ -250,7 +255,7 @@
     });
     const renderBrake = () => {
       if (j !== "brake") return;
-      const stage = Math.max(0,i);
+      const stage = Math.max(0, Math.min(11, BRAKE_STEPS[i]?.art ?? 0));
       const scene = $("sScene");
       const art = brakeSceneCache[stage];
       // Use the uploaded art as the primary scene. Do not wait for it to
@@ -263,7 +268,7 @@
       $("sImg").src = art.src;
       scene.dataset.brakeStage = String(stage);
       const fallback = () => {
-        if (i !== stage || over) return;
+        if ((BRAKE_STEPS[i]?.art ?? 0) !== stage || over) return;
         const carView = stage <= 2 || stage >= 10;
         scene.classList.toggle("carview", carView);
         scene.classList.remove("illustrated-brake");

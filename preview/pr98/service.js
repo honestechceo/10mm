@@ -181,9 +181,9 @@
     { art:9, say:"Install new brake pads and hardware", use:"brakes", consume:"brakes", scene:"svc-brakes-new.webp" },
     { art:10, say:"Reinstall caliper and tighten bolts to vehicle specifications", use:"ratchet", scene:"svc-brakes-new.webp" },
     { art:11, say:"Reinstall wheel and snug lug nuts with the impact gun", use:"lugwrench", scene:"car" },
-    { art:11, say:"Lower vehicle and remove lifting equipment safely", use:"jack", scene:"car" },
-    { art:11, say:"Torque wheel lug nuts in a star pattern to vehicle specification", use:"torquewrench", scene:"car" },
-    { art:11, say:"Pump brake pedal until firm (3 taps), then verify brake operation", pump:3, scene:"car" },
+    { art:12, say:"Lower vehicle and remove lifting equipment safely", use:"jack", scene:"car" },
+    { art:13, say:"Torque wheel lug nuts in a star pattern to vehicle specification", use:"torquewrench", scene:"car" },
+    { art:14, say:"Pump brake pedal until firm (3 taps), then verify brake operation", pump:3, scene:"car" },
   ];
 
   let S = null;
@@ -253,11 +253,34 @@
       img.src = src;
       return img;
     });
+    // The final three actions have their own playable illustrations rather than
+    // repeating the wheel-installation image. The oil-change renderer is untouched.
+    const finalBrakeScene = (stage) => {
+      const caption = stage === 12 ? "LOWER VEHICLE • REMOVE JACK" :
+        stage === 13 ? "FINAL TORQUE • STAR PATTERN" : "PUMP PEDAL UNTIL FIRM";
+      const overlay = stage === 12
+        ? '<path d="M350 65 V170 M326 146 L350 174 374 146" stroke="#ffca44" stroke-width="13" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'
+        : stage === 13
+        ? '<g transform="translate(205 281) rotate(-35)"><rect x="-9" y="-135" width="18" height="125" rx="7" fill="#dce6ef" stroke="#1a2d40" stroke-width="5"/><rect x="-15" y="-80" width="30" height="60" rx="6" fill="#273e57"/><path d="M0 -130 H72" stroke="#dce6ef" stroke-width="18" stroke-linecap="round"/></g><path d="M170 290 L235 235 M170 235 L235 290" stroke="#ffca44" stroke-width="5" stroke-dasharray="8 7"/>'
+        : '<g transform="translate(565 70)"><rect x="0" y="0" width="165" height="190" rx="20" fill="#15273b" stroke="#f5bf3b" stroke-width="6"/><path d="M80 25 V100" stroke="#b7cad8" stroke-width="18" stroke-linecap="round"/><rect x="33" y="96" width="96" height="28" rx="9" fill="#d7e1e9" stroke="#293c50" stroke-width="5"/><path d="M80 140 V173 M62 157 L80 176 98 157" stroke="#f5bf3b" stroke-width="8" fill="none"/></g>';
+      return svgUrl(suvArt(false, false).replace('</svg>',
+        overlay + '<rect x="90" y="380" width="620" height="42" rx="12" fill="#101b2b" stroke="#f5bf3b" stroke-width="3"/><text x="400" y="408" text-anchor="middle" font-family="Arial" font-size="22" font-weight="bold" fill="white">' + caption + '</text></svg>'));
+    };
     const renderBrake = () => {
       if (j !== "brake") return;
-      const stage = Math.max(0, Math.min(11, BRAKE_STEPS[i]?.art ?? 0));
+      const stage = Math.max(0, Math.min(14, BRAKE_STEPS[i]?.art ?? 0));
       const scene = $("sScene");
       const art = brakeSceneCache[stage];
+      if (stage >= 12) {
+        scene.classList.remove("carview", "lifted");
+        scene.classList.add("illustrated-brake");
+        $("sJack").classList.remove("on");
+        $("sCar").style.display = "none";
+        $("sImg").style.display = "block";
+        $("sImg").src = finalBrakeScene(stage);
+        scene.dataset.brakeStage = String(stage);
+        return;
+      }
       // Use the uploaded art as the primary scene. Do not wait for it to
       // finish downloading before switching away from the old SVG car.
       scene.classList.remove("carview", "lifted");

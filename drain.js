@@ -8,8 +8,8 @@
   const COLS = 7, ROWS = 8, T = 50, BX = 0, BY = 162, TCELL = T / C;
   const PAN_TOP = 146;
   // retro look: the board is drawn on a low-res canvas and blown up with hard pixels.
-  // PX = logical units per pixel (2.5 = chunky Terraria-style pixels).
-  const PX = window.__drainPX || 2.5;
+  // PX = logical units per pixel (1.25 = finer 32-bit console style).
+  const PX = window.__drainPX || 1.25;
   // tiny 5x7 bitmap font so text looks like an old console game (each glyph = 35 bits, row by row)
   const FONT = {"A":15621670449,"B":32801506878,"C":16660316687,"D":32801080894,"E":33840644639,"F":33840644624,"G":16660547119,"H":18842895921,"I":33424543903,"J":7585466956,"K":18879369809,"L":17734058527,"M":19182306865,"N":19115132465,"O":15621211694,"P":32801505808,"Q":15621215821,"R":32801509969,"S":16660235326,"T":33424543876,"U":18842437166,"V":18842436932,"W":18842572458,"X":18834663985,"Y":18834657412,"Z":33321787935,"0":15692654126,"1":4701950094,"2":15603929375,"3":32247317566,"4":2359917634,"5":33854359086,"6":15587034670,"7":33321787656,"8":15621113390,"9":15621129262,"!":4433514500,"?":15604060164,".":4,"%":27718197619,"+":139432064,"-":1015808,"'":4437573632};
   const FLOOR = BY + ROWS * T;
@@ -231,30 +231,31 @@
     function makeTex(w, h, fn) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); fn(x, w, h); return c; }
     const px1 = (x, col, i, j, w = 1, h = 1) => { x.fillStyle = col; x.fillRect(i, j, w, h); };
     const shades = (hex, f) => { const n = parseInt(hex.slice(1), 16), r = n >> 16, g2 = (n >> 8) & 255, b = n & 255, m = (v) => Math.max(0, Math.min(255, Math.round(v * f))); return "rgb(" + m(r) + "," + m(g2) + "," + m(b) + ")"; };
-    // ore-style block per part type: noisy base, darker rim, bright ore specks
+    // 32-bit style: smooth banded shading (few colors per ramp), bevels, specular glint, crisp black outline
+    const ramp = (x, w, h, cols, vertical = true) => { const n = cols.length; for (let k = 0; k < n; k++) { x.fillStyle = cols[k]; if (vertical) x.fillRect(0, Math.floor((k * h) / n), w, Math.ceil(h / n) + 1); else x.fillRect(Math.floor((k * w) / n), 0, Math.ceil(w / n) + 1, h); } };
     const blockTex = TYPES.map((tp) => makeTex(TB, TB, (x, w) => {
-      for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.12 ? shades(tp.b, 0.88) : r < 0.88 ? tp.b : shades(tp.a, 0.9), i, j); }
-      for (let k = 0; k < 7; k++) { const i = 2 + Math.floor(rnd() * (w - 5)), j = 2 + Math.floor(rnd() * (w - 5)); px1(x, shades(tp.a, 1.25), i, j, 2, 2); px1(x, "#fff8", i, j); }
-      x.fillStyle = shades(tp.b, 0.55); x.fillRect(0, w - 2, w, 2); x.fillRect(w - 2, 0, 2, w);
-      x.fillStyle = shades(tp.a, 1.15); x.fillRect(0, 0, w, 1); x.fillRect(0, 0, 1, w);
-      x.fillStyle = "#0009"; x.strokeStyle = "#000"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, w - 1, w - 1);
+      ramp(x, w, w, [shades(tp.a, 1.12), tp.a, shades(tp.a, 0.92), tp.b, shades(tp.b, 0.85)]);
+      x.fillStyle = shades(tp.a, 1.3); x.fillRect(1, 1, w - 2, 2); x.fillRect(1, 1, 2, w - 2);       // top-left bevel
+      x.fillStyle = shades(tp.b, 0.6); x.fillRect(1, w - 3, w - 2, 2); x.fillRect(w - 3, 1, 2, w - 2); // bottom-right bevel
+      x.fillStyle = "#ffffff55"; x.fillRect(4, 4, w - 8, Math.round(w * 0.22));                          // gloss band
+      x.fillStyle = "#fff"; x.fillRect(5, 5, 3, 2); x.fillRect(5, 5, 2, 3);                              // glint
+      x.strokeStyle = "#000"; x.lineWidth = 1; x.strokeRect(0.5, 0.5, w - 1, w - 1);
     }));
-    // stone brick (steel plates become gray brick you can only blast)
+    // steel plate (can only be blasted): brushed metal with corner bolts
     const brickTex = makeTex(TB, TB, (x, w) => {
-      px1(x, "#3a3f47", 0, 0, w, w);
-      const bh = Math.max(4, Math.round(w / 3));
-      for (let row = 0, y = 0; y < w; row++, y += bh) for (let bx = row % 2 ? -Math.floor(w / 4) : 0; bx < w; bx += Math.floor(w / 2)) {
-        for (let j = y + 1; j < Math.min(w, y + bh); j++) for (let i = Math.max(0, bx + 1); i < Math.min(w, bx + Math.floor(w / 2)); i++) px1(x, rnd() < 0.5 ? "#8b929b" : "#7b828b", i, j);
-        px1(x, "#a9b0b8", Math.max(0, bx + 1), y + 1, Math.floor(w / 2) - 1, 1);
-      }
+      ramp(x, w, w, ["#e6ebf0", "#c9d0d7", "#aeb7c0", "#949ea8", "#7c8690"]);
+      for (let j = 3; j < w - 3; j += 3) { x.fillStyle = "#ffffff22"; x.fillRect(3, j, w - 6, 1); }
+      x.fillStyle = "#fff"; x.fillRect(1, 1, w - 2, 1); x.fillStyle = "#4b545e"; x.fillRect(1, w - 2, w - 2, 1); x.fillRect(w - 2, 1, 1, w - 2);
+      for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) { const bx = 4 + a * (w - 11), by = 4 + b * (w - 11); x.fillStyle = "#3e4750"; x.fillRect(bx, by, 4, 4); x.fillStyle = "#dfe5ea"; x.fillRect(bx, by, 2, 2); }
       x.strokeStyle = "#000"; x.strokeRect(0.5, 0.5, w - 1, w - 1);
     });
-    // dirt back-wall behind the blocks (what you see once parts are cleared)
-    const wallTex = makeTex(TB * 2, TB * 2, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.3 ? "#2a1c14" : r < 0.8 ? "#33231a" : "#3d2a1f", i, j); } for (let k = 0; k < 10; k++) px1(x, "#1d130d", Math.floor(rnd() * w), Math.floor(rnd() * w), 2, 1); });
-    // gray stone for the engine pan walls, wood planks for the floor
-    const stoneTex = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.3 ? "#5d636b" : r < 0.8 ? "#6e757e" : "#868d96", i, j); } for (let k = 0; k < 4; k++) px1(x, "#4a4f56", Math.floor(rnd() * w), Math.floor(rnd() * w), 3, 1); });
-    const woodTex = makeTex(TB, 8, (x, w, h) => { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) px1(x, j === 0 ? "#c98a4b" : j === h - 1 ? "#4a2a14" : rnd() < 0.15 ? "#7a4a24" : "#98602f", i, j); px1(x, "#4a2a14", w - 1, 0, 1, h); });
-        // tile a texture across a rect in logical coords, snapped to the pixel grid
+    // dark garage-floor checker behind the parts
+    const wallTex = makeTex(TB * 2, TB * 2, (x, w) => { for (let a = 0; a < 2; a++) for (let b = 0; b < 2; b++) { x.fillStyle = (a + b) % 2 ? "#1b232c" : "#212b36"; x.fillRect(a * TB, b * TB, TB, TB); x.fillStyle = "#ffffff08"; x.fillRect(a * TB, b * TB, TB, 2); } });
+    // shop floor: smooth concrete ramp
+    const stoneTex = makeTex(TB, TB, (x, w) => { ramp(x, w, w, ["#59606a", "#525962", "#4b525b", "#454b53"]); x.fillStyle = "#00000030"; x.fillRect(0, w - 1, w, 1); });
+    // red tool-chest rail for the board frame
+    const woodTex = makeTex(TB, 8, (x, w, h) => { ramp(x, w, h, ["#ff6a55", "#e0503f", "#b52a20", "#7d1a13"]); x.fillStyle = "#000"; x.fillRect(0, h - 1, w, 1); x.fillStyle = "#ffffff66"; x.fillRect(0, 1, w, 1); });
+    // tile a texture across a rect in logical coords, snapped to the pixel grid
     function tile(tex, x, y, w, h) {
       g.save(); g.imageSmoothingEnabled = false; g.beginPath(); g.rect(x, y, w, h); g.clip();
       const tw = tex.width * PX, th = tex.height * PX;
@@ -270,8 +271,8 @@
       g.fillStyle = "#ff9d2e"; g.fillRect(x - 5, y - 8 - fl * 2.5, 10, 10 + fl * 2.5);
       g.fillStyle = "#ffe27a"; g.fillRect(x - 2.5, y - 5 - fl * 2.5, 5, 6);
     }
-    const steelTex = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.15 ? "#8f98a2" : r < 0.85 ? "#a7b0ba" : "#c4ccd4", i, j); } for (let k = 0; k < 3; k++) px1(x, "#d9e0e6", Math.floor(rnd() * w), Math.floor(rnd() * w), 3, 1); });
-    const blockEng = makeTex(TB, TB, (x, w) => { for (let j = 0; j < w; j++) for (let i = 0; i < w; i++) { const r = rnd(); px1(x, r < 0.2 ? "#2b2f36" : r < 0.85 ? "#353a42" : "#41474f", i, j); } px1(x, "#22262c", 0, w - 1, w, 1); });
+    const steelTex = makeTex(TB, TB, (x, w) => { ramp(x, w, w, ["#d3d9df", "#c1c8cf", "#b0b8c0", "#a1aab3"]); x.fillStyle = "#ffffff40"; x.fillRect(0, 2, w, 1); });
+    const blockEng = makeTex(TB, TB, (x, w) => { ramp(x, w, w, ["#3e444c", "#383d45", "#32373e", "#2c3037"]); x.fillStyle = "#4a515a"; x.fillRect(0, 0, w, 1); x.fillStyle = "#1f2227"; x.fillRect(0, w - 1, w, 1); });
     let plug = null; // drain plug falls out once the parts land
     function drawBack() {
       // engine block above (dark cast iron with a crossmember)
@@ -333,7 +334,7 @@
       g.fillStyle = "#3a3d44"; for (let x = x0 + 40; x < x1 - 40; x += 12.5) g.fillRect(x, top + 5, 2.5, 5);
       g.fillStyle = "#000"; g.fillRect(LW / 2 - 25, bot - 15, 50, 10); txt("OIL", LW / 2, bot - 6.5, 1.25, "#ffd23f", "center", null);
     }
-    function drawLights() { torch(18, FLOOR + 30); torch(LW - 18, FLOOR + 30); }
+    function drawLights() {}
     function drawOil() {
       const px = oilImg.data, t = performance.now() * 0.002;
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {

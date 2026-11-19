@@ -2229,7 +2229,8 @@ function render() {
   ctx.rotate(Math.sin(player.angle) * 0.22);
   const hero = heroSprites.socket;
   if (hero && hero.complete && hero.naturalWidth) {
-    ctx.drawImage(hero, -87, -33, 131, 62);
+    const extra = hero.naturalHeight > 430 ? ((hero.naturalHeight - 430) / 430) * 62 * (900 / hero.naturalWidth) : 0;
+    ctx.drawImage(hero, -87, -33 - extra, 131, 62 + extra);
   } else {
     image("socket10", 0, 0, 52, 52);
   }
@@ -3469,10 +3470,71 @@ function equippedSkin() {
   const e = localStorage.getItem("tenmm-skin") || "chrome";
   return ownedSkins().includes(e) ? e : "chrome";
 }
+// ---------- face looks + disguises: pieces drawn on top of whatever skin is equipped ----------
+const LOOK_SLOTS = { eyes: "EYES", mouth: "MOUTH", head: "HEAD", ears: "BLING" };
+const LOOKS = [
+  { id: "lashes", name: "Long Lashes", slot: "eyes", price: 150, at: ["eyes", 1.1, -0.12, "c"] },
+  { id: "brows", name: "Angry Brows", slot: "eyes", price: 150, at: ["eyes", 1.05, -0.28, "c"] },
+  { id: "glasses", name: "Nose Disguise", slot: "eyes", price: 300, at: ["eyes", 1.25, 0.2, "c"] },
+  { id: "ninja", name: "Ninja Mask", slot: "eyes", price: 350, at: ["eyes", 1.45, 0.04, "c"] },
+  { id: "welding", name: "Welding Mask", slot: "eyes", price: 400, at: ["eyes", 1.6, 0.32, "c"] },
+  { id: "lips", name: "Lipstick", slot: "mouth", price: 150, at: ["mouth", 0.75, 0, "c"] },
+  { id: "grin", name: "Chipped Grin", slot: "mouth", price: 150, at: ["mouth", 0.95, 0, "c"] },
+  { id: "mustache", name: "Handlebar Mustache", slot: "mouth", price: 200, at: ["mouth", 0.95, -0.14, "c"] },
+  { id: "beard", name: "Mechanic Beard", slot: "mouth", price: 250, at: ["mouth", 1.25, 0.32, "c"] },
+  { id: "bow", name: "Big Bow", slot: "head", price: 200, at: ["top", 0.55, 0.12, "b"] },
+  { id: "hardhat", name: "Hard Hat", slot: "head", price: 250, at: ["top", 1.0, 0.16, "b"] },
+  { id: "cap", name: "Trucker Cap", slot: "head", price: 250, at: ["top", 1.0, 0.16, "b"] },
+  { id: "cowboy", name: "Cowboy Hat", slot: "head", price: 300, at: ["top", 1.15, 0.18, "b"] },
+  { id: "hoops", name: "Gold Hoop", slot: "ears", price: 200, at: ["side", 0.3, 0, "t"] },
+];
+// where the face sits on the two families of socket art (900x430 sprites)
+const FACE_A = { eyes: [695, 175, 200], mouth: [680, 238, 160], top: [705, 95, 260], side: [835, 215, 200] };
+const FACE_B = { eyes: [705, 170, 200], mouth: [700, 280, 170], top: [710, 40, 270], side: [880, 205, 200] };
+const FACE_B_SKINS = new Set("pitcrew goldrush carbon storm camo oldglory flames slime firered haze frost barnfind skull biohazard menace visor checkered trackday galaxy puertorico electric pink royal titanium blueline".split(" "));
+const LOOK_HEAD = 150; // extra room above the sprite for hats
+const lookImgs = {};
+for (const l of LOOKS) { const im = new Image(); im.src = "look-" + l.id + ".webp"; lookImgs[l.id] = im; }
+const LSget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
+const ownedLooks = () => LSget("tenmm-looks-owned", []);
+const equippedLooks = () => LSget("tenmm-looks", {});
+var heroComp = { key: "", url: "" };
+function lookKey() { const eq = equippedLooks(); return equippedSkin() + "|" + Object.keys(LOOK_SLOTS).map((s) => eq[s] || "").join(","); }
+function composeHero(done) {
+  const key = lookKey(), eq = equippedLooks(), ids = Object.keys(LOOK_SLOTS).map((s) => eq[s]).filter(Boolean);
+  if (!ids.length) { heroComp = { key, url: "" }; return done && done(); }
+  const base = new Image();
+  const all = [base, ...ids.map((id) => lookImgs[id])];
+  const go = () => {
+    if (!all.every((im) => im.complete)) return;
+    if (lookKey() !== key) return;
+    const c = document.createElement("canvas"); c.width = 900; c.height = 430 + LOOK_HEAD;
+    const x = c.getContext("2d");
+    if (base.naturalWidth) x.drawImage(base, 0, LOOK_HEAD, 900, 430);
+    const F = FACE_B_SKINS.has(equippedSkin()) ? FACE_B : FACE_A;
+    for (const id of ids) {
+      const L = LOOKS.find((l) => l.id === id), im = lookImgs[id];
+      if (!L || !im.naturalWidth) continue;
+      const [an, ws, dy, mode] = L.at, [ax, ay, aw] = F[an];
+      const pw = aw * ws, ph = (im.naturalHeight * pw) / im.naturalWidth, cy = ay + dy * aw + LOOK_HEAD;
+      x.drawImage(im, ax - pw / 2, mode === "c" ? cy - ph / 2 : mode === "b" ? cy - ph : cy, pw, ph);
+    }
+    try { heroComp = { key, url: c.toDataURL("image/png") }; } catch (e) { heroComp = { key, url: "" }; }
+    done && done();
+  };
+  for (const im of all) if (!im.complete) im.addEventListener("load", go, { once: true }), im.addEventListener("error", go, { once: true });
+  base.src = skinFile(equippedSkin());
+  go();
+}
 function skinSrc() {
+  if (typeof heroComp !== "undefined" && heroComp && heroComp.url && heroComp.key === lookKey()) return heroComp.url;
   return skinFile(equippedSkin());
 }
 function applySkin() {
+  composeHero(() => {
+    if (heroSprites && heroSprites.socket) heroSprites.socket.src = skinSrc();
+    if (state === "shop" || state === "menu") setArt("hero");
+  });
   if (heroSprites && heroSprites.socket) heroSprites.socket.src = skinSrc();
 }
 function showShop() {
@@ -3496,11 +3558,46 @@ function showShop() {
   renderShop();
   $("shop").classList.add("on");
 }
+function renderLooks(box) {
+  const own = ownedLooks(), eq = equippedLooks();
+  const hd = document.createElement("div");
+  hd.className = "lvhead";
+  hd.textContent = "NEW! FACE LOOKS & DISGUISES";
+  box.append(hd);
+  const save = () => { localStorage.setItem("tenmm-looks", JSON.stringify(eq)); applySkin(); buzz("light"); renderShop(); };
+  for (const L of LOOKS) {
+    const card = document.createElement("div"), on = eq[L.slot] === L.id;
+    card.className = "skin look" + (on ? " eq" : "");
+    const im = document.createElement("img"); im.src = "look-" + L.id + ".webp"; im.alt = L.name;
+    const nm = document.createElement("div"); nm.textContent = L.name;
+    const sl = document.createElement("div"); sl.className = "lslot"; sl.textContent = LOOK_SLOTS[L.slot];
+    const b = document.createElement("button");
+    if (on) { b.textContent = "TAKE OFF"; b.className = "own"; b.onclick = () => { delete eq[L.slot]; save(); }; }
+    else if (own.includes(L.id)) { b.textContent = "WEAR"; b.className = "own"; b.onclick = () => { eq[L.slot] = L.id; save(); }; }
+    else if (totalCoins >= L.price) {
+      b.textContent = "BUY • " + L.price; b.className = "buy";
+      b.onclick = () => {
+        totalCoins -= L.price; localStorage.setItem("tenmm-coins", totalCoins);
+        own.push(L.id); localStorage.setItem("tenmm-looks-owned", JSON.stringify(own));
+        eq[L.slot] = L.id; $("coinsCount").textContent = totalCoins;
+        $("details").textContent = "Unlocked " + L.name + "! You have " + totalCoins + " coins left.";
+        sfx("win"); buzz("success"); save();
+      };
+    } else { b.textContent = L.price + " COINS"; b.className = "no"; b.disabled = true; }
+    card.append(im, nm, sl, b);
+    box.append(card);
+  }
+}
 function renderShop() {
   const box = $("shop"),
     own = ownedSkins(),
     eq = equippedSkin();
   box.innerHTML = "";
+  renderLooks(box);
+  const sh = document.createElement("div");
+  sh.className = "lvhead";
+  sh.textContent = "SOCKET FINISHES";
+  box.append(sh);
   const list = [
     ...SKINS.filter((k) => !k.holiday),
     ...SKINS.filter((k) => k.holiday && inSeason(k)),
@@ -3655,3 +3752,4 @@ if (document.readyState === "loading")
 else showMenu();
 fitCanvas();
 requestAnimationFrame(fitCanvas);
+try { applySkin(); } catch (e) {}

@@ -225,19 +225,27 @@
       g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
     }
     function drawOil() {
-      const px = oilImg.data, t = performance.now() * 0.002;
+      // Render the physics particles as a single smooth, dark amber liquid.
+      // Do not highlight every exposed pixel: that produced the striped stair-step
+      // pattern when oil moved down the narrow channels.
+      const px = oilImg.data, time = performance.now() * .0015;
       for (let y = 0; y < GH; y++) for (let x = 0; x < GW; x++) {
         const k = idx(x, y), o = k * 4;
-        if (cell[k] !== 1) { px[o + 3] = 0; continue; }
-        const top = y === 0 || cell[idx(x, y - 1)] !== 1, sh = Math.sin(t + x * 0.35 + y * 0.2) * 12 + (shade[k] - 128) * 0.07;
-        if (top) { px[o] = 255; px[o + 1] = 214; px[o + 2] = 110; }
-        else { px[o] = 168 + sh; px[o + 1] = 98 + sh * 0.7; px[o + 2] = 12; }
-        px[o + 3] = 250;
+        if (cell[k] !== 1) { px[o] = 0; px[o+1] = 0; px[o+2] = 0; px[o+3] = 0; continue; }
+        const variation = Math.sin(x * .075 + y * .035 - time) * 8 + (shade[k] - 128) * .022;
+        const nearSurface = y > 1 && cell[idx(x, y-1)] === 0 &&
+          y + 2 < GH && cell[idx(x, y+1)] === 1 && cell[idx(x, y+2)] === 1;
+        px[o] = Math.max(0, Math.min(255, 132 + variation + (nearSurface ? 18 : 0)));
+        px[o+1] = Math.max(0, Math.min(255, 72 + variation * .55 + (nearSurface ? 14 : 0)));
+        px[o+2] = Math.max(0, Math.min(255, 18 + variation * .16));
+        px[o+3] = 255;
       }
       oilCtx.putImageData(oilImg, 0, 0);
+      g.save();
       g.imageSmoothingEnabled = true;
-      g.save(); g.filter = "blur(1.1px)"; g.drawImage(oilCan, 0, 0, LW, LH); g.restore();
-      g.save(); g.globalAlpha = 0.12; g.globalCompositeOperation = "lighter"; g.filter = "blur(2px)"; g.drawImage(oilCan, 0, -1.5, LW, LH); g.restore();
+      g.filter = "blur(2.6px)";
+      g.drawImage(oilCan, 0, 0, LW, LH);
+      g.restore();
     }
     function drawTile(tl, x, y, glow) {
       const s = 1 - Math.max(0, tl.pop) * 0.015, cx = x + T / 2, cy = y + T / 2, w = (T - 4) * s;

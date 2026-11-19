@@ -7,6 +7,11 @@
   const LW = 350, LH = 640, C = 5, GW = LW / C, GH = LH / C;
   const COLS = 7, ROWS = 8, T = 50, BX = 0, BY = 162, TCELL = T / C;
   const PAN_TOP = 146;
+  // retro look: the board is drawn on a low-res canvas and blown up with hard pixels.
+  // PX = logical units per pixel: 2.5 = chunky 16-bit, 1.25 = finer 32-bit.
+  const PX = window.__drainPX || 1.25;
+  // tiny 5x7 bitmap font so text looks like an old console game (each glyph = 35 bits, row by row)
+  const FONT = {"A":15621670449,"B":32801506878,"C":16660316687,"D":32801080894,"E":33840644639,"F":33840644624,"G":16660547119,"H":18842895921,"I":33424543903,"J":7585466956,"K":18879369809,"L":17734058527,"M":19182306865,"N":19115132465,"O":15621211694,"P":32801505808,"Q":15621215821,"R":32801509969,"S":16660235326,"T":33424543876,"U":18842437166,"V":18842436932,"W":18842572458,"X":18834663985,"Y":18834657412,"Z":33321787935,"0":15692654126,"1":4701950094,"2":15603929375,"3":32247317566,"4":2359917634,"5":33854359086,"6":15587034670,"7":33321787656,"8":15621113390,"9":15621129262,"!":4433514500,"?":15604060164,".":4,"%":27718197619,"+":139432064,"-":1015808,"'":4437573632};
   const FLOOR = BY + ROWS * T;
   const TYPES = [
     { img: "tool-wrench.webp", a: "#4aa3ff", b: "#1c5fbf" },
@@ -34,13 +39,40 @@
     el.className = "";
     el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap 2+ matching parts. Parts above drop down.</small></div><div class="dmoves"><span>MOVES</span><b id="dMoves">0</b></div></div>' +
       '<div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>DRAIN PAN</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
-    const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
+    const wrap = $("dWrap"), can = $("dCan"), out = can.getContext("2d");
+    const lowCan = document.createElement("canvas"); lowCan.width = Math.round(LW / PX); lowCan.height = Math.round(LH / PX);
+    const g = lowCan.getContext("2d"); g.setTransform(1 / PX, 0, 0, 1 / PX, 0, 0);
+    let texts = [];
+    // text is drawn crisp on top of the pixel art so it stays readable
+    const txt = (t, x, y, size, fill, align, stroke) => texts.push([t, x, y, size, fill, align || "center", stroke === undefined ? "#000" : stroke]);
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
       can.style.width = LW * s + "px"; can.style.height = LH * s + "px";
       can.width = Math.round(LW * s * dpr); can.height = Math.round(LH * s * dpr);
-      g.setTransform((LW * s * dpr) / LW, 0, 0, (LH * s * dpr) / LH, 0, 0);
     };
+    const textW = (t, u) => t.length * 6 * u - u;
+    function bitText(t, x, y, u, fill, align, stroke) {
+      let sx = align === "center" ? x - textW(t, u) / 2 : align === "right" ? x - textW(t, u) : x;
+      const top = y - 7 * u;
+      const paint = (col, ox, oy, grow) => {
+        out.fillStyle = col;
+        for (let i = 0; i < t.length; i++) {
+          const bits = FONT[t[i]]; if (!bits) continue;
+          const gx = sx + i * 6 * u;
+          for (let k = 0; k < 35; k++) if (Math.floor(bits / 2 ** (34 - k)) % 2) out.fillRect(gx + (k % 5) * u + ox - grow, top + Math.floor(k / 5) * u + oy - grow, u + grow * 2, u + grow * 2);
+        }
+      };
+      if (stroke) { paint(stroke, u * 0.6, u * 0.6, u * 0.6); paint(stroke, 0, 0, u * 0.6); }
+      paint(fill, 0, 0, 0);
+    }
+    function present() {
+      out.setTransform(1, 0, 0, 1, 0, 0); out.imageSmoothingEnabled = false;
+      out.clearRect(0, 0, can.width, can.height);
+      out.drawImage(lowCan, 0, 0, can.width, can.height);
+      const k = can.width / LW; out.setTransform(k, 0, 0, k, 0, 0);
+      for (const [t, x, y, u, fill, align, stroke] of texts) bitText(t.toUpperCase(), x, y, u, fill, align, stroke);
+      out.globalAlpha = 1; texts = [];
+    }
     fit();
 
     // board: each tile has a type and an animated y so it can drop into place
@@ -194,12 +226,12 @@
       for (let y = 0, row = 0; y < LH; y += 22, row++) { g.beginPath(); g.moveTo(0, y); g.lineTo(LW, y); g.stroke(); for (let x = (row % 2) * 24; x < LW; x += 48) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke(); } }
       if (ready(engImg)) { g.save(); g.globalAlpha = 0.6; const w = LW * 1.2, h = (w * engImg.naturalHeight) / engImg.naturalWidth; g.drawImage(engImg, (LW - w) / 2, 64 - h * 0.92, w, h); g.restore(); }
       const pg = g.createLinearGradient(0, 56, 0, PAN_TOP + 10); pg.addColorStop(0, "#6a747e"); pg.addColorStop(1, "#2b3138");
-      g.fillStyle = pg; rr(-6, 56, LW + 12, PAN_TOP - 48, 14); g.fill();
+      g.fillStyle = "#59636d"; g.fillRect(-6, 56, LW + 12, PAN_TOP - 48); g.fillStyle = "#8a96a2"; g.fillRect(-6, 56, LW + 12, 5); g.fillStyle = "#2b3138"; g.fillRect(-6, PAN_TOP + 3, LW + 12, 5);
       g.fillStyle = "#14181d"; g.fillRect(10, 68, LW - 20, PAN_TOP - 68);
-      g.fillStyle = "#9aa6b2"; for (let x = 18; x < LW; x += 38) { g.beginPath(); g.arc(x, 62, 3, 0, 7); g.fill(); }
-      g.font = "900 11px system-ui,sans-serif"; g.fillStyle = "#e6edf3"; g.textAlign = "left"; g.lineWidth = 3; g.strokeStyle = "#000a"; g.strokeText("ENGINE OIL PAN", 12, 52); g.fillText("ENGINE OIL PAN", 12, 52);
+      g.fillStyle = "#9aa6b2"; for (let x = 18; x < LW; x += 38) g.fillRect(x - 3, 59, 6, 6);
+      txt("ENGINE OIL PAN", 12, 52, 1.25, "#e6edf3", "left");
       // board frame like a tool chest drawer
-      g.fillStyle = "#b52a20"; rr(BX - 1, BY - 8, COLS * T + 2, ROWS * T + 14, 10); g.fill();
+      g.fillStyle = "#b52a20"; g.fillRect(BX - 1, BY - 8, COLS * T + 2, ROWS * T + 14); g.fillStyle = "#e0503f"; g.fillRect(BX - 1, BY - 8, COLS * T + 2, 3);
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#1b232c" : "#202933"; g.fillRect(BX + c * T, BY + r * T, T, T); }
       g.fillStyle = "#3b4048"; g.fillRect(0, FLOOR + 6, LW, LH - FLOOR);
       g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
@@ -211,35 +243,40 @@
         if (cell[k] !== 1) { px[o + 3] = 0; continue; }
         const top = y === 0 || cell[idx(x, y - 1)] !== 1, sh = Math.sin(t + x * 0.35 + y * 0.2) * 12 + (shade[k] - 128) * 0.07;
         if (top) { px[o] = 255; px[o + 1] = 214; px[o + 2] = 110; }
-        else { px[o] = 168 + sh; px[o + 1] = 98 + sh * 0.7; px[o + 2] = 12; }
+        else { const b = sh > 4 ? 1 : sh < -4 ? -1 : 0; px[o] = 168 + b * 22; px[o + 1] = 98 + b * 16; px[o + 2] = 12; }
         px[o + 3] = 250;
       }
       oilCtx.putImageData(oilImg, 0, 0);
-      g.imageSmoothingEnabled = true;
+      g.imageSmoothingEnabled = false;
       g.drawImage(oilCan, 0, 0, LW, LH);
-      g.save(); g.globalAlpha = 0.16; g.globalCompositeOperation = "lighter"; g.drawImage(oilCan, 0, -1.5, LW, LH); g.restore();
+      g.imageSmoothingEnabled = true;
+    }
+    // retro block: flat color, light top-left bevel, dark bottom-right bevel, black outline
+    function block(x, y, w, hi, mid, lo) {
+      const e = Math.max(2, PX * 1.6);
+      g.fillStyle = "#000"; g.fillRect(x - PX, y - PX, w + PX * 2, w + PX * 2);
+      g.fillStyle = lo; g.fillRect(x, y, w, w);
+      g.fillStyle = hi; g.fillRect(x, y, w - e, w - e);
+      g.fillStyle = mid; g.fillRect(x + e, y + e, w - e * 2, w - e * 2);
     }
     function drawTile(tl, x, y, glow) {
-      const s = 1 - Math.max(0, tl.pop) * 0.015, cx = x + T / 2, cy = y + T / 2, w = (T - 4) * s;
-      g.save(); g.translate(cx, cy);
+      const s = 1 - Math.max(0, tl.pop) * 0.015, w = Math.round(((T - 6) * s) / PX) * PX, x0 = Math.round((x + (T - w) / 2) / PX) * PX, y0 = Math.round((y + (T - w) / 2) / PX) * PX;
       if (tl.t === STEEL) {
-        const gr = g.createLinearGradient(-w / 2, -w / 2, w / 2, w / 2); gr.addColorStop(0, "#e1e7ed"); gr.addColorStop(0.5, "#9aa6b1"); gr.addColorStop(1, "#5b6570");
-        g.fillStyle = gr; rr(-w / 2, -w / 2, w, w, 7); g.fill(); g.strokeStyle = "#3b434c"; g.lineWidth = 2; g.stroke();
-        g.fillStyle = "#3e4750"; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.arc(a * (w / 2 - 8), b * (w / 2 - 8), 3.2, 0, 7); g.fill(); }
-        g.restore(); return;
+        block(x0, y0, w, "#e1e7ed", "#9aa6b1", "#4b545e");
+        g.fillStyle = "#3e4750"; for (const [a, b] of [[0, 0], [1, 0], [0, 1], [1, 1]]) g.fillRect(x0 + 7 + a * (w - 20), y0 + 7 + b * (w - 20), 6, 6);
+        return;
       }
-      if (glow) { g.shadowColor = "#fff8c0"; g.shadowBlur = 14; }
-      g.fillStyle = "#0007"; rr(-w / 2 + 1, -w / 2 + 3, w, w, 10); g.fill();
-      g.shadowBlur = 0;
-      g.fillStyle = "#fff4dc"; rr(-w / 2, -w / 2, w, w, 10); g.fill();
       let a = "#ffe27a", b = "#e08a00";
       if (typeof tl.t === "number") { a = TYPES[tl.t].a; b = TYPES[tl.t].b; }
-      const gr = g.createLinearGradient(0, -w / 2, 0, w / 2); gr.addColorStop(0, a); gr.addColorStop(1, b);
-      g.fillStyle = gr; rr(-w / 2 + 4, -w / 2 + 4, w - 8, w - 8, 8); g.fill();
-      g.fillStyle = "#ffffff45"; rr(-w / 2 + 6, -w / 2 + 6, w - 12, (w - 12) * 0.36, 6); g.fill();
-      if (typeof tl.t === "number") fitImg(imgs[tl.t], 0, 1, w - 14);
-      else { fitImg(tl.t === ROCKET ? rocketImg : blastImg, 0, 0, w - 8); g.strokeStyle = "#fff"; g.lineWidth = 2.5; g.globalAlpha = 0.6 + Math.sin(performance.now() / 150) * 0.4; rr(-w / 2 + 1, -w / 2 + 1, w - 2, w - 2, 10); g.stroke(); }
-      g.restore();
+      if (glow) { g.fillStyle = "#fff8c0"; g.fillRect(x0 - PX * 2, y0 - PX * 2, w + PX * 4, w + PX * 4); }
+      block(x0, y0, w, "#ffffffcc", a, b);
+      g.fillStyle = a; g.fillRect(x0 + 4, y0 + 4, w - 8, w - 8);
+      g.fillStyle = b; g.fillRect(x0 + 4, y0 + w * 0.55, w - 8, w * 0.45 - 4);
+      if (typeof tl.t === "number") fitImg(imgs[tl.t], x0 + w / 2, y0 + w / 2 + 1, w - 10);
+      else {
+        fitImg(tl.t === ROCKET ? rocketImg : blastImg, x0 + w / 2, y0 + w / 2, w - 6);
+        if (Math.floor(performance.now() / 160) % 2) { g.fillStyle = "#fff"; g.fillRect(x0, y0, w, PX); g.fillRect(x0, y0 + w - PX, w, PX); g.fillRect(x0, y0, PX, w); g.fillRect(x0 + w - PX, y0, PX, w); }
+      }
     }
     let heroCache = null;
     const heroImg = () => { if (!heroCache) heroCache = load(typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp"); return heroCache; };
@@ -264,22 +301,22 @@
       drawOil();
       const panW = LW - 30, panX = 15, panY = LH - 58;
       const f = Math.min(1, inPan / target);
-      if (f > 0) { const h = 6 + f * 22; const og = g.createLinearGradient(0, panY + 40 - h, 0, panY + 40); og.addColorStop(0, "#ffcf6e"); og.addColorStop(0.2, "#c27a12"); og.addColorStop(1, "#6b3a05"); g.fillStyle = og; rr(panX + 26, panY + 44 - h, panW - 52, h, 6); g.fill(); }
+      if (f > 0) { const h = 6 + f * 22, x = panX + 26, y = panY + 44 - h, w = panW - 52; g.fillStyle = "#6b3a05"; g.fillRect(x, y, w, h); g.fillStyle = "#c27a12"; g.fillRect(x, y, w, h * 0.6); g.fillStyle = "#ffcf6e"; g.fillRect(x, y, w, 3); }
       if (ready(panImg)) g.drawImage(panImg, panX - 4, panY, panW + 8, ((panW + 8) * panImg.naturalHeight) / panImg.naturalWidth);
       const hero = heroImg();
       if (ready(hero)) {
         const bob = Math.sin(performance.now() / 260) * 2, w = 74, hx = LW - w - 4, hy = 8 + bob;
         g.drawImage(hero, hx, hy, w, (w * hero.naturalHeight) / hero.naturalWidth);
         const say = f >= 1 ? "YES!!" : f > 0.6 ? "ALMOST!" : moves <= 3 && moves > 0 ? "HURRY!" : "DRAIN IT!";
-        g.font = "900 12px system-ui,sans-serif"; g.textAlign = "center";
-        const tw = g.measureText(say).width + 14, bx = hx - tw - 4, by = hy + 6; g.fillStyle = "#fff"; rr(bx, by, tw, 18, 9); g.fill(); g.beginPath(); g.moveTo(bx + tw - 2, by + 6); g.lineTo(bx + tw + 6, by + 10); g.lineTo(bx + tw - 2, by + 13); g.fill();
-        g.fillStyle = f >= 1 ? "#1d8f3c" : "#1a2630"; g.fillText(say, bx + tw / 2, by + 13);
+        const tw = textW(say, 1.25) + 12, bx = hx - tw - 6, by = hy + 6;
+        g.fillStyle = "#000"; g.fillRect(bx - 2, by - 2, tw + 4, 22); g.fillStyle = "#fff"; g.fillRect(bx, by, tw, 18); g.fillRect(bx + tw, by + 6, 6, 6);
+        txt(say, bx + tw / 2, by + 13.5, 1.25, f >= 1 ? "#1d8f3c" : "#1a2630", "center", null);
       }
       if (flash && flash.life > 0) { g.save(); g.globalAlpha = flash.life / 14; g.fillStyle = "#fff6c0"; g.fillRect(flash.x + T * 0.3, BY - 10, T * 0.4, ROWS * T + 20); g.restore(); flash.life--; }
-      for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life--; g.globalAlpha = Math.max(0, p.life / 32); g.fillStyle = p.color; g.fillRect(p.x, p.y, p.s, p.s); }
+      for (const p of parts) { p.x += p.vx; p.y += p.vy; p.vy += 0.35; p.life--; g.globalAlpha = Math.max(0, p.life / 32); g.fillStyle = p.color; g.fillRect(Math.round(p.x / PX) * PX, Math.round(p.y / PX) * PX, Math.max(PX, Math.round(p.s / PX) * PX), Math.max(PX, Math.round(p.s / PX) * PX)); }
       g.globalAlpha = 1;
       for (let i = parts.length - 1; i >= 0; i--) if (parts[i].life <= 0) parts.splice(i, 1);
-      for (const p of pops) { g.globalAlpha = Math.min(1, p.life / 20); g.font = "900 17px system-ui,sans-serif"; g.textAlign = "center"; g.lineWidth = 4; g.strokeStyle = "#000"; g.fillStyle = p.bad ? "#ff6b5b" : "#ffd23f"; const yy = p.y - (50 - p.life) * 0.8, xx = Math.max(70, Math.min(LW - 70, p.x)); g.strokeText(p.t, xx, yy); g.fillText(p.t, xx, yy); g.globalAlpha = 1; p.life--; }
+      for (const p of pops) { const yy = p.y - (50 - p.life) * 0.8, xx = Math.max(80, Math.min(LW - 80, p.x)); if (p.life > 6 || p.life % 2) txt(p.t, xx, yy, 2, p.bad ? "#ff6b5b" : "#ffd23f"); p.life--; }
       for (let i = pops.length - 1; i >= 0; i--) if (pops[i].life <= 0) pops.splice(i, 1);
     }
 
@@ -295,7 +332,7 @@
       markSolids();
       moved = 0; stepOil(); stepOil(); stepOil();
       if (shake > 0) { shake--; can.style.transform = "translateX(" + (shake % 2 ? 4 : -4) + "px)"; } else can.style.transform = "";
-      draw(); upd();
+      draw(); present(); upd();
       if (inPan >= target) return finish(true);
       if (moves <= 0) { settleT = moved > 2 ? 0 : settleT + 1; if (settleT > 75) return finish(false); }
       raf = requestAnimationFrame(loop);

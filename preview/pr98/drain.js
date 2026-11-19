@@ -32,8 +32,8 @@
     let el = $("drn");
     if (!el) { el = document.createElement("div"); el.id = "drn"; document.body.append(el); }
     el.className = "";
-    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL<small>Tap groups of 2+ matching parts to open a path.</small></div><div class="dmoves"><span>TIME</span><b id="dMoves">0</b></div></div>' +
-      '<div class="dhint">MATCH 2+ • NEW PARTS DROP • FILL THE PAN</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
+    el.innerHTML = '<div class="bhead"><div>DRAIN THE OIL <small>1986 ARCADE EDITION • CLEAR PARTS TO OPEN THE DRAIN.</small></div><div class="dmoves"><span>TIME</span><b id="dMoves">0</b></div></div>' +
+      '<div class="dhint">MATCH 2+ • OPEN THE CHANNEL • CATCH THE OIL</div><div class="dwrap" id="dWrap"><canvas id="dCan"></canvas></div><div class="dmeter"><span>OIL COLLECTED</span><div><i id="dFill"></i></div><b id="dPct">0%</b></div>';
     const wrap = $("dWrap"), can = $("dCan"), g = can.getContext("2d");
     const fit = () => {
       const s = Math.min(wrap.clientWidth / LW, wrap.clientHeight / LH), dpr = window.devicePixelRatio || 1;
@@ -208,21 +208,37 @@
     const oilCtx = oilCan.getContext("2d"), oilImg = oilCtx.createImageData(GW, GH);
     function rr(x, y, w, h, r) { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); }
     function fitImg(im, cx, cy, box) { if (!ready(im)) return; const a = im.naturalWidth / im.naturalHeight, w = a > 1 ? box : box * a, h = a > 1 ? box / a : box; g.drawImage(im, cx - w / 2, cy - h / 2, w, h); }
+    // This round deliberately uses 1980s industrial pixel-art, unlike the
+    // main game and service bay. All art is drawn on the local canvas.
     function drawBack() {
-      g.fillStyle = "#18222e"; g.fillRect(0, 0, LW, LH);
-      g.strokeStyle = "#20252c"; g.lineWidth = 2;
-      for (let y = 0, row = 0; y < LH; y += 22, row++) { g.beginPath(); g.moveTo(0, y); g.lineTo(LW, y); g.stroke(); for (let x = (row % 2) * 24; x < LW; x += 48) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 22); g.stroke(); } }
-      if (ready(engImg)) { g.save(); g.globalAlpha = 0.6; const w = LW * 1.2, h = (w * engImg.naturalHeight) / engImg.naturalWidth; g.drawImage(engImg, (LW - w) / 2, 64 - h * 0.92, w, h); g.restore(); }
-      const pg = g.createLinearGradient(0, 56, 0, PAN_TOP + 10); pg.addColorStop(0, "#6a747e"); pg.addColorStop(1, "#2b3138");
-      g.fillStyle = pg; rr(-6, 56, LW + 12, PAN_TOP - 48, 14); g.fill();
-      g.fillStyle = "#14181d"; g.fillRect(10, 68, LW - 20, PAN_TOP - 68);
-      g.fillStyle = "#9aa6b2"; for (let x = 18; x < LW; x += 38) { g.beginPath(); g.arc(x, 62, 3, 0, 7); g.fill(); }
-      g.font = "900 11px system-ui,sans-serif"; g.fillStyle = "#e6edf3"; g.textAlign = "left"; g.lineWidth = 3; g.strokeStyle = "#000a"; g.strokeText("ENGINE OIL PAN", 12, 52); g.fillText("ENGINE OIL PAN", 12, 52);
-      // board frame like a tool chest drawer
-      g.fillStyle = "#526c80"; rr(BX - 1, BY - 8, COLS * T + 2, ROWS * T + 14, 10); g.fill();
-      for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) { g.fillStyle = (r + c) % 2 ? "#1b232c" : "#202933"; g.fillRect(BX + c * T, BY + r * T, T, T); }
-      g.fillStyle = "#3b4048"; g.fillRect(0, FLOOR + 6, LW, LH - FLOOR);
-      g.fillStyle = "#ffd23f"; g.fillRect(0, FLOOR + 14, LW, 4);
+      g.fillStyle = "#080e1d"; g.fillRect(0, 0, LW, LH);
+      // Factory wall: riveted iron panels, caution bands, ventilation ducts.
+      for (let y = 0; y < LH; y += 40) for (let x = 0; x < LW; x += 70) {
+        g.fillStyle = (Math.floor(x / 70) + Math.floor(y / 40)) % 2 ? "#101d30" : "#0c1828";
+        g.fillRect(x + 1, y + 1, 68, 38);
+        g.fillStyle = "#28445c"; g.fillRect(x + 5, y + 5, 3, 3);
+        g.fillRect(x + 61, y + 31, 3, 3);
+      }
+      g.fillStyle = "#30475a"; g.fillRect(12, 0, 17, LH); g.fillRect(LW - 28, 0, 17, LH);
+      g.fillStyle = "#102a3e"; g.fillRect(16, 0, 8, LH); g.fillRect(LW - 24, 0, 8, LH);
+      for (let y = 12; y < LH; y += 35) { g.fillStyle = "#6b8ba0"; g.fillRect(17, y, 5, 5); g.fillRect(LW - 23, y, 5, 5); }
+      g.fillStyle = "#0b101a"; g.fillRect(6, 57, LW - 12, PAN_TOP - 53);
+      g.fillStyle = "#58738a"; g.fillRect(4, 55, LW - 8, 6);
+      g.fillStyle = "#c18d35"; g.fillRect(4, PAN_TOP - 4, LW - 8, 5);
+      for (let x = 10; x < LW - 10; x += 24) { g.fillStyle = "#354c60"; g.fillRect(x, 61, 4, 4); }
+      g.font = "bold 12px monospace"; g.fillStyle = "#f6bd55"; g.textAlign = "left";
+      g.fillText("ENGINE OIL RESERVOIR", 12, 48);
+      g.fillStyle = "#345267"; g.fillRect(0, BY - 9, LW, ROWS * T + 18);
+      for (let row = 0; row < ROWS; row++) for (let col = 0; col < COLS; col++) {
+        g.fillStyle = (row + col) % 2 ? "#101c2c" : "#142337";
+        g.fillRect(col * T + 1, BY + row * T + 1, T - 2, T - 2);
+        g.fillStyle = "#20344b"; g.fillRect(col * T + 2, BY + row * T + 2, T - 4, 2);
+      }
+      g.fillStyle = "#111c2b"; g.fillRect(0, FLOOR + 7, LW, LH - FLOOR);
+      g.fillStyle = "#ffc44f"; g.fillRect(0, FLOOR + 12, LW, 5);
+      for (let x = 0; x < LW; x += 26) {
+        g.fillStyle = "#192b3b"; g.beginPath(); g.moveTo(x, FLOOR + 17); g.lineTo(x + 11, FLOOR + 17); g.lineTo(x + 26, FLOOR + 30); g.lineTo(x + 15, FLOOR + 30); g.fill();
+      }
     }
     const fluidMask = document.createElement("canvas"); fluidMask.width = LW * 2; fluidMask.height = LH * 2;
     const fluidCtx = fluidMask.getContext("2d");
@@ -259,26 +275,42 @@
       g.drawImage(mask, 0, 0, LW, LH);
       g.restore();
     }
+    function pixelIcon(type) {
+      // Pixel silhouettes: wrench, hex nut, filter, funnel, bolt.
+      const patterns = [
+        ["1100000011","1110000111","0111001110","0011111100","0001111000","0001111000","0011111100","0111001110","1110000111","1100000011"],
+        ["0011111100","0111111110","1110000111","1100000011","1100000011","1100000011","1100000011","1110000111","0111111110","0011111100"],
+        ["0011111100","0111111110","1111111111","1100000011","1101111011","1101111011","1100000011","1111111111","0111111110","0011111100"],
+        ["1111111111","0111111110","0011111100","0001111000","0001111000","0001111000","0001111000","0001111000","0011111100","0011111100"],
+        ["0001111000","0001111000","1111111111","1111111111","0001111000","0001111000","0001111000","0001111000","0011111100","0011111100"]
+      ];
+      const pal = ["#a9eaff","#ffe08a","#ffb46a","#ffa1b1","#a0f7ba"];
+      const pattern = patterns[type] || patterns[0];
+      g.fillStyle = "#142031";
+      g.fillRect(-18, -18, 36, 36);
+      g.fillStyle = "#06101e";
+      for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++)
+        if (pattern[row][col] === "1") g.fillRect(-16 + col * 3.2 + 2, -16 + row * 3.2 + 2, 3.2, 3.2);
+      g.fillStyle = pal[type] || "#fff1ab";
+      for (let row = 0; row < 10; row++) for (let col = 0; col < 10; col++)
+        if (pattern[row][col] === "1") g.fillRect(-16 + col * 3.2, -16 + row * 3.2, 3, 3);
+    }
     function drawTile(tl, x, y, glow) {
-      const s = 1 - Math.max(0, tl.pop) * 0.015, cx = x + T / 2, cy = y + T / 2, w = (T - 4) * s;
+      const cx = x + T / 2, cy = y + T / 2, w = 44 - Math.max(0, tl.pop) * .4;
       g.save(); g.translate(cx, cy);
-      if (tl.t === STEEL) {
-        const gr = g.createLinearGradient(-w / 2, -w / 2, w / 2, w / 2); gr.addColorStop(0, "#e1e7ed"); gr.addColorStop(0.5, "#9aa6b1"); gr.addColorStop(1, "#5b6570");
-        g.fillStyle = gr; rr(-w / 2, -w / 2, w, w, 7); g.fill(); g.strokeStyle = "#3b434c"; g.lineWidth = 2; g.stroke();
-        g.fillStyle = "#3e4750"; for (const [a, b] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { g.beginPath(); g.arc(a * (w / 2 - 8), b * (w / 2 - 8), 3.2, 0, 7); g.fill(); }
-        g.restore(); return;
+      const colors = ["#256ca6","#ac7a20","#b85626","#9b3354","#2b815c"];
+      const color = typeof tl.t === "number" ? colors[tl.t] : "#5c6680";
+      g.fillStyle = "#050b16"; g.fillRect(-w/2 + 3, -w/2 + 4, w, w);
+      g.fillStyle = glow ? "#ffe18c" : "#9bb5c7"; g.fillRect(-w/2, -w/2, w, w);
+      g.fillStyle = color; g.fillRect(-w/2 + 4, -w/2 + 4, w - 8, w - 8);
+      g.fillStyle = "#ffffff55"; g.fillRect(-w/2 + 5, -w/2 + 5, w - 10, 3);
+      g.fillStyle = "#102031"; g.fillRect(-w/2 + 5, w/2 - 8, w - 10, 3);
+      if (typeof tl.t === "number") pixelIcon(tl.t);
+      else {
+        g.font = "bold 23px monospace"; g.textAlign = "center"; g.textBaseline = "middle";
+        g.fillStyle = tl.t === STEEL ? "#d6e0e8" : "#ffe47a";
+        g.fillText(tl.t === STEEL ? "X" : tl.t === ROCKET ? "↑" : "*", 0, 1);
       }
-      if (glow) { g.shadowColor = "#fff8c0"; g.shadowBlur = 14; }
-      g.fillStyle = "#0007"; rr(-w / 2 + 1, -w / 2 + 3, w, w, 10); g.fill();
-      g.shadowBlur = 0;
-      g.fillStyle = "#dceaf4"; rr(-w / 2, -w / 2, w, w, 10); g.fill();
-      let a = "#ffe27a", b = "#e08a00";
-      if (typeof tl.t === "number") { a = TYPES[tl.t].a; b = TYPES[tl.t].b; }
-      const gr = g.createLinearGradient(0, -w / 2, 0, w / 2); gr.addColorStop(0, a); gr.addColorStop(1, b);
-      g.fillStyle = gr; rr(-w / 2 + 4, -w / 2 + 4, w - 8, w - 8, 8); g.fill();
-      g.fillStyle = "#ffffff70"; rr(-w / 2 + 6, -w / 2 + 6, w - 12, (w - 12) * 0.36, 6); g.fill();
-      if (typeof tl.t === "number") fitImg(imgs[tl.t], 0, 1, w - 14);
-      else { fitImg(tl.t === ROCKET ? rocketImg : blastImg, 0, 0, w - 8); g.strokeStyle = "#fff"; g.lineWidth = 2.5; g.globalAlpha = 0.6 + Math.sin(performance.now() / 150) * 0.4; rr(-w / 2 + 1, -w / 2 + 1, w - 2, w - 2, 10); g.stroke(); }
       g.restore();
     }
     let heroCache = null;

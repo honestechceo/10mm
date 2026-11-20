@@ -190,7 +190,7 @@
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
     hud.Name.textContent = roomRows ? "SECRET ROOM" : "DRAWER " + (i + 1) + " · " + L.name;
-    bgImg = img(BG[L.bg] || "bg-garage.jpg");
+    bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
     inRoom = !!roomRows; starHud();
     timeScale = 1; chase = null; t = 0;
   }
@@ -752,8 +752,8 @@
       const bh = (H + oy) * 1.11, bw = (bgImg.naturalWidth / bgImg.naturalHeight) * bh;
       let bx = -(cam * 0.35) % bw;
       for (; bx < vw; bx += bw) ctx.drawImage(bgImg, bx, -oy, bw, bh);
-      ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = "rgba(128,128,128,.55)"; ctx.fillRect(0, -oy, vw, H + oy); ctx.restore();
-      ctx.fillStyle = inRoom ? "rgba(14,8,4,.86)" : "rgba(10,16,28,.64)"; ctx.fillRect(0, -oy, vw, H + oy);
+      ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = inRoom ? "rgba(128,128,128,.3)" : "rgba(128,128,128,.55)"; ctx.fillRect(0, -oy, vw, H + oy); ctx.restore();
+      ctx.fillStyle = inRoom ? "rgba(14,8,4,.5)" : "rgba(10,16,28,.64)"; ctx.fillRect(0, -oy, vw, H + oy);
     }
     ctx.save(); ctx.translate(-Math.round(cam) + (shakeT > 0 ? (Math.random() - 0.5) * 12 : 0), shakeT > 0 ? (Math.random() - 0.5) * 10 : 0);
     const c0 = Math.max(0, Math.floor(cam / T) - 1), c1 = Math.min(W - 1, Math.ceil((cam + vw) / T) + 1);
@@ -765,9 +765,13 @@
     drawPlayer();
     for (const f of fx) drawFx(f);
     if (chase) drawChase();
-    if (inRoom) { // rock ceiling over the secret room
-      ctx.fillStyle = "#1b120b"; ctx.fillRect(cam - 2, -oy - 2, vw + 4, oy + 2 * T - 4);
-      ctx.fillStyle = "#3a2716"; for (let x = Math.floor(cam / T) * T; x < cam + vw + T; x += T) { ctx.fillRect(x + 6, 2 * T - 16, T - 12, 10); }
+    if (inRoom) { // pipe ceiling over the secret room (falls back to plain rock until the art loads)
+      const ci = img("room-ceil"), S = 4 * T, x0 = Math.floor(cam / S) * S;
+      ctx.fillStyle = "#1b120b"; ctx.fillRect(cam - 2, -oy - 2, vw + 4, oy + 2 * T + 2);
+      if (ready(ci)) for (let y = 2 * T - S; y > -oy - S; y -= S) for (let x = x0; x < cam + vw; x += S) ctx.drawImage(ci, x, y, S + 0.5, S + 0.5);
+      ctx.fillStyle = "rgba(0,0,0,.55)"; ctx.fillRect(cam - 2, 2 * T - 4, vw + 4, 4);
+      // on wide screens the room is narrower than the view: solid rock past the back wall
+      if (cam + vw > W * T) { ctx.fillStyle = "#1b120b"; ctx.fillRect(W * T, 2 * T, cam + vw - W * T + 2, H - 2 * T); ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(W * T, 2 * T, 6, H - 2 * T); }
     }
     ctx.restore();
     if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, -oy, vw, H + oy); }
@@ -778,6 +782,10 @@
     const top = !isSolid(cell(x, y - 1));
     switch (ch) {
       case "#":
+        if (inRoom && y >= ROWS - 2) { // secret room floor: one wet-concrete strip, yellow line down the middle, repeating every 4 cells
+          const fl = img("room-floor");
+          if (ready(fl)) { const n = fl.naturalWidth / 4; ctx.drawImage(fl, (x % 4) * n, fl.naturalHeight / 4 + (y - (ROWS - 2)) * n, n, n, X, Y, T + 0.5, T + 0.5); return; }
+        }
         if (top) { const im = img("t-square"); if (ready(im)) ctx.drawImage(im, X, Y, T + 0.5, T + 0.5); }
         else { ctx.fillStyle = (x + y) % 2 ? "#3b424c" : "#363d46"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); ctx.fillStyle = "#2a3038"; ctx.fillRect(X, Y + T - 3, T, 3); }
         return;

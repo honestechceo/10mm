@@ -344,7 +344,8 @@ function showHome(intro) {
     $("hLostSub").textContent = ls.golden ? "Golden 10MM earned! Replay any drawer" : d ? d + " of " + ((window.LT_LEVELS || []).length || 10) + " drawers cleared" : "NEW! 10-level platform adventure";
     lb.onclick = () => { audioReady(); stopMusic(); window.LostBox.open(); };
   }
-  $("hShop").onclick = run(showShop);
+  $("hShop").onclick = run(() => showShop("shop"));
+  if ($("hGarage")) $("hGarage").onclick = run(() => showShop("garage"));
   $("hSettings").onclick = run(showSettings);
   $("hHow").onclick = run(showTutorial);
   if (window.Feature) {

@@ -15,7 +15,7 @@
   const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg" };
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
-  const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD"] };
+  const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD"], torque: [10, "TORQUE STAR! Smash through anything"] };
 
   // ---------- art ----------
   const IMG = {};
@@ -32,13 +32,16 @@
   };
   function preload() {
     Object.values(FR).flat().forEach(img);
-    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star".split(" ").forEach(img);
+    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp chest-gold".split(" ").forEach(img);
     img("tool-piston.webp");
     "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet".split(" ").forEach(img);
   }
 
   // ---------- save ----------
-  const load = () => { try { return Object.assign({ done: [], coins: {}, golden: false }, JSON.parse(localStorage.getItem(SAVE) || "{}")); } catch (e) { return { done: [], coins: {}, golden: false }; } };
+  const load = () => { try { return Object.assign({ done: [], coins: {}, golden: false, stars: {}, starPaid: 0, rooms: [] }, JSON.parse(localStorage.getItem(SAVE) || "{}")); } catch (e) { return { done: [], coins: {}, golden: false, stars: {}, starPaid: 0, rooms: [] }; } };
+  // stars: 5 hidden in every drawer, kept for good once found. Every STAR_STEP stars pays coins into the shop wallet.
+  const STAR_STEP = 10, STAR_PAY = 250;
+  const starTotal = (s) => Object.values(s.stars || {}).reduce((n, a) => n + a.length, 0);
   const store = (s) => { try { localStorage.setItem(SAVE, JSON.stringify(s)); } catch (e) {} };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
   const say = (n) => { try { window.sfx && sfx(n); } catch (e) {} };
@@ -53,14 +56,14 @@
     root.className = "hidden";
     root.innerHTML =
       '<canvas id="ltc"></canvas>' +
-      '<div class="lthud"><span class="lthp" id="ltHp"></span><span class="ltname" id="ltName"></span><span class="ltcoin"><img src="lt/coin.webp" alt="">×<b id="ltCoins">0</b></span><button id="ltPause" aria-label="Pause">II</button></div>' +
+      '<div class="lthud"><span class="lthp" id="ltHp"></span><span class="ltname" id="ltName"></span><span class="ltcoin"><img src="lt/coin.webp" alt="">×<b id="ltCoins">0</b></span><span class="ltcoin ltstar"><img src="lt/star.webp" alt="">×<b id="ltStars">0/5</b></span><button id="ltPause" aria-label="Pause">II</button></div>' +
       '<div class="ltpow" id="ltPow"></div><div class="ltboss" id="ltBoss"></div>' +
       '<div class="ltmsg" id="ltMsg"></div>' +
       '<div class="ltpad"><button class="ltl" data-k="L" aria-label="Move left">◀</button><button class="ltr" data-k="R" aria-label="Move right">▶</button><button class="ltj" data-k="J" aria-label="Jump">JUMP</button></div>' +
       '<div class="ltcard hidden" id="ltCard"></div>';
     document.body.append(root);
     cv = root.querySelector("#ltc"); ctx = cv.getContext("2d"); card = root.querySelector("#ltCard");
-    ["Hp", "Name", "Coins", "Pow", "Msg"].forEach((k) => (hud[k] = root.querySelector("#lt" + k)));
+    ["Hp", "Name", "Coins", "Stars", "Pow", "Msg"].forEach((k) => (hud[k] = root.querySelector("#lt" + k)));
     root.querySelector("#ltPause").onclick = () => pauseMenu();
     // Touch: every finger is tracked by where it is right now, so sliding a thumb from ◀ to ▶
     // switches direction, and lifting any finger can never leave a direction stuck on.
@@ -127,14 +130,14 @@
   const cell = (cx, cy) => (cy < 0 || cx < 0 || cx >= W ? (cx < 0 || cx >= W ? "#" : ".") : cy >= ROWS ? "." : grid[cy][cx]);
   const isSolid = (ch) => SOLID.includes(ch);
 
-  function startLevel(i, fromCheckpoint) {
+  function startLevel(i, fromCheckpoint, roomRows) {
     const L = window.LT_LEVELS[i];
     lvI = i;
-    grid = L.rows.map((r) => r.split(""));
+    grid = (roomRows || L.rows).map((r) => r.split(""));
     W = grid[0].length;
     ents = []; movers = []; fx = [];
     const ext = {};
-    for (const [x, y, kw] of L.ext) ext[x + "," + y] = kw;
+    if (!roomRows) for (const [x, y, kw] of L.ext) ext[x + "," + y] = kw;
     let start = { x: 2, y: 10 };
     for (let y = 0; y < ROWS; y++) for (let x = 0; x < W; x++) {
       const ch = grid[y][x], kw = ext[x + "," + y] || {}, cx = x * T + T / 2, by = (y + 1) * T;
@@ -164,20 +167,70 @@
         case "L": movers.push({ k: "lift", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dy: (kw.dy || 3) * T, dx: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "M": movers.push({ k: "plat", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dx: (kw.dx || 3) * T, dy: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "U": ext[x + "," + y] = kw; break;
+        case "*": e({ k: "star", w: 34, h: 34, y: by - 7, sid: x + "," + y }); grid[y][x] = "."; break;
+        case "Y": e({ k: "warp", w: 60, h: 60 }); grid[y][x] = "."; break;
+        case "y": e({ k: "warpback", w: 60, h: 60 }); grid[y][x] = "."; break;
+        case "Q": e({ k: "gchest", w: 56, h: 50 }); grid[y][x] = "."; break;
       }
     }
     crumbles = []; boss = ents.find((e) => e.k === "boss") || null; arena = null;
     if (boss) { boss.home = { x: boss.x, y: boss.y }; arena = { l: boss.x - 6 * T - T / 2, r: boss.x + 6 * T + T / 2, on: false, done: false }; }
-    for (const e of ents) if (e.k === "coin" && collected.has(i + ":" + Math.round(e.x0) + ":" + Math.round(e.y0))) e.alive = false;
+    const tag = roomRows ? "r" : "";
+    for (const e of ents) if (e.k === "coin" && collected.has(tag + i + ":" + Math.round(e.x0) + ":" + Math.round(e.y0))) e.alive = false;
+    const sv = load(), got = (sv.stars && sv.stars[i]) || [];
+    for (const e of ents) if (e.k === "star" && got.includes(e.sid)) e.ghost = 1;   // already found: shows faded, still worth nothing
+    for (const e of ents) if (e.k === "gchest" && collected.has("chest" + i)) e.open = 1;
     blockKw = ext;
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
-    hud.Name.textContent = "DRAWER " + (i + 1) + " · " + L.name;
+    hud.Name.textContent = roomRows ? "SECRET ROOM" : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(BG[L.bg] || "bg-garage.jpg");
+    inRoom = !!roomRows; starHud();
     timeScale = 1; chase = null; t = 0;
   }
-  let zoom = 1;
+  let zoom = 1, inRoom = false, stash = null;
+  function starHud() {
+    if (!hud.Stars) return;
+    const s = load(), n = ((s.stars && s.stars[lvI]) || []).length;
+    hud.Stars.textContent = n + "/5";
+  }
+  function grabStar(e) {
+    e.alive = false; fx.push({ k: "spark", x: e.x, y: e.y - 17, t: 0.45 });
+    if (e.ghost) { say("grab"); return; }
+    const s = load(); s.stars = s.stars || {}; const a = (s.stars[lvI] = s.stars[lvI] || []);
+    if (!a.includes(e.sid)) a.push(e.sid);
+    const tot = starTotal(s), due = Math.floor(tot / STAR_STEP);
+    let paid = 0;
+    if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY; s.starPaid = due; }
+    store(s);
+    say("power"); haptic("success"); starHud();
+    if (paid) {
+      try { totalCoins += paid; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (x) {}
+      toast("★ " + tot + " STARS! +" + paid + " COINS to your wallet");
+    } else toast(a.length === 5 ? "ALL 5 STARS IN THIS DRAWER!" : "★ STAR " + a.length + "/5 · " + (STAR_STEP - (tot % STAR_STEP)) + " more for " + STAR_PAY + " coins");
+  }
+  // ---- secret rooms: a blue toolbox drops you underground; the box at the far end brings you back ----
+  function enterRoom(e) {
+    stash = { grid, W, ents, movers, crumbles, boss, arena, blockKw, startPos, cp, chase, back: { x: e.x + T * 1.5, y: e.y } };
+    const L = window.LT_LEVELS[lvI], keep = { hp, pow };
+    startLevel(lvI, false, L.room);
+    hp = keep.hp; pow = keep.pow;
+    mode = "intro"; drawerT = 0; say("power"); haptic("success"); toast("SECRET ROOM!");
+    const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); }
+  }
+  function leaveRoom() {
+    if (!stash) return;
+    const keep = { hp, pow }, S = stash; stash = null;
+    ({ grid, W, ents, movers, crumbles, boss, arena, blockKw, startPos, cp, chase } = S);
+    inRoom = false;
+    const L = window.LT_LEVELS[lvI];
+    hud.Name.textContent = "DRAWER " + (lvI + 1) + " · " + L.name;
+    pl.x = S.back.x; pl.y = S.back.y; pl.vx = 0; pl.vy = -300; pl.ground = false; pl.on = null; pl.inv = 1.2;
+    hp = keep.hp; pow = keep.pow; fx = [];
+    cam = Math.max(0, Math.min(W * T - VW(), pl.x - VW() * 0.35));
+    mode = "play"; say("grab"); haptic("medium");
+  }
   const VW = () => viewW / zoom;
   let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 }, crumbles = [], arena = null, boss = null;
   function crumble(cx, cy) {
@@ -206,7 +259,7 @@
     zoom = 1;
     cam = Math.max(0, Math.min(W * T - viewW, pl.x - viewW * 0.35));
     hp = 3;
-    pow = { speed: 0, slow: 0, magnet: 0, spring: 0, shield: pow && pow.shield ? 1 : 0 };
+    pow = { speed: 0, slow: 0, magnet: 0, spring: 0, torque: 0, shield: pow && pow.shield ? 1 : 0 };
   }
 
   // ---------- physics ----------
@@ -319,7 +372,7 @@
     say("grab");
   }
   function hurt(src) {
-    if (pl.inv > 0 || mode !== "play") return;
+    if (pl.inv > 0 || mode !== "play" || pow.torque > 0) return;
     if (pow.shield) { pow.shield = 0; pl.inv = 1.2; say("hit"); haptic("medium"); toast("Shield saved you!"); return; }
     hp--; pl.inv = 1.4; pl.hitT = 0.45; say("hit"); haptic("heavy");
     pl.vy = -420; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 220; pl.ground = false; pl.on = null;
@@ -419,11 +472,21 @@
     const shrink = e.round ? 6 : e.hurt ? 4 : 0;
     if (px1 < b.x0 + shrink || px0 > b.x1 - shrink || py1 < b.y0 + shrink || py0 > b.y1 - shrink) return;
     switch (e.k) {
-      case "coin": e.alive = false; collected.add(lvI + ":" + Math.round(e.x0) + ":" + Math.round(e.y0)); addCoin(e.x, e.y); fx.push({ k: "spark", x: e.x, y: e.y - 13, t: 0.3 }); return;
+      case "coin": e.alive = false; collected.add((inRoom ? "r" : "") + lvI + ":" + Math.round(e.x0) + ":" + Math.round(e.y0)); addCoin(e.x, e.y); fx.push({ k: "spark", x: e.x, y: e.y - 13, t: 0.3 }); return;
       case "pu": e.alive = false; givePower(e.pu); return;
+      case "star": grabStar(e); return;
+      case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
+      case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
+      case "gchest": if (!e.open) { e.open = 1; collected.add("chest" + lvI); fx.push({ k: "spark", x: e.x, y: e.y - 40, t: 0.5 }); for (let k = 0; k < 20; k++) addCoin(e.x, e.y - 40, k % 4 === 0); givePower("torque"); } return;
       case "check": if (!e.on) { ents.forEach((o) => o.k === "check" && (o.on = false)); e.on = true; cp = { x: e.x, y: e.y }; toast("CHECKPOINT!"); say("win"); haptic("success"); } return;
       case "spring": if (pl.vy >= 0 && py1 - b.y0 < 26) { pl.vy = -P.SPRING * (key.J ? 1.1 : 1); pl.jumps = 1; pl.ground = false; pl.on = null; e.squash = 0.2; say("flap"); } return;
       case "exit": if (arena && !arena.done) return; if (mode === "play" && px1 > b.x0 + 26 && px0 < b.x1 - 26 && py1 > b.y0 + 30) enterDrawer(e); return;
+    }
+    // torque star: plow through anything that walks, flies or rolls (bosses just can't hurt you)
+    if (pow.torque > 0) {
+      if (e.k !== "boss" && (e.stomp || e.walker || e.fly || e.bounce) && !e.dead) { e.dead = 0.6; e.vx = 0; coinsRun++; hud.Coins.textContent = coinsRun; say("hit"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); return; }
+      if (e.k === "boss" && pl.vy > 60 && py1 - b.y0 < 30 && e.inv <= 0 && bossStompable(e)) { bossHit(e); return; }
+      return;
     }
     // hazards: stomp the stompable ones from above
     const fromAbove = pl.vy > 60 && py1 - b.y0 < (e.k === "boss" ? 30 : 20);
@@ -542,7 +605,7 @@
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
-    if (mode === "play" || mode === "respawn" || mode === "drawer" || mode === "intro") {
+    if (mode === "play" || mode === "respawn" || mode === "drawer" || mode === "intro" || mode === "warp") {
       acc += dt;
       while (acc >= STEP) { tick(STEP); acc -= STEP; }
     }
@@ -551,12 +614,19 @@
   function tick(dt) {
     msgT -= dt;
     if (msgT <= 0 && hud.Msg.classList.contains("on")) hud.Msg.classList.remove("on");
-    for (const k of ["speed", "slow", "magnet", "spring"]) if (pow[k] > 0) pow[k] = Math.max(0, pow[k] - dt);
+    for (const k of ["speed", "slow", "magnet", "spring", "torque"]) if (pow[k] > 0) pow[k] = Math.max(0, pow[k] - dt);
     timeScale = pow.slow > 0 ? 0.5 : 1;
     for (const f of fx) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 900 * dt; } if (f.k === "coinpop") f.y -= 120 * dt; }
     fx = fx.filter((f) => f.t > 0);
     if (mode === "intro") { drawerT += dt; stepEnts(dt); if (drawerT > 1.1) { mode = "play"; pl.inv = 0.6; } updHud(); return; }
     if (mode === "respawn") { drawerT -= dt; if (drawerT <= 0) { mode = "play"; const s = pow.shield; spawnPlayer(); pow.shield = s; resetHazards(); } updHud(); return; }
+    if (mode === "warp") {
+      drawerT += dt;
+      const e = exitEnt;
+      pl.x += (e.x - pl.x) * 0.15; pl.y += (e.y - 20 - pl.y) * 0.15;
+      if (drawerT > 0.7) { if (e.k === "warp") enterRoom(e); else leaveRoom(); }
+      updHud(); return;
+    }
     if (mode === "drawer") {
       drawerT += dt;
       const e = exitEnt, tx = e.x, ty = e.y - 28;
@@ -595,7 +665,7 @@
   function updHud() {
     const k = hp + "|" + pow.shield;
     if (k !== hudKey) { hudKey = k; hud.Hp.innerHTML = "●".repeat(Math.max(0, hp)).split("").map(() => '<i class="on"></i>').join("") + '<i></i>'.repeat(Math.max(0, 3 - hp)) + (pow.shield ? '<img src="lt/pu-shield.webp" alt="shield">' : ""); }
-    const list = ["speed", "slow", "magnet", "spring"].filter((p) => pow[p] > 0).map((p) => '<span><img src="lt/pu-' + p + '.webp" alt="">' + Math.ceil(pow[p]) + "</span>").join("");
+    const list = ["speed", "slow", "magnet", "spring", "torque"].filter((p) => pow[p] > 0).map((p) => '<span><img src="lt/' + (p === "torque" ? "star" : "pu-" + p) + '.webp" alt="">' + Math.ceil(pow[p]) + "</span>").join("");
     if (hud.Pow._v !== list) { hud.Pow.innerHTML = list; hud.Pow._v = list; }
     const bb = root.querySelector("#ltBoss"), showB = boss && arena && arena.on && boss.st !== "dead";
     bb.classList.toggle("on", !!showB);
@@ -620,18 +690,22 @@
       let bx = -(cam * 0.35) % bw;
       for (; bx < vw; bx += bw) ctx.drawImage(bgImg, bx, -oy, bw, bh);
       ctx.save(); ctx.globalCompositeOperation = "saturation"; ctx.fillStyle = "rgba(128,128,128,.55)"; ctx.fillRect(0, -oy, vw, H + oy); ctx.restore();
-      ctx.fillStyle = "rgba(10,16,28,.64)"; ctx.fillRect(0, -oy, vw, H + oy);
+      ctx.fillStyle = inRoom ? "rgba(14,8,4,.86)" : "rgba(10,16,28,.64)"; ctx.fillRect(0, -oy, vw, H + oy);
     }
     ctx.save(); ctx.translate(-Math.round(cam), 0);
     const c0 = Math.max(0, Math.floor(cam / T) - 1), c1 = Math.min(W - 1, Math.ceil((cam + vw) / T) + 1);
     for (let y = 0; y < ROWS; y++) for (let x = c0; x <= c1; x++) drawCell(x, y, grid[y][x]);
     // the drawer you came out of
-    if (Math.abs(startPos.x - cam - vw / 2) < vw) { ctx.globalAlpha = 0.9; fitImg(mode === "intro" ? "drawer1" : "drawer3", startPos.x - 6, startPos.y, 92); ctx.globalAlpha = 1; }
+    if (!inRoom && Math.abs(startPos.x - cam - vw / 2) < vw) { ctx.globalAlpha = 0.9; fitImg(mode === "intro" ? "drawer1" : "drawer3", startPos.x - 6, startPos.y, 92); ctx.globalAlpha = 1; }
     for (const m of movers) drawMover(m);
     for (const e of ents) if (e.alive && e.x > cam - 200 && e.x < cam + vw + 200) drawEnt(e);
     drawPlayer();
     for (const f of fx) drawFx(f);
     if (chase) drawChase();
+    if (inRoom) { // rock ceiling over the secret room
+      ctx.fillStyle = "#1b120b"; ctx.fillRect(cam - 2, -oy - 2, vw + 4, oy + 2 * T - 4);
+      ctx.fillStyle = "#3a2716"; for (let x = Math.floor(cam / T) * T; x < cam + vw + T; x += T) { ctx.fillRect(x + 6, 2 * T - 16, T - 12, 10); }
+    }
     ctx.restore();
     if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, -oy, vw, H + oy); }
   }
@@ -693,6 +767,19 @@
   function drawEnt(e) {
     const b = box(e);
     switch (e.k) {
+      case "star": { const im = img("star"); if (!ready(im)) return; const bob = Math.sin(t * 3 + e.x0) * 4, w = 34;
+        ctx.save(); ctx.globalAlpha = e.ghost ? 0.35 : 1; ctx.translate(e.x, e.y - 17 + bob); ctx.rotate(Math.sin(t * 2 + e.x0) * 0.15);
+        if (!e.ghost) { ctx.globalAlpha = 0.35 + 0.2 * Math.sin(t * 5); ctx.fillStyle = "#ffe066"; ctx.beginPath(); ctx.arc(0, 0, 24, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
+        ctx.drawImage(im, -w / 2, -w / 2, w, w); ctx.restore(); return; }
+      case "warp": case "warpback": {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 4);
+        ctx.save(); ctx.globalAlpha = 0.25 + 0.25 * pulse; ctx.fillStyle = "#6fb6ff"; ctx.beginPath(); ctx.ellipse(e.x, e.y - 30, 46, 40, 0, 0, 7); ctx.fill(); ctx.restore();
+        fitImg("warp", e.x, e.y + 2, 66);
+        ctx.fillStyle = "#cfe8ff"; ctx.font = "900 13px system-ui,sans-serif"; ctx.textAlign = "center";
+        ctx.fillText(e.k === "warp" ? "▼" : "▲", e.x, e.y - 72 - pulse * 5); return; }
+      case "gchest": {
+        if (!e.open) { ctx.save(); ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 5); ctx.fillStyle = "#ffd34d"; ctx.beginPath(); ctx.ellipse(e.x, e.y - 26, 44, 34, 0, 0, 7); ctx.fill(); ctx.restore(); }
+        ctx.save(); if (e.open) ctx.globalAlpha = 0.55; fitImg("chest-gold", e.x, e.y + 2, 60); ctx.restore(); return; }
       case "coin": { const s = Math.abs(Math.cos(t * 3 + e.x0 * 0.01)); const im = img("coin"); if (ready(im)) ctx.drawImage(im, e.x - 13 * Math.max(0.25, s), e.y - 26, 26 * Math.max(0.25, s), 26); return; }
       case "pan": fitImg("pan", e.x, e.y + 2, 46); return;
       case "tire": case "jack": case "creeper": case "toolcart": {
@@ -792,12 +879,13 @@
     "u-run_03": [165, 142, 155, 172, 155, 52, 110, 211, 130],
     "u-run_04": [170, 145, 160, 172, 147, 57, 105, 211, 132],
     "u-jump": [152, 138, 150, 168, 132, 63, 112, 198, 128],
-    "u-double_jump": [155, 140, 155, 168, 130, 93, 100, 193, 133],
+    "u-double_jump": [155, 140, 155, 168, 128, 82, 100, 193, 133],
     "u-fall": [165, 132, 155, 160, 148, 52, 110, 208, 117],
     "u-land": [167, 162, 157, 192, 142, 77, 112, 211, 150],
     "u-hurt": [150, 143, 150, 168, 120, 68, 105, 191, 128],
     "u-victory": [165, 98, 162, 128, 140, 28, 110, 201, 88]
   };
+  const UTILT = { "u-double_jump": -0.15, "u-hurt": -0.3 }; // radians, socket leans back on these frames
   function lookAnchors(name) {
     const a = UFACE[name]; if (!a) return null;
     return { eyes: [a[0], a[1], 88], mouth: [a[2], a[3], 68], top: [a[4], a[5], a[6]], side: [a[7], a[8], 80], body: [150, 150, 200] };
@@ -819,7 +907,10 @@
       }
       const [an, ws, dy, md] = L.at, [ax, ay, aw] = F[an];
       const pw = aw * ws * k, ph = (im.naturalHeight * pw) / im.naturalWidth, cy = -h + (ay + dy * aw) * k;
+      const tilt = UTILT[name] || 0;
+      if (tilt) { const px = -w / 2 + ax * k, py = cy; ctx.save(); ctx.translate(px, py); ctx.rotate(tilt); ctx.translate(-px, -py); }
       ctx.drawImage(im, -w / 2 + ax * k - pw / 2, md === "c" ? cy - ph / 2 : md === "b" ? cy - ph : cy, pw, ph);
+      if (tilt) ctx.restore();
     }
   }
   function drawPlayer() {
@@ -842,9 +933,11 @@
     if (!ready(im)) return;
     let s = 1;
     if (mode === "intro") s = Math.min(1, drawerT * 2.2);
+    if (mode === "warp") s = Math.max(0.05, 1 - drawerT * 1.5);
     const w = 94 * s, h = (w * im.naturalHeight) / im.naturalWidth;
     ctx.save(); ctx.translate(pl.x, pl.y + 3);
     if (pl.face < 0) ctx.scale(-1, 1);
+    if (pow.torque > 0) { ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 14); ctx.fillStyle = "hsl(" + ((t * 360) % 360) + ",100%,60%)"; ctx.beginPath(); ctx.ellipse(0, -h * 0.45, w * 0.62, h * 0.55, 0, 0, 7); ctx.fill(); ctx.restore(); }
     if (pow.shield) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 6); ctx.strokeStyle = "#6fd3ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(0, -h * 0.42, 40, 44, 0, 0, 7); ctx.stroke(); ctx.restore(); }
     const fk = w / im.naturalWidth, fname = FR[set][fi];
     drawLooks(fname, fk, w, h, true);
@@ -881,12 +974,12 @@
     card.querySelectorAll(".ltdr").forEach((b) => (b.onclick = () => play(+b.dataset.i)));
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }
   function play(i) {
-    hideCard(); collected = new Set(); pow = null; fit();
+    hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; fit();
     startLevel(i); coinsRun = 0; hud.Coins.textContent = 0;
     mode = "intro"; drawerT = 0;
     try { window.stopMusic && stopMusic(); window.startMusic && startMusic("level"); } catch (e) {}
@@ -925,7 +1018,7 @@
     try { window.showHome && showHome(false); } catch (e) {}
   }
   // ---- test hooks: run the real player physics with hazards off and movers frozen at a fraction of their path ----
-  function probeSetup(i) { startLevel(i); mode = "play"; return { W, movers: movers.map((m) => ({ x0: m.x0, y0: m.y0, dx: m.dx, dy: m.dy, w: m.w, k: m.k })), rows: grid.map((r) => r.join("")) }; }
+  function probeSetup(i, room) { startLevel(i, false, room ? window.LT_LEVELS[i].room : undefined); mode = "play"; return { W, movers: movers.map((m) => ({ x0: m.x0, y0: m.y0, dx: m.dx, dy: m.dy, w: m.w, k: m.k })), rows: grid.map((r) => r.join("")) }; }
   function probe(x, y, dir, da, vy0, fr) {
     movers.forEach((m, k) => { const f = fr[k] || 0; m.x = m.x0 + m.dx * f; m.y = m.y0 - m.dy * f; m.vx = m.vy = 0; });
     mode = "play"; pl.x = x; pl.y = y; pl.vx = dir * P.MAXV; pl.vy = vy0; pl.ground = vy0 === 0 && dir === 0; pl.jumps = vy0 < 0 ? 1 : 0; pl.inv = 99; pl.on = null; pl.coyote = 0;

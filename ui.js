@@ -425,6 +425,20 @@ function showReady() {
     startMusic();
     rafId = requestAnimationFrame(tick);
   };
+  // MAIN MENU on the ready card: leave the level without starting it
+  const m = $("rMenu");
+  m.onpointerdown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  m.onpointerup = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (state !== "ready") return;
+    r.classList.add("hidden");
+    r.onpointerup = null;
+    showMenu();
+  };
 }
 
 // iPhone Safari has no vibration API. Since iOS 18, toggling a switch control gives a light tap of haptics,

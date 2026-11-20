@@ -3543,6 +3543,15 @@ for (const [k, n, p] of AURA_LIST) LOOKS.push({ id: "aura-" + k, img: "aura-" + 
 const FACE_A = { body: [610, 240, 430], eyes: [695, 175, 200], mouth: [680, 238, 160], top: [705, 95, 260], side: [835, 215, 200] };
 const FACE_B = { body: [625, 225, 470], eyes: [705, 170, 200], mouth: [700, 280, 170], top: [710, 40, 270], side: [880, 205, 200] };
 const FACE_B_SKINS = new Set("chrome golden10 pitcrew goldrush carbon storm camo oldglory flames slime firered haze frost barnfind skull biohazard menace visor checkered trackday galaxy puertorico electric pink royal titanium blueline".split(" "));
+// per-skin nudges on top of the family anchors: [dx, dy, widthScale]
+const FACE_FIX = { golden10: { eyes: [15, 38, 0.85], mouth: [15, 30, 0.9], side: [0, 25, 1], top: [10, 25, 0.95], body: [0, 10, 1] } };
+function faceFor(skin) {
+  const F = FACE_B_SKINS.has(skin) ? FACE_B : FACE_A, fx = FACE_FIX[skin];
+  if (!fx) return F;
+  const o = {};
+  for (const k in F) { const d = fx[k] || [0, 0, 1]; o[k] = [F[k][0] + d[0], F[k][1] + d[1], Math.round(F[k][2] * d[2])]; }
+  return o;
+}
 const LOOK_HEAD = 150, LOOK_FOOT = 100; // extra room above (hats) and below (aura glow)
 const lookImgs = {};
 for (const l of LOOKS) { const im = new Image(); im.src = l.img || "look-" + l.id + ".webp"; lookImgs[l.id] = im; }
@@ -3552,7 +3561,7 @@ const equippedLooks = () => LSget("tenmm-looks", {});
 var heroComp = { key: "", url: "" };
 function lookKey() { const eq = equippedLooks(); return equippedSkin() + "|" + Object.keys(LOOK_SLOTS).map((s) => eq[s] || "").join(","); }
 function composeHero(done) {
-  const key = lookKey(), eq = equippedLooks(), ids = Object.keys(LOOK_SLOTS).map((s) => eq[s]).filter(Boolean);
+  const key = lookKey(), eq = equippedLooks(), ids = Object.keys(LOOK_SLOTS).map((s) => eq[s]).filter((id) => id && lookImgs[id]);
   if (!ids.length) { heroComp = { key, url: "" }; return done && done(); }
   const base = new Image();
   const all = [base, ...ids.map((id) => lookImgs[id])];
@@ -3561,7 +3570,7 @@ function composeHero(done) {
     if (lookKey() !== key) return;
     const c = document.createElement("canvas"); c.width = 900; c.height = 430 + LOOK_HEAD + LOOK_FOOT;
     const x = c.getContext("2d");
-    const F = FACE_B_SKINS.has(equippedSkin()) ? FACE_B : FACE_A;
+    const F = faceFor(equippedSkin());
     const aura = LOOKS.find((l) => l.id === eq.aura), aim = aura && lookImgs[aura.id];
     if (aim && aim.naturalWidth) {
       // ring sits around the socket body, streaks trail off behind it
@@ -3595,14 +3604,16 @@ function applySkin() {
   });
   if (heroSprites && heroSprites.socket) heroSprites.socket.src = skinSrc();
 }
-function showShop() {
+var shopTab = "shop";
+function showShop(tab) {
+  shopTab = tab === "garage" ? "garage" : "shop";
   state = "shop";
   $("overlay").classList.remove("hidden");
   $("opts").classList.remove("on");
   $("levels").classList.remove("on");
   setArt("hero");
-  $("eyebrow").textContent = "SOCKET SHOP";
-  $("message").textContent = "PICK YOUR 10MM";
+  $("eyebrow").textContent = shopTab === "garage" ? "MY GARAGE" : "SOCKET SHOP";
+  $("message").textContent = shopTab === "garage" ? "YOUR STUFF" : "PICK YOUR 10MM";
   $("details").textContent =
     "You have " +
     totalCoins +
@@ -3647,11 +3658,69 @@ function renderLooks(box) {
     box.append(card);
   }
 }
+function shopTabs(box) {
+  const bar = document.createElement("div");
+  bar.className = "shoptabs";
+  const n = ownedSkins().length + ownedLooks().length;
+  for (const [t, label] of [["shop", "SHOP"], ["garage", "MY GARAGE (" + n + ")"]]) {
+    const b = document.createElement("button");
+    b.textContent = label;
+    b.className = shopTab === t ? "on" : "";
+    b.onclick = () => { if (shopTab !== t) { buzz("light"); showShop(t); box.scrollTop = 0; } };
+    bar.append(b);
+  }
+  box.append(bar);
+}
+function renderGarage(box) {
+  const own = ownedSkins(), eqS = equippedSkin(), ownL = ownedLooks(), eq = equippedLooks();
+  $("details").textContent = "Everything you own. Tap to equip. Looks and auras fit every finish.";
+  const head = (t) => { const h = document.createElement("div"); h.className = "lvhead"; h.textContent = t; box.append(h); };
+  const card = (src, name, sub, on, btn, cls) => {
+    const c = document.createElement("div"); c.className = "skin" + (cls || "") + (on ? " eq" : "");
+    const im = document.createElement("img"); im.src = src; im.alt = name;
+    const nm = document.createElement("div"); nm.textContent = name;
+    c.append(im, nm);
+    if (sub) { const s = document.createElement("div"); s.className = "lslot"; s.textContent = sub; c.append(s); }
+    c.append(btn); box.append(c);
+  };
+  const mk = (t, cls, fn) => { const b = document.createElement("button"); b.textContent = t; b.className = cls; if (fn) b.onclick = fn; else b.disabled = true; return b; };
+  head("SOCKET FINISHES (" + own.length + ")");
+  for (const sk of SKINS.filter((k) => own.includes(k.id))) {
+    const on = sk.id === eqS;
+    card(skinFile(sk.id), sk.name, "", on, on ? mk("EQUIPPED", "own") : mk("EQUIP", "own", () => {
+      localStorage.setItem("tenmm-skin", sk.id); applySkin(); setArt("hero"); buzz("light"); renderShop();
+    }));
+  }
+  const save = () => { localStorage.setItem("tenmm-looks", JSON.stringify(eq)); applySkin(); buzz("light"); renderShop(); };
+  let any = false;
+  for (const slot of ["aura", ...Object.keys(LOOK_SLOTS).filter((s) => s !== "aura")]) {
+    const mine = LOOKS.filter((L) => L.slot === slot && ownL.includes(L.id));
+    if (!mine.length) continue;
+    any = true;
+    head((slot === "aura" ? "AURAS" : LOOK_SLOTS[slot]) + " (" + mine.length + ")");
+    for (const L of mine) {
+      const on = eq[slot] === L.id;
+      card(L.img || "look-" + L.id + ".webp", L.name, LOOK_SLOTS[slot], on,
+        on ? mk("TAKE OFF", "own", () => { delete eq[slot]; save(); }) : mk("WEAR", "own", () => { eq[slot] = L.id; save(); }), " look");
+    }
+  }
+  if (!any) {
+    head("FACE LOOKS & AURAS");
+    const p = document.createElement("div"); p.className = "gempty";
+    p.textContent = "No looks yet. Pick some up in the SHOP tab.";
+    box.append(p);
+  } else if (Object.keys(eq).length) {
+    const b = mk("TAKE OFF ALL LOOKS", "gclear", () => { for (const k in eq) delete eq[k]; save(); });
+    box.append(b);
+  }
+}
 function renderShop() {
   const box = $("shop"),
     own = ownedSkins(),
     eq = equippedSkin();
   box.innerHTML = "";
+  shopTabs(box);
+  if (shopTab === "garage") return renderGarage(box);
   renderLooks(box);
   const sh = document.createElement("div");
   sh.className = "lvhead";

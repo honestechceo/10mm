@@ -24,10 +24,11 @@
     return IMG[k];
   };
   const ready = (im) => im && im.complete && im.naturalWidth > 0;
+  // upright socket animation (Juan's 12-pose sheet); every frame shares one scale and a bottom-center anchor
   const FR = {
-    idle: ["p-idle0", "p-idle1", "p-idle2", "p-idle3"], run: ["p-run0", "p-run1", "p-run2", "p-run3", "p-run4", "p-run5"],
-    jump: ["p-jump0", "p-jump1", "p-jump2"], djump: ["p-djump0", "p-djump1", "p-djump2"], fall: ["p-fall0", "p-fall1"],
-    land: ["p-land0", "p-land1"], hit: ["p-hit0", "p-hit1", "p-hit2"], win: ["p-win0", "p-win1", "p-win2"],
+    idle: ["u-idle_01", "u-idle_01", "u-idle_02", "u-idle_02"], run: ["u-run_01", "u-run_02", "u-run_03", "u-run_04", "u-run_03", "u-run_02"],
+    jump: ["u-jump", "u-jump", "u-jump"], djump: ["u-double_jump", "u-double_jump", "u-double_jump"], fall: ["u-fall", "u-fall"],
+    land: ["u-land", "u-land"], hit: ["u-hurt", "u-hurt", "u-hurt"], win: ["u-victory", "u-victory", "u-victory"],
   };
   function preload() {
     Object.values(FR).flat().forEach(img);
@@ -858,7 +859,7 @@
   }
   function showClear() {
     const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
-    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 || fin ? "p-golden0" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
+    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
     if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';

@@ -33,6 +33,7 @@
     Object.values(FR).flat().forEach(img);
     "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star".split(" ").forEach(img);
     img("tool-piston.webp");
+    "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet".split(" ").forEach(img);
   }
 
   // ---------- save ----------
@@ -655,28 +656,38 @@
       }
       case "q": {
         const cr = crumbles.find((k) => k.cx === x && k.cy === y), sh = cr && cr.t > 0 ? (Math.random() - 0.5) * 4 : 0;
-        ctx.fillStyle = "#8b6a3e"; ctx.fillRect(X + sh, Y, T, 16); ctx.fillStyle = "#b8925a"; ctx.fillRect(X + sh, Y, T, 5);
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(X + sh + 1, Y + 1, T - 2, 14);
-        ctx.strokeStyle = "#3b2a14"; ctx.beginPath(); ctx.moveTo(X + sh + 14, Y + 2); ctx.lineTo(X + sh + 20, Y + 9); ctx.lineTo(X + sh + 16, Y + 14); ctx.moveTo(X + sh + 34, Y + 3); ctx.lineTo(X + sh + 30, Y + 12); ctx.stroke();
+        runImg(cr && cr.t > 0 ? "ob-ledge-cracked" : "ob-ledge", x, y, "q", X + sh, Y - 2, 30);
         return;
       }
       case "D": drawImg("drum", X + 2, Y, T - 4, T); return;
       case ">": case "<": {
-        ctx.fillStyle = "#1c2027"; ctx.fillRect(X, Y, T, T); ctx.fillStyle = "#f2c230"; ctx.fillRect(X, Y, T, 5);
-        ctx.fillStyle = "#5d6570"; const off = ((t * 95) % 24) * (ch === ">" ? 1 : -1);
-        for (let i = -1; i < 3; i++) { const cx = X + i * 24 + off; ctx.beginPath(); const d = ch === ">" ? 1 : -1; ctx.moveTo(cx, Y + 12); ctx.lineTo(cx + 8 * d, Y + 22); ctx.lineTo(cx, Y + 32); ctx.lineWidth = 4; ctx.strokeStyle = "#8e99a6"; ctx.stroke(); }
-        ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(X + 1, Y + 1, T - 2, T - 2);
+        ctx.fillStyle = "#2a3038"; ctx.fillRect(X, Y + 18, T, T - 18);
+        runImg("ob-conveyor", x, y, ch, X, Y - 2, 30);
+        { ctx.save(); ctx.beginPath(); ctx.rect(X, Y, T, 12); ctx.clip(); ctx.fillStyle = "rgba(255,210,63,.85)"; const off = ((t * 95) % 16) * (ch === ">" ? 1 : -1); for (let i = -1; i < 4; i++) { const cx = X + i * 16 + off, d = ch === ">" ? 1 : -1; ctx.beginPath(); ctx.moveTo(cx, Y + 3); ctx.lineTo(cx + 5 * d, Y + 6); ctx.lineTo(cx, Y + 9); ctx.fill(); } ctx.restore(); }
         return;
       }
     }
   }
+  // draw one tile of a run using left cap / middle / right cap slices of a wide piece of art
+  function runImg(k, x, y, ch, X, Y, h) {
+    const im = img(k); if (!ready(im)) return;
+    const same = (c) => c === ch || (ch === ">" && c === "<") || (ch === "<" && c === ">");
+    const l = !same(cell(x - 1, y)), r = !same(cell(x + 1, y)), iw = im.naturalWidth, ih = im.naturalHeight, cap = iw * 0.22;
+    const sx = l && r ? 0 : l ? 0 : r ? iw - cap * 1.6 : cap, sw = l && r ? iw : l || r ? cap * 1.6 : iw - cap * 2;
+    ctx.drawImage(im, sx, 0, sw, ih, X, Y, T + 0.5, h);
+  }
   function drawImg(k, x, y, w, h) { const im = img(k); if (ready(im)) ctx.drawImage(im, x, y, w, h); }
   function fitImg(k, cx, by, w) { const im = img(k); if (!ready(im)) return; const h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, cx - w / 2, by - h, w, h); }
   function drawMover(m) {
-    if (m.k === "lift") { const im = img("lift-l"); if (ready(im)) { ctx.globalAlpha = 0.55; ctx.drawImage(im, m.x0 - 8, m.y0 - m.dy - 40, 30, m.dy + 90); ctx.globalAlpha = 1; } }
-    const im = img("t-bench");
-    if (ready(im)) ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight * 0.42, m.x - 2, m.y, m.w + 4, 20);
-    ctx.fillStyle = "#1f6fd6"; ctx.fillRect(m.x + 10, m.y + 18, 8, 6); ctx.fillRect(m.x + m.w - 18, m.y + 18, 8, 6);
+    const im = img("ob-scissor"); if (!ready(im)) return;
+    const iw = im.naturalWidth, ih = im.naturalHeight, topH = ih * 0.3;
+    if (m.k === "lift") {
+      // scissor legs stretch down from the deck to its base below
+      const base = m.y0 + 40, legH = Math.max(10, base - m.y - 22);
+      ctx.drawImage(im, 0, topH, iw, ih * 0.5, m.x + 8, m.y + 18, m.w - 16, legH);
+      ctx.drawImage(im, 0, ih * 0.8, iw, ih * 0.2, m.x + 2, m.y + 18 + legH - 4, m.w - 4, 14);
+    }
+    ctx.drawImage(im, 0, 0, iw, topH, m.x - 3, m.y - 2, m.w + 6, 24);
   }
   function drawEnt(e) {
     const b = box(e);
@@ -707,22 +718,22 @@
         ctx.save(); ctx.translate(e.x, e.y - e.h / 2);
         if (e.dead) { ctx.scale(1, 0.5); ctx.globalAlpha = Math.max(0, e.dead / 0.6); }
         if (e.k === "nut") ctx.rotate(Math.sin(e.rot) * 0.3); else if (e.vx > 0) ctx.scale(-1, 1);
-        // little propeller so you can tell they fly
-        ctx.fillStyle = "#cfd6de"; const pw = 22 * Math.abs(Math.cos(t * 30)); ctx.fillRect(-pw, -e.h / 2 - 10, pw * 2, 4); ctx.fillRect(-1.5, -e.h / 2 - 8, 3, 8);
-        fitImg(e.k === "nut" ? "nut" : "meter", 0, e.h / 2 + 4, e.k === "nut" ? 40 : 46);
+        ctx.scale(1, 1 + Math.sin(t * 40) * 0.015);
+        fitImg(e.k === "nut" ? "fly-nut" : "fly-drone", 0, e.h / 2 + 6, e.k === "nut" ? 50 : 64);
         ctx.restore(); return;
       }
       case "diver": {
         const sx = e.shake ? (Math.random() - 0.5) * 5 : 0;
-        ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(e.x, 0); ctx.lineTo(e.x, e.y - e.h); ctx.stroke();
-        ctx.save(); ctx.translate(e.x + sx, e.y - e.h / 2); ctx.rotate(Math.PI); const im = img("screw"); if (ready(im)) { const w = 38, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, -w / 2, -h / 2, w, h); } ctx.restore();
+        { const im = img("fly-screw"); if (ready(im)) { const w = 30, h = (w * im.naturalHeight) / im.naturalWidth;
+          ctx.strokeStyle = "#7d858f"; ctx.lineWidth = 4; ctx.setLineDash([6, 4]); ctx.beginPath(); ctx.moveTo(e.x, -40); ctx.lineTo(e.x, e.y - h + 4); ctx.stroke(); ctx.setLineDash([]);
+          ctx.drawImage(im, e.x + sx - w / 2, e.y - h, w, h); } }
         if (e.st === "hover" && Math.abs(pl.x - e.x) < 160) { ctx.fillStyle = "rgba(255,60,40,.22)"; ctx.fillRect(e.x - 18, e.y, 36, groundBelow(e.x) - e.y); }
         return;
       }
       case "zap": {
         const y = e.y, x0 = e.x - T / 2;
-        ctx.fillStyle = "#1a2433"; ctx.fillRect(x0 + 2, y - 6, T - 4, 6); ctx.fillStyle = "#3b82f6"; ctx.fillRect(x0 + 6, y - 5, T - 12, 3);
-        if (e.on || e.warn) {
+        { const on = e.on, im = img(on ? "ob-zap-on" : "ob-zap-off"); if (ready(im)) { const w = T + 2, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, x0 - 1, y - h + (on ? 4 : 2), w, h); } }
+        if (e.warn) {
           ctx.strokeStyle = e.on ? "#bfe9ff" : "rgba(120,190,255,.5)"; ctx.lineWidth = e.on ? 3 : 2; ctx.beginPath();
           for (let k = 0; k < (e.on ? 3 : 1); k++) { let px = x0 + 4, py = y - 4; ctx.moveTo(px, py); for (let s2 = 0; s2 < 6; s2++) { px += (T - 8) / 6; py = y - 4 - Math.random() * (e.on ? 26 : 10); ctx.lineTo(px, py); } }
           ctx.stroke();
@@ -745,7 +756,7 @@
         return;
       }
       case "pu": { const y = e.y - e.rise * 34; fitImg("pu-" + e.pu, e.x, y + Math.sin(t * 4) * 2, 36); return; }
-      case "check": { ctx.fillStyle = "#c8ced6"; ctx.fillRect(e.x - 2, e.y - 64, 4, 64); ctx.fillStyle = e.on ? "#3fd36b" : "#e5402b"; ctx.beginPath(); ctx.moveTo(e.x + 2, e.y - 64); ctx.lineTo(e.x + 30, e.y - 56); ctx.lineTo(e.x + 2, e.y - 46); ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.stroke(); fitImg("coin", e.x + 13, e.y - 49, 12); return; }
+      case "check": fitImg(e.on ? "ob-flag-green" : "ob-flag-red", e.x + 14, e.y + 2, 62); return;
       case "spring": { const s = e.squash > 0 ? 0.6 : 1; e.squash = (e.squash || 0) - 1 / 60; const im = img("spring"); if (ready(im)) ctx.drawImage(im, e.x - 24, e.y - 30 * s, 48, 30 * s); return; }
       case "exit": {
         const near = Math.abs(pl.x - e.x) < 260 || mode === "drawer";
@@ -755,7 +766,8 @@
         const locked = arena && !arena.done;
         if (locked) k = "drawer0";
         fitImg(k, e.x, e.y, 112);
-        if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
+        if (locked && ready(img("ob-chain"))) fitImg("ob-chain", e.x, e.y - 22, 118);
+        else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
         ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
         const lab = arena && !arena.done ? "BEAT THE BOSS" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
@@ -813,7 +825,7 @@
     // a drawer opens once the one before it is cleared
     const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
     const names = window.LT_LEVELS.map((l) => l.name);
-    let h = '<div class="ltlogo">THE LOST TOOLBOX</div><p>' + n + ' drawers of platform action. Beat the boss guarding each drawer, then jump in.</p><div class="ltdrawers">';
+    let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>' + n + ' drawers of platform action. Beat the boss guarding each drawer, then jump in.</p><div class="ltdrawers">';
     names.forEach((nm, i) => {
       const done = s.done.includes(i), lock = !open(i);
       if (i === 5) h += '<div class="ltpart">PART 2 · THE DEEP DRAWERS</div>';

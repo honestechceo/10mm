@@ -732,14 +732,14 @@
       }
       case "bolt": fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
       case "boss": {
-        const art = BOSS_ART[e.kind], sh = e.shake || e.st === "wind" || e.st === "hot" ? (Math.random() - 0.5) * 6 : 0;
+        const art = (lvI >= 5 ? "bossb-" : "bossa-") + BOSS_ART[e.kind], sh = e.shake || e.st === "wind" || e.st === "hot" ? (Math.random() - 0.5) * 6 : 0;
         if (e.st === "wait" && !(arena && arena.on)) { ctx.globalAlpha = 0.95; }
         ctx.save(); ctx.translate(e.x + sh, e.y);
         if (e.inv > 0 && Math.floor(e.inv * 16) % 2) ctx.globalAlpha = 0.4;
         if (e.st === "hot") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,80,30," + (0.3 + 0.2 * Math.sin(t * 20)) + ")"; ctx.beginPath(); ctx.arc(0, -e.h / 2, e.w * 0.75, 0, 7); ctx.fill(); ctx.restore(); }
-        if (e.kind === "roller") { ctx.translate(0, -e.h / 2); ctx.rotate(e.rot || 0); fitImg(art, 0, e.h / 2 + 8, e.w + 44); }
-        else if (e.kind === "flyer" || e.kind === "magnet") { ctx.rotate(Math.sin(t * 2) * 0.08); fitImg(art, 0, 12, e.w + 56); }
-        else { if (e.face > 0 && e.kind === "charger") ctx.scale(-1, 1); if (e.st === "dead") ctx.rotate(e.rot || 0); fitImg(art, 0, 4, e.w + 56); }
+        if (e.kind === "roller") { ctx.translate(0, -e.h / 2); ctx.rotate(Math.sin(e.rot || 0) * 0.35); fitImg(art, 0, e.h / 2 + 8, e.w + 62); }
+        else if (e.kind === "flyer" || e.kind === "magnet") { ctx.rotate(Math.sin(t * 2) * 0.08); fitImg(art, 0, 12, e.w + 62); }
+        else { if (e.face > 0 && e.kind === "charger") ctx.scale(-1, 1); if (e.st === "dead") ctx.rotate(e.rot || 0); fitImg(art, 0, 4, e.w + 62); }
         ctx.restore(); ctx.globalAlpha = 1;
         if (e.st === "stun" || e.st === "dazed") for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; fitImg("star", e.x + Math.cos(a) * 34, e.y - e.h - 6 + Math.sin(a) * 8, 18); }
         return;

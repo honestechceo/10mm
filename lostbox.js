@@ -783,6 +783,45 @@
     ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,60,60,.12)"; ctx.fillRect(x - 600, 0, 680, ROWS * T); ctx.restore();
     if (ready(im)) { const w = 170, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, x - w / 2, y - h / 2, w, h); }
   }
+  // face-look anchors per upright frame (frame px): eyes x,y  mouth x,y  top x,y,w  side x,y
+  const UFACE = {
+    "u-idle_01": [160, 134, 155, 160, 148, 50, 105, 204, 120],
+    "u-idle_02": [162, 131, 152, 160, 137, 50, 112, 201, 117],
+    "u-run_01": [165, 138, 160, 168, 150, 63, 110, 211, 128],
+    "u-run_02": [167, 135, 154, 168, 147, 60, 110, 210, 123],
+    "u-run_03": [165, 142, 155, 172, 155, 52, 110, 211, 130],
+    "u-run_04": [170, 145, 160, 172, 147, 57, 105, 211, 132],
+    "u-jump": [152, 138, 150, 168, 132, 63, 112, 198, 128],
+    "u-double_jump": [155, 140, 155, 168, 130, 93, 100, 193, 133],
+    "u-fall": [165, 132, 155, 160, 148, 52, 110, 208, 117],
+    "u-land": [167, 162, 157, 192, 142, 77, 112, 211, 150],
+    "u-hurt": [150, 143, 150, 168, 120, 68, 105, 191, 128],
+    "u-victory": [165, 98, 162, 128, 140, 28, 110, 201, 88]
+  };
+  function lookAnchors(name) {
+    const a = UFACE[name]; if (!a) return null;
+    return { eyes: [a[0], a[1], 88], mouth: [a[2], a[3], 68], top: [a[4], a[5], a[6]], side: [a[7], a[8], 80], body: [150, 150, 200] };
+  }
+  function wornLooks() {
+    if (typeof LOOKS === "undefined" || typeof equippedLooks !== "function") return [];
+    const eq = equippedLooks();
+    return Object.values(eq).map((id) => LOOKS.find((l) => l.id === id)).filter((L) => L && lookImgs[L.id] && lookImgs[L.id].naturalWidth);
+  }
+  function drawLooks(name, k, w, h, aura) {
+    const F = lookAnchors(name); if (!F) return;
+    for (const L of wornLooks()) {
+      if ((L.slot === "aura") !== aura) continue;
+      const im = lookImgs[L.id];
+      if (aura) {
+        const [cx, cy, bh] = F.body, ph = bh * L.at[1] * k, pw = (im.naturalWidth * ph) / im.naturalHeight;
+        ctx.drawImage(im, -w / 2 + cx * k + ph / 2 - pw, -h + cy * k - ph / 2, pw, ph);
+        continue;
+      }
+      const [an, ws, dy, md] = L.at, [ax, ay, aw] = F[an];
+      const pw = aw * ws * k, ph = (im.naturalHeight * pw) / im.naturalWidth, cy = -h + (ay + dy * aw) * k;
+      ctx.drawImage(im, -w / 2 + ax * k - pw / 2, md === "c" ? cy - ph / 2 : md === "b" ? cy - ph : cy, pw, ph);
+    }
+  }
   function drawPlayer() {
     if (mode === "drawer" && drawerT > 0.5) return;
     if (pl.inv > 0 && mode === "play" && Math.floor(pl.inv * 14) % 2) return;
@@ -807,8 +846,11 @@
     ctx.save(); ctx.translate(pl.x, pl.y + 3);
     if (pl.face < 0) ctx.scale(-1, 1);
     if (pow.shield) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 6); ctx.strokeStyle = "#6fd3ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(0, -h * 0.42, 40, 44, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+    const fk = w / im.naturalWidth, fname = FR[set][fi];
+    drawLooks(fname, fk, w, h, true);
     if (pow.speed > 0) { ctx.globalAlpha = 0.3; ctx.drawImage(im, -w / 2 - 14, -h, w, h); ctx.globalAlpha = 1; }
     ctx.drawImage(im, -w / 2, -h, w, h);
+    drawLooks(fname, fk, w, h, false);
     ctx.restore();
   }
   function drawFx(f) {

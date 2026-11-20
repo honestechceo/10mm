@@ -3,10 +3,10 @@
 // several timings, short hops and walk-offs, with lifts/platforms frozen at the ends and middle of
 // their paths. Reports whether the exit drawer and every checkpoint can be reached and whether any
 // reachable surface is a dead end.
-window.__ltReach = function (li) {
+window.__ltReach = function (li, room) {
   const T = 48, PW = 30;
-  const info = LostBox._probeSetup(li), rows = info.rows, W = info.W, M = info.movers;
-  const L = window.LT_LEVELS[li].rows;
+  const info = LostBox._probeSetup(li, room), rows = info.rows, W = info.W, M = info.movers;
+  const L = room ? window.LT_LEVELS[li].room : window.LT_LEVELS[li].rows;
   const SOLID = "#=CU?RSD<>i", stand = (ch) => SOLID.includes(ch) || ch === "-" || ch === "q";
   const S = [];
   for (let y = 1; y < rows.length; y++) {
@@ -45,7 +45,7 @@ window.__ltReach = function (li) {
     }
   });
   const find = (ch) => { const out = []; L.forEach((r, y) => [...r].forEach((c, x) => { if (c === ch) out.push([x, y, S.findIndex((s) => s.mover === undefined && s.y === (y + 1) * T && s.cols[0] <= x && x < s.cols[1])]); })); return out; };
-  const start = find("@")[0][2], goals = find("X").map((g) => [g[2], S.findIndex((s) => s.mover === undefined && s.y === (g[1] + 1) * T && s.cols[0] <= g[0] + 1 && g[0] + 1 < s.cols[1])]);
+  const start = find("@")[0][2], goals = find(room ? "y" : "X").map((g) => [g[2], S.findIndex((s) => s.mover === undefined && s.y === (g[1] + 1) * T && s.cols[0] <= g[0] + 1 && g[0] + 1 < s.cols[1])]);
   const seen = new Set([start]), q = [start];
   while (q.length) { const i = q.pop(); for (const j of edges[i]) if (!seen.has(j)) { seen.add(j); q.push(j); } }
   const goal = goals[0][0];
@@ -56,6 +56,12 @@ window.__ltReach = function (li) {
   const good = new Set([goal]), q2 = [goal];
   while (q2.length) { const j = q2.pop(); for (const i of rev[j]) if (!good.has(i)) { good.add(i); q2.push(i); } }
   for (const i of seen) if (!good.has(i) && S[i].mover === undefined) problems.push("dead end on columns " + S[i].cols.join("-") + " row " + S[i].y / T);
+  // stars float 2 rows above their ledge; warp boxes and the secret chest sit on theirs
+  const onLedge = (x, y, up) => S.findIndex((s) => s.mover === undefined && s.y === (y + up) * T && s.cols[0] <= x && x < s.cols[1]);
+  L.forEach((r, y) => [...r].forEach((c, x) => {
+    if (c === "*" && !seen.has(onLedge(x, y, 2))) problems.push("star at column " + x + " row " + y + " not reachable");
+    if ((c === "Y" || c === "Q") && !seen.has(onLedge(x, y, 1))) problems.push(c + " at column " + x + " not reachable");
+  }));
   const unreached = S.map((s, i) => [s, i]).filter(([s, i]) => !seen.has(i) && s.mover === undefined).map(([s]) => s.cols.join("-") + "@" + s.y / T);
   return { level: li + 1, surfaces: S.length, reachable: seen.size, probes, problems, unreached };
 };

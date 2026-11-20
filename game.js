@@ -2267,6 +2267,7 @@ function tick(t) {
   if (slow > 0) slow -= dt;
   if (boost > 0) boost -= dt;
   if (coinMagnet > 0) coinMagnet -= dt;
+  powHud();
   if (window.FX && FX.tick(dt, speed) === "stop") return;
   player.vy = Math.min(10, player.vy + 0.64 * dt);
   player.y += player.vy * dt;
@@ -3605,6 +3606,24 @@ function applySkin() {
   if (heroSprites && heroSprites.socket) heroSprites.socket.src = skinSrc();
 }
 var shopTab = "shop";
+// active power-up timers: icon with a ring that drains, plus seconds left
+const powMax = {};
+let powHudKey = "";
+function powHud() {
+  const el = document.getElementById("powHud");
+  if (!el) return;
+  const fx = window.FX && FX.timers ? FX.timers() : {};
+  const list = [["shield", shield], ["boost", boost], ["slow", slow], ["magnet", coinMagnet], ["oil", fx.oil || 0], ["rocket", fx.rocket || 0]];
+  let html = "", key = "";
+  for (const [k, v] of list) {
+    if (!(v > 0)) { powMax[k] = 0; continue; }
+    if (!powMax[k] || v > powMax[k]) powMax[k] = v;
+    const f = Math.max(0, Math.min(1, v / powMax[k])), s = Math.ceil(v / 60), pct = Math.round(f * 100);
+    key += k + s + "|" + Math.round(pct / 4) + ",";
+    html += '<span class="pw' + (s <= 2 ? " low" : "") + '" style="--p:' + pct + '%"><img src="power-' + k + '.webp" alt=""><b>' + s + "</b></span>";
+  }
+  if (key !== powHudKey) { powHudKey = key; el.innerHTML = html; }
+}
 function showShop(tab) {
   shopTab = tab === "garage" ? "garage" : "shop";
   state = "shop";

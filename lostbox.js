@@ -665,7 +665,7 @@
   function updHud() {
     const k = hp + "|" + pow.shield;
     if (k !== hudKey) { hudKey = k; hud.Hp.innerHTML = "●".repeat(Math.max(0, hp)).split("").map(() => '<i class="on"></i>').join("") + '<i></i>'.repeat(Math.max(0, 3 - hp)) + (pow.shield ? '<img src="lt/pu-shield.webp" alt="shield">' : ""); }
-    const list = ["speed", "slow", "magnet", "spring", "torque"].filter((p) => pow[p] > 0).map((p) => '<span><img src="lt/' + (p === "torque" ? "star" : "pu-" + p) + '.webp" alt="">' + Math.ceil(pow[p]) + "</span>").join("");
+    const list = ["speed", "slow", "magnet", "spring", "torque"].filter((p) => pow[p] > 0).map((p) => { const f = Math.round(Math.min(1, pow[p] / PU[p][0]) * 25) * 4, n = Math.ceil(pow[p]); return '<span class="pw' + (n <= 2 ? " low" : "") + '" style="--p:' + f + '%"><img src="lt/' + (p === "torque" ? "star" : "pu-" + p) + '.webp" alt=""><b>' + n + "</b></span>"; }).join("");
     if (hud.Pow._v !== list) { hud.Pow.innerHTML = list; hud.Pow._v = list; }
     const bb = root.querySelector("#ltBoss"), showB = boss && arena && arena.on && boss.st !== "dead";
     bb.classList.toggle("on", !!showB);

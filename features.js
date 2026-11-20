@@ -158,6 +158,7 @@
     rocketOn() { return rocket > 0; },
     coinBonus() { const l = upLvl("lucky"); return l && Math.random() < l * 0.1 ? 1 : 0; },
     powerMul() { return 1 + upLvl("power") * 0.2; },
+    timers() { return { oil: slick, rocket }; },
     isNewPower(t) { return t === "wd40" || t === "rocket"; },
     powerSprite(t) { const im = t === "wd40" ? oilSprite : t === "rocket" ? rocketSprite : null; return im && ready(im) ? im : null; },
     pickup(t, pm) {

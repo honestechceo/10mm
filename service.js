@@ -129,9 +129,9 @@
   const OIL_STEPS = [
     { say: "Put on your gloves", use: "gloves", scene: "scene-plug.webp" },
     { say: "Slide the drain pan under the engine", use: "pan", scene: "scene-plug.webp", after: (s) => s.showPan(true) },
-    { say: "Loosen the drain plug", use: "wrenches", scene: "scene-draining.webp", after: (s) => s.wait("Draining the old oil…", 1800) },
+    { say: "Loosen the drain plug", use: "wrenches", scene: "scene-plug.webp", next: "scene-draining.webp", after: (s) => s.wait("Draining the old oil…", 1800) },
     { say: "Swap in the new oil filter", use: "filter", consume: "filter", scene: "scene-draining.webp", after: (s) => s.flash("svc-filter.webp") },
-    { say: "Put the drain plug back in", use: "ratchet", scene: "scene-plug.webp", after: (s) => s.showPan(false) },
+    { say: "Put the drain plug back in", use: "ratchet", scene: "scene-draining.webp", next: "scene-plug.webp", after: (s) => s.showPan(false) },
     { say: "Tap the oil cap to open it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-closed.webp", next: "scene-engine-open.webp" },
     { say: "Set the funnel in the fill hole", use: "funnel", scene: "scene-engine-open.webp", after: (s) => s.showFunnel(true) },
     { say: "HOLD the oil jug to pour", pour: true, use: "oil", consume: "oil", scene: "scene-engine-open.webp" },
@@ -165,7 +165,8 @@
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
       '<div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div></div>' +
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
-    const carSrc = "car-" + (1 + (level % 7)) + ".webp";
+    // the brake job zooms in on a blue sedan with its wheel off, so start with that same sedan
+    const carSrc = j === "oil" ? "car-" + (1 + (level % 7)) + ".webp" : "car-7.webp";
     $("sCar").src = carSrc;
     for (const id of tools) {
       const b = document.createElement("button");

@@ -3325,6 +3325,8 @@ function renderOptions() {
           ["Ad privacy", "CHOICES", false, () => Monetize.privacy()],
         ]
       : []),
+    ["Gift code", "ENTER", false, () => setTimeout(redeemGift, 50)],
+    ...(window.SaveSync && SaveSync.native ? [["Older saves", "VIEW", false, () => setTimeout(showOlderSaves, 50)]] : []),
     [
       "Progress",
       resetArmed ? "TAP TO CONFIRM" : "RESET",
@@ -3365,6 +3367,46 @@ function renderOptions() {
     row.append(span, b);
     box.append(row);
   }
+}
+// ---------- support: gift codes (coins back for players who lost them) ----------
+// Code = AMOUNT-ID-CHECK, e.g. 500-K7Q2-X9F3. Each ID works once per device. Make codes with scripts/gift_code.py.
+const GIFT_SALT = "honestech-10mm-wrench-7731";
+function giftCheck(amount, id) {
+  let h = 2166136261;
+  for (const ch of GIFT_SALT + "|" + amount + "|" + id) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s = ""; for (let i = 0; i < 4; i++) { s += A[h % 32]; h = Math.floor(h / 32); }
+  return s;
+}
+function redeemGift() {
+  const raw = (window.prompt("Enter your gift code") || "").trim().toUpperCase().replace(/\s+/g, "");
+  if (!raw) return;
+  const m = raw.match(/^(\d{1,5})-([A-Z0-9]{4})-([A-Z0-9]{4})$/);
+  let used = []; try { used = JSON.parse(localStorage.getItem("tenmm-redeemed") || "[]"); } catch (e) {}
+  if (!m || giftCheck(+m[1], m[2]) !== m[3] || +m[1] > 20000) { $("details").textContent = "That code doesn't look right. Check it and try again."; buzz("heavy"); return; }
+  if (used.includes(m[2])) { $("details").textContent = "That code was already used on this phone."; return; }
+  used.push(m[2]); localStorage.setItem("tenmm-redeemed", JSON.stringify(used));
+  totalCoins += +m[1]; localStorage.setItem("tenmm-coins", totalCoins);
+  $("coinsCount").textContent = totalCoins;
+  $("details").textContent = "Gift code accepted: +" + m[1] + " coins! You now have " + totalCoins + ".";
+  sfx("win"); buzz("success");
+}
+async function showOlderSaves() {
+  const box = $("opts"), h = (await SaveSync.history()).slice().reverse();
+  box.innerHTML = "";
+  $("details").textContent = h.length ? "Your phone keeps a few older saves. Restoring one replaces your current progress." : "No older saves on this phone yet.";
+  for (const s of h) {
+    const d = s.data || {}, row = document.createElement("div"); row.className = "opt";
+    const span = document.createElement("span");
+    span.textContent = new Date(s.t).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) + " · Lv " + (d["tenmm-escape-best"] || 1) + " · " + (d["tenmm-coins"] || 0) + " coins";
+    const b = document.createElement("button"); b.textContent = "RESTORE";
+    b.onclick = () => { if (b.textContent !== "TAP TO CONFIRM") { b.textContent = "TAP TO CONFIRM"; return; } $("details").textContent = "Restoring…"; SaveSync.restoreFrom(s); };
+    row.append(span, b); box.append(row);
+  }
+  const back = document.createElement("div"); back.className = "opt";
+  const bs = document.createElement("span"); bs.textContent = "Back to settings";
+  const bb = document.createElement("button"); bb.textContent = "BACK"; bb.onclick = () => { renderOptions(); $("details").textContent = ""; };
+  back.append(bs, bb); box.append(back);
 }
 function resetProgress() {
   for (const k of [

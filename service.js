@@ -33,9 +33,8 @@
     brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brakes"], secs: 50 },
     tire: { name: "TIRE REPLACEMENT", short: "Tire job", needs: ["valvetool", "beadbreaker", "tirebar", "wirebrush", "lube", "airhose", "weighthammer", "newtire", "weights"], secs: 85 },
   };
-  // the tire job is in tester mode only until its final tool art is in
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
-  const JOB_IDS = () => (tester() ? ["oil", "brake", "tire"] : ["oil", "brake"]);
+  const JOB_IDS = () => ["oil", "brake", "tire"];
 
   const load = () => { try { return JSON.parse(localStorage.getItem("tenmm-garage")) || {}; } catch (e) { return {}; } };
   const G = Object.assign({ bag: [], cart: {}, done: {} }, load());
@@ -92,7 +91,7 @@
   function svcSummary() {
     const r = JOB_IDS().filter(ready);
     if (r.length) return "READY: " + r.map((j) => JOBS[j].short).join(" & ");
-    const j = missing("oil").length ? "oil" : "brake", n = JOBS[j].needs.length;
+    const j = JOB_IDS().find((k) => missing(k).length) || "oil", n = JOBS[j].needs.length;
     return JOBS[j].short + " kit " + (n - missing(j).length) + "/" + n + " • find parts in levels";
   }
   const baseShowHome = showHome;

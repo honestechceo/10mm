@@ -435,9 +435,20 @@ def level10():
     return l
 
 
+def crushers(l, xs):
+    """drop hydraulic crushers (2 tiles wide) on clear floor near each x"""
+    g = l.g
+    for x0 in xs:
+        for d in sorted(range(-15, 16), key=abs):
+            x = x0 + d
+            ok = all(g[11][c] == '#' for c in (x, x + 1)) and all(g[y][c] in '.o' for c in (x - 1, x, x + 1, x + 2) for y in range(5, 11)) and 'n' not in ''.join(g[10][x - 4:x + 6])
+            if ok: l.put(x, 10, 'n'); break
+        else: raise SystemExit('no crusher spot near %d in %s' % (x0, l.name))
+
+
 def level11():
     # PART 3 · THE BACK LOT (placeholder art until the Back Lot pack lands)
-    l = L('THE BACK LOT', 240, 'salvage', 'salvage')
+    l = L('THE BACK LOT', 240, 'backlot', 'salvage')
     l.floor(0, 240)
     l.put(2, 10, '@')
     l.put(8, 10, 'T'); l.put(12, 10, 'P'); l.put(10, 6, 'b')
@@ -463,11 +474,12 @@ def level11():
     l.put(184, 10, 'J'); l.put(189, 10, 'P'); l.put(187, 6, 'h'); l.put(192, 4, 'v')
     l.coins(196, 202, 10)
     l.arena(206, 'gunner', 5, 1.3, 'IMPACT GUN KING')
+    crushers(l, [18, 58, 103])
     return l
 
 
 def level12():
-    l = L('TOW LOT TROUBLE', 250, 'pitlane', 'salvage')
+    l = L('TOW LOT TROUBLE', 250, 'backlot', 'salvage')
     l.floor(0, 250)
     l.put(2, 10, '@')
     l.put(8, 10, 'J'); l.put(13, 10, 'T'); l.put(11, 6, 'h')
@@ -493,11 +505,12 @@ def level12():
     l.floor(193, 196, 9); l.put(199, 10, 'T'); l.put(203, 10, 'T'); l.put(201, 5, 'v')
     l.coins(206, 212, 10)
     l.arena(216, 'stomper', 6, 1.3, 'THE JACK STAND GIANT')
+    crushers(l, [30, 92, 196])
     return l
 
 
 def level13():
-    l = L('RADIATOR ROW', 250, 'carwash', 'salvage')
+    l = L('RADIATOR ROW', 250, 'backlot', 'salvage')
     l.floor(0, 250)
     l.put(2, 10, '@')
     l.row(6, 18, 11, 'i'); l.row(6, 18, 12, 'i'); l.put(10, 10, 'T'); l.put(15, 10, 'P'); l.put(12, 6, 'b')
@@ -522,11 +535,12 @@ def level13():
     l.floor(191, 194, 9); l.put(197, 10, 'P'); l.put(201, 10, 'T'); l.put(199, 5, 'v')
     l.coins(205, 211, 10)
     l.arena(216, 'kraken', 6, 1.3, 'THE COOLANT KRAKEN')
+    crushers(l, [37, 90, 155])
     return l
 
 
 def level14():
-    l = L('BELT DRIVE BOULEVARD', 255, 'engineshop', 'salvage')
+    l = L('BELT DRIVE BOULEVARD', 255, 'backlot', 'salvage')
     l.floor(0, 255)
     l.put(2, 10, '@')
     l.put(8, 10, 'K'); l.put(12, 10, 'J'); l.put(10, 6, 'b')
@@ -552,11 +566,12 @@ def level14():
     l.floor(200, 203, 9); l.put(206, 10, 'K'); l.put(210, 10, 'T'); l.put(208, 5, 'v')
     l.coins(213, 219, 10)
     l.arena(224, 'serpent', 6, 1.35, 'THE TIMING BELT SERPENT')
+    crushers(l, [45, 96, 120, 165])
     return l
 
 
 def level15():
-    l = L('THE CLEANUP CREW', 260, 'evtech', 'grand')
+    l = L('THE CLEANUP CREW', 260, 'backlot', 'grand')
     l.floor(0, 260)
     l.put(2, 10, '@')
     l.put(8, 10, 'T'); l.put(11, 10, 'T'); l.put(14, 10, 'P'); l.put(12, 6, 'h')
@@ -583,6 +598,7 @@ def level15():
     l.put(208, 10, 'T'); l.put(212, 10, 'T'); l.put(210, 5, 'v')
     l.coins(216, 222, 10)
     l.arena(228, 'vac', 7, 1.35, 'THE SHOP VAC')
+    crushers(l, [16, 100, 185, 206])
     return l
 
 

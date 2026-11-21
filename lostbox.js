@@ -12,7 +12,7 @@
   const SOLID = "#=CU?RSD<>i";
   const SEMI = "-q"; // land from above only (q crumbles)
   const SAVE = "tenmm-lt";
-  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg" };
+  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg" };
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD! Blocks the next hit, no time limit"], torque: [10, "TORQUE STAR! Smash through anything"],
@@ -37,7 +37,7 @@
   };
   function preload() {
     Object.values(FR).flat().forEach(img);
-    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break".split(" ").forEach(img);
+    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break bl-ground bl-wall bl-beam bl-conveyor bl-crusher bl-slick bl-engine bl-gremlin bl-bat".split(" ").forEach(img);
     img("tool-piston.webp");
     "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead js-idle js-attack js-hit js-dead ck-idle ck-attack ck-hit ck-dead tb-idle tb-attack tb-hit tb-dead sv-idle sv-attack sv-hit sv-dead".split(" ").forEach(img);
   }
@@ -166,6 +166,7 @@
         case "W": e({ k: "chaseOn", w: 20, h: 600 }); grid[y][x] = "."; break;
         case "w": e({ k: "chaseOff", w: 20, h: 600 }); grid[y][x] = "."; break;
         case "Z": e({ k: "spring", w: 44, h: 26 }); grid[y][x] = "."; break;
+        case "n": e({ k: "crusher", x: cx + T / 2, x0: cx + T / 2, w: 2 * T - 14, h: 28, top: by - 5.2 * T, up: by - 2.7 * T, y: by - 2.7 * T, hurt: 1, ph: (x * 0.29) % 1 }); grid[y][x] = "."; break;
         case "e": e({ k: "zap", w: T, h: 16, hurt: 1, ph: (x % 3) * 0.33 }); grid[y][x] = "."; break;
         case "b": e({ k: "nut", w: 34, h: 30, y: by - T / 2 + 15, cy: by - T / 2, vx: -70, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
         case "h": e({ k: "drone", w: 46, h: 40, y: by - T / 2 + 20, cy: by - T / 2, vx: -90, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
@@ -199,10 +200,11 @@
     spawnPlayer();
     hud.Name.textContent = roomRows ? "SECRET ROOM" : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
+    BL = L.bg === "backlot" && !roomRows;
     inRoom = !!roomRows; starHud(); bagHud();
     timeScale = 1; chase = null; t = 0;
   }
-  let zoom = 1, inRoom = false, stash = null;
+  let zoom = 1, inRoom = false, stash = null, BL = false; // BL: Back Lot art set
   function starHud() {
     if (!hud.Stars) return;
     const s = load(), n = ((s.stars && s.stars[lvI]) || []).length;
@@ -440,6 +442,13 @@
       if (e.dead) { e.dead -= dt; e.y += 300 * dt; if (e.dead <= 0) e.alive = false; continue; }
       if (e.k === "piston") e.y = e.y0 - (0.5 - 0.5 * Math.cos((t * timeScale * 2.4 + e.ph * 6.28))) * 2.6 * T;
       if (e.k === "gear") { e.rot = (e.rot || 0) + 3 * hd; e.y = e.y0 - 4 + Math.sin(t * 2 + e.ph * 6) * 6; }
+      if (e.k === "crusher") {
+        const c = ((t * timeScale) / 2.8 + e.ph) % 1, fl = e.y0, up = e.up;
+        e.warn = c > 0.5 && c < 0.66;
+        e.y = c < 0.66 ? up : c < 0.7 ? up + (fl - up) * ((c - 0.66) / 0.04) : c < 0.82 ? fl : fl - (fl - up) * ((c - 0.82) / 0.18);
+        if (c >= 0.7 && c < 0.72 && !e.thud) { e.thud = 1; if (Math.abs(e.x - pl.x) < 9 * T) { shakeT = Math.max(shakeT, 0.15); puff(e.x, fl, 6, "#c9b38a"); } }
+        if (c < 0.7) e.thud = 0;
+      }
       if (e.k === "chain") { e.ang = 0.95 * Math.sin(t * timeScale * 1.7 + e.ph * 6.28); e.x = e.ax + Math.sin(e.ang) * e.len; e.y = e.ay + Math.cos(e.ang) * e.len + e.h / 2; }
       if (e.k === "drop") {
         e.cyc = ((t * timeScale) / 2.4 + e.ph) % 1;
@@ -928,15 +937,17 @@
           const fl = img("room-floor");
           if (ready(fl)) { const n = fl.naturalWidth / 4; ctx.drawImage(fl, (x % 4) * n, fl.naturalHeight / 4 + (y - (ROWS - 2)) * n, n, n, X, Y, T + 0.5, T + 0.5); return; }
         }
+        if (BL) { if (top) drawImg("bl-ground", X, Y, T + 0.5, T + 0.5); else { ctx.fillStyle = (x * 7 + y * 3) % 5 ? "#5e2a0c" : "#542509"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); } return; }
         if (top) { const im = img("t-square"); if (ready(im)) ctx.drawImage(im, X, Y, T + 0.5, T + 0.5); }
         else { ctx.fillStyle = (x + y) % 2 ? "#3b424c" : "#363d46"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); ctx.fillStyle = "#2a3038"; ctx.fillRect(X, Y + T - 3, T, 3); }
         return;
-      case "=": drawImg("t-redbox", X, Y + dy, T, T); return;
-      case "-": { const im = img("t-bench"); if (ready(im)) ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight * 0.42, X - 1, Y, T + 2, 18); return; }
+      case "=": drawImg(BL ? "bl-wall" : "t-redbox", X, Y + dy, T, T); return;
+      case "-": if (BL) { runImg("bl-beam", x, y, "-", X, Y - 2, 22); return; } { const im = img("t-bench"); if (ready(im)) ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight * 0.42, X - 1, Y, T + 2, 18); return; }
       case "C": drawImg("t-crate", X, Y + dy, T, T); return;
       case "?": case "U": drawImg("qblock", X, Y + dy, T, T); return;
       case "S": drawImg("usedblk", X, Y + dy, T, T); return;
       case "i": {
+        if (BL) { if (top) { drawImg("bl-ground", X, Y, T + 0.5, T + 0.5); runImg("bl-slick", x, y, "i", X, Y - 6, 18); } else { ctx.fillStyle = "#5e2a0c"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); } return; }
         const im = img("t-square"); if (top && ready(im)) ctx.drawImage(im, X, Y, T + 0.5, T + 0.5); else { ctx.fillStyle = "#363d46"; ctx.fillRect(X, Y, T + 0.5, T + 0.5); }
         const c = SLICK[window.LT_LEVELS[lvI].bg] || ["rgba(40,20,0,.55)", "#ffcf6e"];
         if (top) { ctx.fillStyle = c[0]; ctx.fillRect(X, Y, T + 0.5, 12); ctx.fillStyle = c[1]; ctx.globalAlpha = 0.7; ctx.fillRect(X + ((x * 13) % 30), Y + 3, 10, 2); ctx.globalAlpha = 1; }
@@ -950,7 +961,7 @@
       case "D": drawImg("drum", X + 2, Y, T - 4, T); return;
       case ">": case "<": {
         ctx.fillStyle = "#2a3038"; ctx.fillRect(X, Y + 18, T, T - 18);
-        runImg("ob-conveyor", x, y, ch, X, Y - 2, 30);
+        runImg(BL ? "bl-conveyor" : "ob-conveyor", x, y, ch, X, Y - 4, BL ? 34 : 30);
         { ctx.save(); ctx.beginPath(); ctx.rect(X, Y, T, 12); ctx.clip(); ctx.fillStyle = "rgba(255,210,63,.85)"; const off = ((t * 95) % 16) * (ch === ">" ? 1 : -1); for (let i = -1; i < 4; i++) { const cx = X + i * 16 + off, d = ch === ">" ? 1 : -1; ctx.beginPath(); ctx.moveTo(cx, Y + 3); ctx.lineTo(cx + 5 * d, Y + 6); ctx.lineTo(cx, Y + 9); ctx.fill(); } ctx.restore(); }
         return;
       }
@@ -1000,12 +1011,24 @@
         ctx.save(); ctx.translate(e.x, e.y);
         if (e.dead) { ctx.scale(1, 0.4); ctx.globalAlpha = Math.max(0, e.dead / 0.6); }
         if (k === "tire") { ctx.translate(0, -17); ctx.rotate(e.rot || 0); fitImg("tire", 0, 19, w); }
+        else if (BL && k === "jack") { if (e.vx > 0) ctx.scale(-1, 1); fitImg("bl-gremlin", 0, 3, 58); }
         else { if (e.vx > 0) ctx.scale(-1, 1); fitImg(k, 0, 2, w); }
         ctx.restore(); return;
       }
       case "piston": { const im = img("tool-piston.webp"); ctx.fillStyle = "#6d7682"; ctx.fillRect(e.x - 6, e.y, 12, e.y0 - e.y); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 6, e.y, 12, e.y0 - e.y); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y - 30); ctx.rotate(-Math.PI / 2); const w = 70, h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); } return; }
       case "gear": { const im = img("gear"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y - 20); ctx.rotate(e.rot || 0); ctx.drawImage(im, -24, -24, 48, 48); ctx.restore(); } return; }
+      case "crusher": {
+        const im = img("bl-crusher"); if (!ready(im)) return;
+        const W = 2 * T, sc = W / im.naturalWidth, x0 = e.x - W / 2, sh = e.warn ? (Math.random() - 0.5) * 4 : 0;
+        if (e.warn) { ctx.fillStyle = "rgba(255,60,40," + (0.3 + 0.3 * Math.sin(t * 24)) + ")"; ctx.beginPath(); ctx.ellipse(e.x, e.y0 - 3, 40, 7, 0, 0, 7); ctx.fill(); }
+        const headY = e.y - 64 * sc;
+        ctx.drawImage(im, 0, 0, im.naturalWidth, 52, x0 + sh, e.top, W, 52 * sc);
+        ctx.drawImage(im, 0, 52, im.naturalWidth, 106, x0 + sh, e.top + 52 * sc - 1, W, Math.max(4, headY - e.top - 52 * sc + 2));
+        ctx.drawImage(im, 0, 158, im.naturalWidth, 64, x0 + sh, headY, W, 64 * sc);
+        return;
+      }
       case "chain": {
+        if (BL) { ctx.strokeStyle = "#7d858f"; ctx.lineWidth = 5; ctx.setLineDash([8, 4]); ctx.beginPath(); ctx.moveTo(e.ax, e.ay); ctx.lineTo(e.x, e.y - e.h - 6); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#c0302a"; ctx.fillRect(e.ax - 22, e.ay - 10, 44, 12); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.ax - 22, e.ay - 10, 44, 12); fitImg("bl-engine", e.x, e.y + 14, 70); return; }
         ctx.strokeStyle = "#9aa3ad"; ctx.lineWidth = 4; ctx.setLineDash([7, 4]); ctx.beginPath(); ctx.moveTo(e.ax, e.ay); ctx.lineTo(e.x, e.y - e.h); ctx.stroke(); ctx.setLineDash([]);
         ctx.fillStyle = "#545c66"; ctx.fillRect(e.ax - 14, e.ay - 8, 28, 10);
         fitImg("hoist", e.x, e.y + 4, 54); return;
@@ -1020,7 +1043,8 @@
         if (e.dead) { ctx.scale(1, 0.5); ctx.globalAlpha = Math.max(0, e.dead / 0.6); }
         if (e.k === "nut") ctx.rotate(Math.sin(e.rot) * 0.3); else if (e.vx > 0) ctx.scale(-1, 1);
         ctx.scale(1, 1 + Math.sin(t * 40) * 0.015);
-        fitImg(e.k === "nut" ? "fly-nut" : "fly-drone", 0, e.h / 2 + 6, e.k === "nut" ? 50 : 64);
+        if (BL && e.k === "nut") { if (e.vx > 0) ctx.scale(-1, 1); fitImg("bl-bat", 0, e.h / 2 + 8, 66); }
+        else fitImg(e.k === "nut" ? "fly-nut" : "fly-drone", 0, e.h / 2 + 6, e.k === "nut" ? 50 : 64);
         ctx.restore(); return;
       }
       case "diver": {

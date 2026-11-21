@@ -1043,7 +1043,7 @@
       if (punchT > 0.2) mf = "mech-wind"; else if (punchT > 0) mf = "mech-punch";
       else if (pl.hitT > 0) mf = "mech-hit";
       else if (!pl.ground) mf = "mech-jump";
-      else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + Math.abs(pl.vx) / 60 / 34; mf = "mech-walk" + (1 + (Math.floor(pl.rp) % 4)); }
+      else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + Math.abs(pl.vx) / 60 / 34; mf = ["mech-walk1", "mech-idle2", "mech-walk2", "mech-idle2"][Math.floor(pl.rp) % 4]; }
       const mi = img(mf);
       if (ready(mi)) {
         const h = 150, w = (h * mi.naturalWidth) / mi.naturalHeight;

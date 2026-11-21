@@ -1090,17 +1090,32 @@
     // a drawer opens once the one before it is cleared
     const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
     const names = window.LT_LEVELS.map((l) => l.name);
-    let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>' + n + ' drawers of platform action. Beat the boss guarding each drawer, then jump in.</p><div class="ltdrawers">';
+    let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>Beat the boss guarding each drawer, then jump in. Tap a stop on the map to play.</p>';
+    // ---- stage map: drawer 1 at the bottom, the path winds up ----
+    const STEP = 128, PAD = 90, H = n * STEP + PAD * 2;
+    const X = (i) => 50 + 30 * Math.sin(i * 1.15 + 0.4);
+    const Y = (i) => H - PAD - i * STEP;
+    let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
+    let d = "M " + X(0) + " " + (Y(0) + PAD * 0.6);
+    for (let i = 0; i < n; i++) { const px = X(i - 1 < 0 ? 0 : i - 1), py = i ? Y(i - 1) : Y(0) + PAD * 0.6; d += " C " + px + " " + (py - STEP * 0.5) + ", " + X(i) + " " + (Y(i) + STEP * 0.5) + ", " + X(i) + " " + Y(i); }
+    h += '<div class="ltmap" style="height:' + H + 'px"><svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none"><path d="' + d + '" class="road"/><path d="' + d + '" class="dots"/></svg>';
+    for (let p = 5; p < n; p += 5) h += '<div class="ltmpart" style="top:' + (Y(p) + STEP / 2 - 14) + 'px">PART ' + (p / 5 + 1) + (p === 5 ? " · THE DEEP DRAWERS" : "") + "</div>";
     names.forEach((nm, i) => {
-      const done = s.done.includes(i), lock = !open(i);
-      if (i === 5) h += '<div class="ltpart">PART 2 · THE DEEP DRAWERS</div>';
-      h += '<button class="ltdr' + (done ? " done" : "") + (i === 4 ? " gold" : "") + '"' + (lock ? " disabled" : "") + ' data-i="' + i + '"><b>' + (i === 4 ? "GOLDEN DRAWER" : "DRAWER " + (i + 1)) + "</b><span>" + nm + "</span><small>" + (lock ? "LOCKED" : done ? "✓ CLEARED · best " + (s.coins[i] || 0) + " coins" : "PLAY") + "</small></button>";
+      const done = s.done.includes(i), lock = !open(i), st = ((s.stars && s.stars[i]) || []).length, room = (s.rooms || []).includes(i);
+      h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Y(i) + 'px"' + (lock ? " disabled" : "") + ">" +
+        "<i>" + (lock ? "🔒" : i + 1) + "</i>" +
+        '<span class="nm">' + (i === 4 ? "GOLDEN DRAWER" : nm) + "</span>" +
+        (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<em class="rm">SECRET</em>' : "") + (done ? '<em class="ok">✓ ' + (s.coins[i] || 0) + "</em>" : '<em class="bs">BOSS</em>') + "</span>") + "</button>";
     });
-    h += "</div>" + (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
+    h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:" + (Y(cur) - 34) + 'px">';
+    const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
+    h += "</div><p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.length + "/" + n + " drawers cleared</p>";
+    h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
     show(h);
-    card.querySelectorAll(".ltdr").forEach((b) => (b.onclick = () => play(+b.dataset.i)));
+    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = parseFloat(b.style.top) - 34 + "px"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
+    const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {
       show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');

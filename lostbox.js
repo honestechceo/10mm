@@ -235,6 +235,7 @@
     hp = keep.hp; pow = keep.pow; fx = [];
     cam = Math.max(0, Math.min(W * T - VW(), pl.x - VW() * 0.35));
     mode = "play"; say("grab"); haptic("medium");
+    if (pow.torqueBank) { pow.torqueBank = 0; givePower("torque"); }
   }
   const VW = () => viewW / zoom;
   let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 }, crumbles = [], arena = null, boss = null;
@@ -264,7 +265,7 @@
     zoom = 1;
     cam = Math.max(0, Math.min(W * T - viewW, pl.x - viewW * 0.35));
     hp = maxHp;
-    pow = { speed: 0, slow: 0, magnet: 0, spring: 0, torque: 0, wrench: 0, pound: 0, air: 0, lucky: 0, shield: pow && pow.shield ? 1 : 0 };
+    pow = { speed: 0, slow: 0, magnet: 0, spring: 0, torque: 0, wrench: 0, pound: 0, air: 0, lucky: 0, shield: pow && pow.shield ? 1 : 0, torqueBank: pow && pow.torqueBank ? 1 : 0 };
   }
 
   // ---------- physics ----------
@@ -487,7 +488,7 @@
       case "star": grabStar(e); return;
       case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
       case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
-      case "gchest": if (!e.open) { e.open = 1; collected.add("chest" + lvI); fx.push({ k: "spark", x: e.x, y: e.y - 40, t: 0.5 }); for (let k = 0; k < 20; k++) addCoin(e.x, e.y - 40, k % 4 === 0); givePower("torque"); } return;
+      case "gchest": if (!e.open) { e.open = 1; collected.add("chest" + lvI); fx.push({ k: "spark", x: e.x, y: e.y - 40, t: 0.5 }); for (let k = 0; k < 20; k++) addCoin(e.x, e.y - 40, k % 4 === 0); pow.torqueBank = 1; say("power"); haptic("success"); toast("TORQUE STAR saved! It kicks in when you go back up"); } return;
       case "check": if (!e.on) { ents.forEach((o) => o.k === "check" && (o.on = false)); e.on = true; cp = { x: e.x, y: e.y }; toast("CHECKPOINT!"); say("win"); haptic("success"); } return;
       case "spring": if (pl.vy >= 0 && py1 - b.y0 < 26) { pl.vy = -P.SPRING * (key.J ? 1.1 : 1); pl.jumps = 1; pl.ground = false; pl.on = null; e.squash = 0.2; say("flap"); } return;
       case "exit": if (arena && !arena.done) return; if (mode === "play" && px1 > b.x0 + 26 && px0 < b.x1 - 26 && py1 > b.y0 + 30) enterDrawer(e); return;
@@ -1048,7 +1049,7 @@
     card.querySelectorAll(".ltdr").forEach((b) => (b.onclick = () => play(+b.dataset.i)));
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }

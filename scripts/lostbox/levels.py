@@ -435,6 +435,37 @@ def level10():
     return l
 
 
+def level11():
+    # PART 3 · THE BACK LOT (placeholder art until the Back Lot pack lands)
+    l = L('THE BACK LOT', 240, 'salvage', 'salvage')
+    l.floor(0, 240)
+    l.put(2, 10, '@')
+    l.put(8, 10, 'T'); l.put(12, 10, 'P'); l.put(10, 6, 'b')
+    l.row(15, 19, 7, '?'); l.put(17, 7, 'U'); l.ext.append([17, 7, {'pu': 'lucky'}])
+    l.pit(22, 28); l.row(23, 25, 9, 'q'); l.row(26, 28, 8, 'q')
+    l.floor(28, 32, 7); l.put(30, 3, 'v'); l.pit(32, 36)
+    l.row(38, 50, 10, '>'); l.put(42, 6, 'h'); l.put(46, 9, 'g')
+    l.put(53, 10, '!')
+    l.pit(56, 64); l.mover(57, 9, 'L', dy=4, speed=85); l.mover(60, 6, 'M', dx=2, speed=90)
+    l.floor(64, 68, 6); l.coins(64, 68, 5); l.pit(68, 72)
+    l.put(75, 10, 'J'); l.put(80, 10, 'K'); l.put(78, 6, 'b'); l.put(83, 10, 'p')
+    l.put(87, 2, 'f'); l.put(91, 2, 'f')
+    l.put(95, 10, '!')
+    l.row(98, 110, 11, 'i'); l.row(98, 110, 12, 'i'); l.put(102, 10, 'T'); l.put(107, 10, 'T'); l.put(104, 5, 'v')
+    l.row(113, 117, 7, '?'); l.put(115, 7, 'U'); l.ext.append([115, 7, {'pu': 'wrench'}])
+    l.pit(120, 128); l.mover(121, 9, 'L', dy=5, speed=90); l.row(125, 128, 6, 'q')
+    l.floor(128, 132, 8); l.pit(132, 136)
+    l.row(137, 147, 10, '<'); l.put(141, 6, 'h'); l.put(145, 10, 'e'); l.put(146, 10, 'e')
+    l.put(150, 10, '!')
+    l.mover(153, 3, 'c', len=4); l.put(157, 10, 'k'); l.put(161, 10, 'k'); l.put(159, 6, 'b')
+    l.pit(165, 173); l.mover(166, 9, 'L', dy=4, speed=95); l.mover(169, 6, 'M', dx=2, speed=95)
+    l.floor(173, 177, 7); l.put(175, 3, 'U'); l.ext.append([175, 3, {'pu': 'heart'}]); l.pit(177, 181)
+    l.put(184, 10, 'J'); l.put(189, 10, 'P'); l.put(187, 6, 'h'); l.put(192, 4, 'v')
+    l.coins(196, 202, 10)
+    l.arena(206, 'gunner', 5, 1.3, 'IMPACT GUN KING')
+    return l
+
+
 SOLIDS = set('#=CU?RSD<>i'); SEMIS = set('-q')
 def decorate(l, idx):
     """5 hidden stars per drawer (high spots first) and one blue warp toolbox to a secret room."""
@@ -488,7 +519,7 @@ def room(idx):
     g[10][31] = 'y'
     return [''.join(r) for r in g]
 
-LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10()]
+LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11()]
 
 if __name__ == '__main__':
     out = []

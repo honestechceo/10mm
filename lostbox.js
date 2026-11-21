@@ -37,7 +37,7 @@
     Object.values(FR).flat().forEach(img);
     "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break".split(" ").forEach(img);
     img("tool-piston.webp");
-    "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet".split(" ").forEach(img);
+    "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead".split(" ").forEach(img);
   }
 
   // ---------- save ----------
@@ -168,7 +168,7 @@
         case "b": e({ k: "nut", w: 34, h: 30, y: by - T / 2 + 15, cy: by - T / 2, vx: -70, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
         case "h": e({ k: "drone", w: 46, h: 40, y: by - T / 2 + 20, cy: by - T / 2, vx: -90, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
         case "v": e({ k: "diver", w: 26, h: 44, y: by, hy: by, st: "hover", hurt: 1 }); grid[y][x] = "."; break;
-        case "B": e(Object.assign({ k: "boss", st: "wait", hp: kw.hp || 3, max: kw.hp || 3, spd: kw.spd || 1, kind: kw.boss || "walker", name: kw.name || "BOSS", w: 78, h: 78, vx: 0, vy: 0, face: -1, tt: 0, hurt: 1 }, kw.boss === "flyer" || kw.boss === "magnet" ? { y: 4 * T, hy: 4 * T, gy: by, w: 92, h: 70 } : { gy: by })); grid[y][x] = "."; break;
+        case "B": e(Object.assign({ k: "boss", st: "wait", hp: kw.hp || 3, max: kw.hp || 3, spd: kw.spd || 1, kind: kw.boss || "walker", name: kw.name || "BOSS", w: 78, h: 78, vx: 0, vy: 0, face: -1, tt: 0, hurt: 1 }, kw.boss === "flyer" || kw.boss === "magnet" ? { y: 4 * T, hy: 4 * T, gy: by, w: 92, h: 70 } : kw.boss === "gunner" ? { gy: by, w: 92, h: 116 } : { gy: by })); grid[y][x] = "."; break;
         case "L": movers.push({ k: "lift", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dy: (kw.dy || 3) * T, dx: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "M": movers.push({ k: "plat", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dx: (kw.dx || 3) * T, dy: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "U": ext[x + "," + y] = kw; break;
@@ -467,7 +467,8 @@
         else if (e.st === "up") { e.y -= 160 * hd; if (e.y <= e.hy) { e.y = e.hy; e.st = "hover"; } }
       }
       if (e.k === "zap") { e.cyc = ((t * timeScale) / 2.8 + e.ph) % 1; e.on = e.cyc > 0.55; e.warn = e.cyc > 0.42 && !e.on; }
-      if (e.k === "bolt") { e.vy = Math.min(900, e.vy + 1400 * hd); e.y += e.vy * hd; e.x += (e.vx || 0) * hd; const ch = cell(Math.floor(e.x / T), Math.floor(e.y / T)); if (isSolid(ch) || e.y > ROWS * T) { e.alive = false; puff(e.x, Math.floor(e.y / T) * T, 4, "#7ad7ff"); } }
+      if (e.k === "bolt" && e.str) { e.x += e.vx * hd; e.life = (e.life || 2.2) - hd; e.spin = (e.spin || 0) + hd * 14; if (e.life <= 0 || isSolid(cell(Math.floor(e.x / T), Math.floor(e.y / T)))) { e.alive = false; puff(e.x, e.y, 4, "#ccc"); } }
+      else if (e.k === "bolt") { e.vy = Math.min(900, e.vy + 1400 * hd); e.y += e.vy * hd; e.x += (e.vx || 0) * hd; const ch = cell(Math.floor(e.x / T), Math.floor(e.y / T)); if (isSolid(ch) || e.y > ROWS * T) { e.alive = false; puff(e.x, Math.floor(e.y / T) * T, 4, "#7ad7ff"); } }
       if (e.k === "boss") { stepBoss(e, hd, dt); }
       if (e.k === "pu" && e.rise < 1) { e.rise = Math.min(1, e.rise + dt * 3); }
       if (e.k === "coin" && pow.magnet > 0) {
@@ -584,6 +585,26 @@
           if (e.tt <= 0) { e.st = "rise"; }
         } else if (e.st === "rise") { e.y += (e.hy - e.y) * 3 * hd; if (Math.abs(e.y - e.hy) < 6) { e.st = "move"; e.tt = 3.4 / sp; } }
         break;
+      case "gunner": { // Impact Gun King: struts toward you, braces, then fires lug nuts. Jump the nuts, stomp the crown.
+        ground();
+        if (e.st === "move") {
+          const want = pl.x - e.face * 5 * T;
+          if (Math.abs(want - e.x) > 20) e.x += Math.sign(want - e.x) * 80 * sp * hd; walls();
+          if (e.tt <= 0) { e.st = "wind"; e.tt = 0.55; e.dir = e.face; e.shots = sp > 1.45 ? 3 : 2; }
+        } else if (e.st === "wind") { e.shake = 1; if (e.tt <= 0) { e.shake = 0; e.st = "fire"; e.tt = 0; } }
+        else if (e.st === "fire") {
+          if (e.tt <= 0) {
+            if (e.shots-- > 0) {
+              const lob = e.shots === 0 && sp > 1.3;
+              ents.push(lob ? { k: "bolt", x: e.x + e.dir * 60, y: e.y - 70, vx: e.dir * 300, vy: -520, w: 22, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, art: "nut" }
+                            : { k: "bolt", str: 1, x: e.x + e.dir * 70, y: e.y - 34, vx: e.dir * 420 * Math.min(1.4, sp), vy: 0, w: 24, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, art: "nut" });
+              say("hit"); shakeT = Math.max(shakeT, 0.08); puff(e.x + e.dir * 70, e.y - 40, 5, "#fff"); e.tt = 0.42; e.pose = 0.3;
+            } else { e.st = "move"; e.tt = 2.4 / sp; }
+          }
+        }
+        e.pose = Math.max(0, (e.pose || 0) - hd);
+        break;
+      }
       case "roller": // bounces around the arena; after a while it overheats and sits still: stomp it then
         if (e.st === "move") {
           if (!e.vx) e.vx = e.face * 260;
@@ -932,8 +953,19 @@
         }
         return;
       }
-      case "bolt": fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
+      case "bolt": if (e.str) { const im = img("nut"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.spin || 0); ctx.drawImage(im, -14, -14, 28, 28); ctx.restore(); } return; } fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
       case "boss": {
+        if (e.kind === "gunner") {
+          const pose = e.st === "dead" ? "gk-dead" : e.inv > 0.5 || e.st === "stun" ? "gk-hit" : e.st === "fire" || e.pose > 0 ? "gk-shoot" : "gk-idle";
+          const im = img(pose); if (!ready(im)) return;
+          const sh = e.shake ? (Math.random() - 0.5) * 6 : 0, H = 150, W = (H * im.naturalWidth) / im.naturalHeight;
+          ctx.save(); ctx.translate(e.x + sh, e.y + 4);
+          if (e.inv > 0 && Math.floor(e.inv * 16) % 2) ctx.globalAlpha = 0.45;
+          if ((e.st === "fire" ? e.dir : e.face) > 0) ctx.scale(-1, 1);
+          ctx.drawImage(im, -W / 2, -H, W, H); ctx.restore(); ctx.globalAlpha = 1;
+          if (e.st === "stun") for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; fitImg("star", e.x + Math.cos(a) * 34, e.y - 150 + Math.sin(a) * 8, 18); }
+          return;
+        }
         const art = (lvI >= 5 ? "bossb-" : "bossa-") + BOSS_ART[e.kind], sh = e.shake || e.st === "wind" || e.st === "hot" ? (Math.random() - 0.5) * 6 : 0;
         if (e.st === "wait" && !(arena && arena.on)) { ctx.globalAlpha = 0.95; }
         ctx.save(); ctx.translate(e.x + sh, e.y);
@@ -1098,6 +1130,7 @@
     let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
     h += '<div class="ltmap">';
     if (n > 5) h += '<div class="ltmpart" style="top:' + ((Yp(4) + Yp(5)) / 2) + '%">PART 2 · THE DEEP DRAWERS</div>';
+    if (n > 10) h += '<div class="ltmpart" style="top:' + ((Yp(9) + Yp(10)) / 2) + '%">PART 3 · THE BACK LOT</div>';
     names.forEach((nm, i) => {
       const done = s.done.includes(i), lock = !open(i), st = ((s.stars && s.stars[i]) || []).length, room = (s.rooms || []).includes(i);
       h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Yp(i) + '%"' + (lock ? " disabled" : "") + ">" +
@@ -1122,7 +1155,7 @@
   }
   // Ratchet Mech: 3 random drawers per session get a mech pickup before the boss arena
   let mechSet = null;
-  function pickMech() { const a = [...Array(10).keys()].sort(() => Math.random() - 0.5); mechSet = new Set(a.slice(0, 3)); }
+  function pickMech() { const a = [...Array(NLV()).keys()].sort(() => Math.random() - 0.5); mechSet = new Set(a.slice(0, 3)); }
   function play(i) {
     if (!mechSet) pickMech();
     hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; fit();

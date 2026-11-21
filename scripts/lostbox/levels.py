@@ -496,6 +496,96 @@ def level12():
     return l
 
 
+def level13():
+    l = L('RADIATOR ROW', 250, 'carwash', 'salvage')
+    l.floor(0, 250)
+    l.put(2, 10, '@')
+    l.row(6, 18, 11, 'i'); l.row(6, 18, 12, 'i'); l.put(10, 10, 'T'); l.put(15, 10, 'P'); l.put(12, 6, 'b')
+    l.pit(21, 28); l.row(22, 24, 9, 'q'); l.mover(25, 8, 'M', dx=2, speed=90)
+    l.floor(28, 32, 7); l.put(30, 3, 'U'); l.ext.append([30, 3, {'pu': 'shield'}]); l.pit(32, 36)
+    l.put(39, 10, 'J'); l.put(44, 10, 'K'); l.put(42, 5, 'v'); l.put(47, 9, 'g')
+    l.put(51, 10, '!')
+    l.row(54, 66, 10, '>'); l.put(58, 6, 'h'); l.put(63, 10, 'e'); l.put(64, 10, 'e')
+    l.pit(69, 77); l.mover(70, 9, 'L', dy=4, speed=90); l.row(74, 77, 7, 'q')
+    l.floor(77, 81, 8); l.coins(77, 81, 7); l.pit(81, 85)
+    l.put(88, 2, 'f'); l.put(92, 2, 'f'); l.put(96, 10, 'p'); l.put(99, 10, 'p')
+    l.put(102, 10, '!')
+    l.row(105, 109, 7, '?'); l.put(107, 7, 'U'); l.ext.append([107, 7, {'pu': 'wrench'}])
+    l.row(112, 125, 11, 'i'); l.row(112, 125, 12, 'i'); l.put(116, 10, 'J'); l.put(121, 10, 'T'); l.put(118, 6, 'h'); l.put(124, 4, 'v')
+    l.pit(128, 137); l.mover(129, 9, 'L', dy=5, speed=95); l.mover(132, 6, 'M', dx=2, speed=100); l.row(135, 137, 8, 'q')
+    l.floor(137, 141, 8); l.pit(141, 145)
+    l.put(147, 10, '!')
+    l.mover(150, 3, 'c', len=4); l.put(154, 10, 'k'); l.put(158, 10, 'k'); l.put(156, 6, 'b')
+    l.row(162, 174, 10, '<'); l.put(166, 9, 'g'); l.put(171, 6, 'h')
+    l.row(177, 181, 7, '?'); l.put(179, 7, 'U'); l.ext.append([179, 7, {'pu': 'heart'}])
+    l.pit(184, 191); l.row(185, 187, 9, 'q'); l.row(188, 191, 8, 'q')
+    l.floor(191, 194, 9); l.put(197, 10, 'P'); l.put(201, 10, 'T'); l.put(199, 5, 'v')
+    l.coins(205, 211, 10)
+    l.arena(216, 'kraken', 6, 1.3, 'THE COOLANT KRAKEN')
+    return l
+
+
+def level14():
+    l = L('BELT DRIVE BOULEVARD', 255, 'engineshop', 'salvage')
+    l.floor(0, 255)
+    l.put(2, 10, '@')
+    l.put(8, 10, 'K'); l.put(12, 10, 'J'); l.put(10, 6, 'b')
+    l.row(15, 27, 10, '>'); l.put(19, 6, 'h'); l.put(24, 9, 'g')
+    l.pit(30, 37); l.mover(31, 9, 'L', dy=4, speed=95); l.row(34, 37, 7, 'q')
+    l.floor(37, 41, 8); l.put(39, 4, 'U'); l.ext.append([39, 4, {'pu': 'air'}]); l.pit(41, 46)
+    l.put(48, 10, '!')
+    l.put(51, 2, 'f'); l.put(54, 2, 'f'); l.put(57, 2, 'f'); l.put(60, 10, 'e'); l.put(61, 10, 'e')
+    l.row(64, 76, 11, 'i'); l.row(64, 76, 12, 'i'); l.put(68, 10, 'T'); l.put(73, 10, 'K'); l.put(70, 5, 'v')
+    l.pit(79, 88); l.row(80, 82, 9, 'q'); l.mover(83, 8, 'M', dx=2, speed=100); l.row(86, 88, 7, 'q')
+    l.floor(88, 92, 6); l.coins(88, 92, 5); l.pit(92, 96)
+    l.put(98, 10, '!')
+    l.row(101, 105, 7, '?'); l.put(103, 7, 'U'); l.ext.append([103, 7, {'pu': 'pound'}])
+    l.mover(108, 3, 'c', len=4); l.put(112, 10, 'p'); l.put(115, 10, 'p'); l.put(118, 10, 'p')
+    l.row(122, 134, 10, '<'); l.put(126, 6, 'b'); l.put(131, 9, 'g'); l.put(133, 4, 'v')
+    l.pit(137, 146); l.mover(138, 9, 'L', dy=5, speed=100); l.mover(141, 6, 'M', dx=2, speed=105); l.row(144, 146, 8, 'q')
+    l.floor(146, 150, 8); l.pit(150, 154)
+    l.put(156, 10, '!')
+    l.put(159, 10, 'J'); l.put(163, 10, 'J'); l.put(161, 5, 'h'); l.put(167, 10, 'k')
+    l.row(171, 183, 11, 'i'); l.row(171, 183, 12, 'i'); l.put(175, 10, 'T'); l.put(180, 10, 'P'); l.put(177, 6, 'b')
+    l.row(186, 190, 7, '?'); l.put(188, 7, 'U'); l.ext.append([188, 7, {'pu': 'heart'}])
+    l.pit(193, 200); l.row(194, 196, 9, 'q'); l.row(197, 200, 8, 'q')
+    l.floor(200, 203, 9); l.put(206, 10, 'K'); l.put(210, 10, 'T'); l.put(208, 5, 'v')
+    l.coins(213, 219, 10)
+    l.arena(224, 'serpent', 6, 1.35, 'THE TIMING BELT SERPENT')
+    return l
+
+
+def level15():
+    l = L('THE CLEANUP CREW', 260, 'evtech', 'grand')
+    l.floor(0, 260)
+    l.put(2, 10, '@')
+    l.put(8, 10, 'T'); l.put(11, 10, 'T'); l.put(14, 10, 'P'); l.put(12, 6, 'h')
+    l.pit(18, 25); l.mover(19, 9, 'L', dy=4, speed=95); l.mover(22, 7, 'M', dx=2, speed=100)
+    l.floor(25, 29, 7); l.put(27, 3, 'U'); l.ext.append([27, 3, {'pu': 'lucky'}]); l.pit(29, 33)
+    l.row(35, 47, 10, '>'); l.put(39, 6, 'b'); l.put(44, 9, 'g'); l.put(46, 4, 'v')
+    l.put(50, 10, '!')
+    l.row(53, 66, 11, 'i'); l.row(53, 66, 12, 'i'); l.put(57, 10, 'J'); l.put(62, 10, 'K'); l.put(60, 5, 'v')
+    l.put(69, 2, 'f'); l.put(72, 2, 'f'); l.put(75, 2, 'f'); l.put(78, 10, 'e'); l.put(79, 10, 'e')
+    l.pit(82, 91); l.row(83, 85, 9, 'q'); l.mover(86, 8, 'M', dx=2, speed=105); l.row(89, 91, 7, 'q')
+    l.floor(91, 95, 6); l.coins(91, 95, 5); l.pit(95, 99)
+    l.put(101, 10, '!')
+    l.row(104, 108, 7, '?'); l.put(106, 7, 'U'); l.ext.append([106, 7, {'pu': 'wrench'}])
+    l.mover(111, 3, 'c', len=4); l.put(115, 10, 'k'); l.put(119, 10, 'k'); l.put(117, 6, 'b')
+    l.row(123, 135, 10, '<'); l.put(127, 6, 'h'); l.put(132, 10, 'p'); l.put(134, 4, 'v')
+    l.pit(138, 147); l.mover(139, 9, 'L', dy=5, speed=105); l.mover(142, 6, 'M', dx=2, speed=105); l.row(145, 147, 8, 'q')
+    l.floor(147, 151, 8); l.pit(151, 155)
+    l.put(157, 10, '!')
+    l.row(160, 172, 11, 'i'); l.row(160, 172, 12, 'i'); l.put(164, 10, 'T'); l.put(169, 10, 'J'); l.put(166, 6, 'b'); l.put(171, 4, 'v')
+    l.row(175, 179, 7, '?'); l.put(177, 7, 'U'); l.ext.append([177, 7, {'pu': 'shield'}])
+    l.put(182, 10, 'K'); l.put(186, 10, 'P'); l.put(184, 5, 'h')
+    l.pit(190, 197); l.row(191, 193, 9, 'q'); l.row(194, 197, 8, 'q')
+    l.floor(197, 200, 9); l.row(201, 205, 7, '?'); l.put(203, 7, 'U'); l.ext.append([203, 7, {'pu': 'heart'}])
+    l.put(208, 10, 'T'); l.put(212, 10, 'T'); l.put(210, 5, 'v')
+    l.coins(216, 222, 10)
+    l.arena(228, 'vac', 7, 1.35, 'THE SHOP VAC')
+    return l
+
+
 SOLIDS = set('#=CU?RSD<>i'); SEMIS = set('-q')
 def decorate(l, idx):
     """5 hidden stars per drawer (high spots first) and one blue warp toolbox to a secret room."""
@@ -549,7 +639,7 @@ def room(idx):
     g[10][31] = 'y'
     return [''.join(r) for r in g]
 
-LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11(), level12()]
+LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11(), level12(), level13(), level14(), level15()]
 
 if __name__ == '__main__':
     out = []

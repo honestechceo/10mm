@@ -37,7 +37,7 @@
     Object.values(FR).flat().forEach(img);
     "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break".split(" ").forEach(img);
     img("tool-piston.webp");
-    "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead js-idle js-attack js-hit js-dead".split(" ").forEach(img);
+    "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead js-idle js-attack js-hit js-dead ck-idle ck-attack ck-hit ck-dead tb-idle tb-attack tb-hit tb-dead sv-idle sv-attack sv-hit sv-dead".split(" ").forEach(img);
   }
 
   // ---------- save ----------
@@ -168,7 +168,7 @@
         case "b": e({ k: "nut", w: 34, h: 30, y: by - T / 2 + 15, cy: by - T / 2, vx: -70, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
         case "h": e({ k: "drone", w: 46, h: 40, y: by - T / 2 + 20, cy: by - T / 2, vx: -90, fly: 1, stomp: 1, hurt: 1 }); grid[y][x] = "."; break;
         case "v": e({ k: "diver", w: 26, h: 44, y: by, hy: by, st: "hover", hurt: 1 }); grid[y][x] = "."; break;
-        case "B": e(Object.assign({ k: "boss", st: "wait", hp: kw.hp || 3, max: kw.hp || 3, spd: kw.spd || 1, kind: kw.boss || "walker", name: kw.name || "BOSS", w: 78, h: 78, vx: 0, vy: 0, face: -1, tt: 0, hurt: 1 }, kw.boss === "flyer" || kw.boss === "magnet" ? { y: 4 * T, hy: 4 * T, gy: by, w: 92, h: 70 } : kw.boss === "gunner" ? { gy: by, w: 92, h: 116 } : kw.boss === "stomper" ? { gy: by, w: 110, h: 140 } : { gy: by })); grid[y][x] = "."; break;
+        case "B": e(Object.assign({ k: "boss", st: "wait", hp: kw.hp || 3, max: kw.hp || 3, spd: kw.spd || 1, kind: kw.boss || "walker", name: kw.name || "BOSS", w: 78, h: 78, vx: 0, vy: 0, face: -1, tt: 0, hurt: 1 }, kw.boss === "flyer" || kw.boss === "magnet" ? { y: 4 * T, hy: 4 * T, gy: by, w: 92, h: 70 } : kw.boss === "gunner" ? { gy: by, w: 92, h: 116 } : kw.boss === "stomper" ? { gy: by, w: 110, h: 140 } : kw.boss === "kraken" ? { gy: by, w: 120, h: 120 } : kw.boss === "serpent" ? { gy: by, w: 110, h: 110 } : kw.boss === "vac" ? { gy: by, w: 110, h: 130 } : { gy: by })); grid[y][x] = "."; break;
         case "L": movers.push({ k: "lift", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dy: (kw.dy || 3) * T, dx: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "M": movers.push({ k: "plat", x: x * T, y: by - 12, x0: x * T, y0: by - 12, w: 2 * T, dx: (kw.dx || 3) * T, dy: 0, sp: kw.speed || 60, ph: kw.phase || 0, vx: 0, vy: 0 }); grid[y][x] = "."; break;
         case "U": ext[x + "," + y] = kw; break;
@@ -468,7 +468,8 @@
       }
       if (e.k === "zap") { e.cyc = ((t * timeScale) / 2.8 + e.ph) % 1; e.on = e.cyc > 0.55; e.warn = e.cyc > 0.42 && !e.on; }
       if (e.k === "bolt" && e.str) { e.x += e.vx * hd; e.life = (e.life || 2.2) - hd; e.spin = (e.spin || 0) + hd * 14; if (e.life <= 0 || isSolid(cell(Math.floor(e.x / T), Math.floor(e.y / T)))) { e.alive = false; puff(e.x, e.y, 4, "#ccc"); } }
-      else if (e.k === "bolt") { e.vy = Math.min(900, e.vy + 1400 * hd); e.y += e.vy * hd; e.x += (e.vx || 0) * hd; const ch = cell(Math.floor(e.x / T), Math.floor(e.y / T)); if (isSolid(ch) || e.y > ROWS * T) { e.alive = false; puff(e.x, Math.floor(e.y / T) * T, 4, "#7ad7ff"); } }
+      else if (e.k === "bolt" && e.pud) { e.life -= hd; if (e.life <= 0) e.alive = false; }
+      else if (e.k === "bolt") { e.vy = Math.min(900, e.vy + 1400 * hd); e.y += e.vy * hd; e.x += (e.vx || 0) * hd; const ch = cell(Math.floor(e.x / T), Math.floor(e.y / T)); if (isSolid(ch) || e.y > ROWS * T) { e.alive = false; const fy = Math.floor(e.y / T) * T; puff(e.x, fy, 4, e.glob ? "#6dff5a" : "#7ad7ff"); if (e.glob && e.y <= ROWS * T) ents.push({ k: "bolt", pud: 1, x: e.x, y: fy, w: 52, h: 12, x0: 0, y0: 0, alive: true, hurt: 1, life: 2.4 }); } }
       if (e.k === "boss") { stepBoss(e, hd, dt); }
       if (e.k === "pu" && e.rise < 1) { e.rise = Math.min(1, e.rise + dt * 3); }
       if (e.k === "coin" && pow.magnet > 0) {
@@ -620,6 +621,54 @@
           }
         }
         e.pose = Math.max(0, (e.pose || 0) - hd);
+        break;
+      }
+      case "kraken": { // Coolant Kraken: shuffles slowly, sprays globs of coolant that leave burning puddles
+        ground();
+        if (e.st === "move") {
+          e.x += e.face * 45 * sp * hd; walls();
+          if (e.tt <= 0) { e.st = "spray"; e.tt = 0.5; e.n = e.hp <= 2 ? 4 : 3; e.dir = e.face; }
+        } else if (e.st === "spray") {
+          e.shake = 1;
+          if (e.tt <= 0) {
+            if (e.n-- > 0) {
+              const dx = pl.x - e.x, spread = (e.n - 1) * 0.22;
+              ents.push({ k: "bolt", glob: 1, x: e.x + e.dir * 50, y: e.y - 100, vx: Math.max(-420, Math.min(420, dx * (0.75 + spread))), vy: -620, w: 22, h: 22, x0: 0, y0: 0, alive: true, hurt: 1 });
+              say("flap"); e.tt = 0.22; e.pose = 0.3;
+            } else { e.shake = 0; e.st = "move"; e.tt = 2.2 / sp; }
+          }
+        }
+        e.pose = Math.max(0, (e.pose || 0) - hd);
+        break;
+      }
+      case "serpent": { // Timing Belt Serpent: slithers fast, coils, then leaps at you. It's dazed after it lands.
+        const g = ground();
+        if (e.st === "move") {
+          e.x += e.face * 150 * sp * hd; walls();
+          if (e.tt <= 0) { e.st = "coil"; e.tt = 0.5; }
+        } else if (e.st === "coil") { e.shake = 1; if (e.tt <= 0) { e.shake = 0; e.st = "leap"; const dx = Math.max(-6 * T, Math.min(6 * T, pl.x - e.x)); e.vy = -820; e.vx = dx / 0.68; e.dir = Math.sign(dx) || e.face; } }
+        else if (e.st === "leap") {
+          e.x += e.vx * hd; walls(); e.face = e.dir;
+          if (g && e.vy === 0) { shakeT = 0.25; say("land"); puff(e.x, e.y, 8, "#bbb"); e.st = "dazed"; e.tt = e.hp <= 2 ? 0.9 : 1.3; }
+        } else if (e.st === "dazed") { if (e.tt <= 0) { e.st = "move"; e.tt = 1.4 / sp; } }
+        break;
+      }
+      case "vac": { // Shop Vac: sucks you toward its nozzle and pulls junk across the arena. Stomp it when it clogs.
+        ground();
+        if (e.st === "move") {
+          e.x += e.face * 60 * sp * hd; walls();
+          if (e.tt <= 0) { e.st = "suck"; e.tt = 3.2; e.dir = e.face; e.drop = 0.3; toast("It's sucking you in! Walk away and jump the junk!"); }
+        } else if (e.st === "suck") {
+          e.shake = 1;
+          if (mode === "play" && Math.sign(pl.x - e.x) === e.dir) pl.x -= e.dir * 95 * Math.min(1.3, sp) * dt;
+          e.drop -= hd;
+          if (e.drop <= 0) {
+            e.drop = 0.85 / sp;
+            const sx = e.dir > 0 ? R0 + T * 0.5 : L0 - T * 0.5;
+            ents.push({ k: "bolt", str: 1, x: sx, y: e.y - 18 - (Math.random() < 0.35 ? 54 : 0), vx: -e.dir * 330, vy: 0, w: 24, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, life: 2.6, art: Math.random() < 0.5 ? "nut" : "screw" });
+          }
+          if (e.tt <= 0) { e.shake = 0; e.st = "dazed"; e.tt = 1.7; toast("CLOGGED! Stomp it!"); puff(e.x + e.dir * 60, e.y - 40, 8, "#999"); }
+        } else if (e.st === "dazed") { if (e.tt <= 0) { e.st = "move"; e.tt = 1.8 / sp; } }
         break;
       }
       case "roller": // bounces around the arena; after a while it overheats and sits still: stomp it then
@@ -970,19 +1019,19 @@
         }
         return;
       }
-      case "bolt": if (e.wave) { ctx.save(); ctx.globalAlpha = Math.min(1, e.life * 2); if (e.vx < 0) { ctx.translate(e.x, 0); ctx.scale(-1, 1); ctx.translate(-e.x, 0); } fitImg("fx-pound", e.x, e.y + 8, 76); ctx.restore(); return; } if (e.str) { const im = img("nut"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.spin || 0); ctx.drawImage(im, -14, -14, 28, 28); ctx.restore(); } return; } fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
+      case "bolt": if (e.glob || e.pud) { ctx.save(); ctx.globalAlpha = e.pud ? Math.min(1, e.life * 1.5) * 0.9 : 1; ctx.fillStyle = "#4fe03a"; ctx.strokeStyle = "#0b3d08"; ctx.lineWidth = 3; ctx.beginPath(); if (e.pud) ctx.ellipse(e.x, e.y - 4, 30, 8, 0, 0, 7); else ctx.ellipse(e.x, e.y - 10, 11, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8ff9e"; ctx.beginPath(); ctx.arc(e.x - 4, e.y - (e.pud ? 7 : 15), 3, 0, 7); ctx.fill(); ctx.restore(); return; } if (e.wave) { ctx.save(); ctx.globalAlpha = Math.min(1, e.life * 2); if (e.vx < 0) { ctx.translate(e.x, 0); ctx.scale(-1, 1); ctx.translate(-e.x, 0); } fitImg("fx-pound", e.x, e.y + 8, 76); ctx.restore(); return; } if (e.str) { const im = img("nut"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.spin || 0); ctx.drawImage(im, -14, -14, 28, 28); ctx.restore(); } return; } fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
       case "boss": {
-        const SPR = { gunner: ["gk", "shoot", 150], stomper: ["js", "attack", 175] }[e.kind];
+        const SPR = { gunner: ["gk", "shoot", 150], stomper: ["js", "attack", 175], kraken: ["ck", "attack", 150], serpent: ["tb", "attack", 140], vac: ["sv", "attack", 160] }[e.kind];
         if (SPR) {
-          const atk = e.kind === "gunner" ? e.st === "fire" || e.pose > 0 : e.st === "rear" || e.st === "slam" || e.pose > 0;
-          const pose = SPR[0] + "-" + (e.st === "dead" ? "dead" : e.inv > 0.5 || e.st === "stun" ? "hit" : atk ? SPR[1] : "idle");
+          const atk = { gunner: e.st === "fire", stomper: e.st === "rear" || e.st === "slam", kraken: e.st === "spray", serpent: e.st === "coil" || e.st === "leap", vac: e.st === "suck" }[e.kind] || e.pose > 0;
+          const pose = SPR[0] + "-" + (e.st === "dead" ? "dead" : e.inv > 0.5 || e.st === "stun" || (e.st === "dazed" && e.kind === "vac") ? "hit" : atk ? SPR[1] : "idle");
           const im = img(pose); if (!ready(im)) return;
           const sh = e.shake ? (Math.random() - 0.5) * 6 : 0, H = e.st === "dead" ? SPR[2] * 0.62 : SPR[2], W = (H * im.naturalWidth) / im.naturalHeight;
           ctx.save(); ctx.translate(e.x + sh, e.y + 4);
           if (e.inv > 0 && Math.floor(e.inv * 16) % 2) ctx.globalAlpha = 0.45;
           if ((e.st === "fire" ? e.dir : e.face) > 0) ctx.scale(-1, 1);
           ctx.drawImage(im, -W / 2, -H, W, H); ctx.restore(); ctx.globalAlpha = 1;
-          if (e.st === "stun") for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; fitImg("star", e.x + Math.cos(a) * 34, e.y - SPR[2] + Math.sin(a) * 8, 18); }
+          if (e.st === "stun" || e.st === "dazed") for (let k = 0; k < 3; k++) { const a = t * 5 + k * 2.1; fitImg("star", e.x + Math.cos(a) * 34, e.y - SPR[2] + Math.sin(a) * 8, 18); }
           return;
         }
         const art = (lvI >= 5 ? "bossb-" : "bossa-") + BOSS_ART[e.kind], sh = e.shake || e.st === "wind" || e.st === "hot" ? (Math.random() - 0.5) * 6 : 0;

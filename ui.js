@@ -351,7 +351,7 @@ function showHome(intro) {
   if (window.Feature) {
     const dd = Feature.isDailyDone(), ds = Feature.dailyState();
     $("hDaily").className = dd ? "done" : "";
-    $("hDailySub").textContent = dd ? "Done! Streak " + ds.streak + " • back tomorrow" : ds.streak && ds.last === Feature.today() - 1 ? "Keep your " + ds.streak + "-day streak!" : "New level every day";
+    $("hDailySub").textContent = dd ? "Done! Streak " + ds.streak + " • back tomorrow" : ds.streak && ds.last === Feature.today() - 1 ? "Keep your " + ds.streak + "-day streak!" : "Today: " + Feature.twistOfDay().name;
     $("hDaily").onclick = run(Feature.startDaily);
     const el = best >= 26;
     $("hEndless").className = el ? "" : "locked";

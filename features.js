@@ -28,6 +28,27 @@
   let runMode = "adventure", savedLevel = 1, coinsInLevel = 0;
   window.runSeed = 0;
   const dailyLevel = () => 30 + ((today() * 37) % 360);
+  // ---------- daily twists: each weekday plays by a different rule ----------
+  const TWISTS = [
+    { id: "flip", name: "FLIP SUNDAY", rule: "Everything is flipped: you're running the other way!" },
+    { id: "magnet", name: "MAGNET MONDAY", rule: "No glove today. Two magnets sweep the ceiling and keep tugging you up. Stay low!" },
+    { id: "turbo", name: "TURBO TUESDAY", rule: "Everything runs 35% faster. Hold on!" },
+    { id: "float", name: "WEIGHTLESS WEDNESDAY", rule: "Low gravity: every jump floats sky-high." },
+    { id: "night", name: "THURSDAY NIGHT SHIFT", rule: "The shop lights are out. You can only see what your headlight shows." },
+    { id: "payday", name: "FRIDAY PAYDAY", rule: "Double coins on the course, but you must grab 60% of them before the finish!" },
+    { id: "showdown", name: "SATURDAY SHOWDOWN", rule: "A boss chases you the whole way. Double-jump over it when it charges!" },
+  ];
+  const twistOfDay = () => TWISTS[(((today() + 4) % 7) + 7) % 7];
+  const twist = () => (runMode === "daily" ? twistOfDay().id : null);
+  let payTarget = 0, payShown = -1;
+  const coinsTaken = () => coins.reduce((n, c) => n + (c.taken ? 1 : 0), 0);
+  // Magnet Monday: a second ceiling magnet sweeps the other way
+  const baseMagnetList = magnetList;
+  magnetList = function () {
+    const a = baseMagnetList();
+    if (twist() === "magnet" && a.length < 2) a.push([300 - Math.sin(frames * 0.029 + 1.3) * 190, 15 + Math.sin(frames * 0.04 + 1) * 4]);
+    return a;
+  };
   function enterMode(m) {
     if (runMode === "adventure") savedLevel = level;
     runMode = m;
@@ -82,7 +103,7 @@
 
   // ---------- mirror levels: the scene is flipped, so keep canvas text readable ----------
   window.mirrorOn = false;
-  const isMirror = () => (runMode === "adventure" && level >= 7 && level % 10 === 7) || (runMode === "daily" && today() % 3 === 0);
+  const isMirror = () => (runMode === "adventure" && level >= 7 && level % 10 === 7) || twist() === "flip";
   for (const fn of ["fillText", "strokeText"]) {
     const orig = ctx[fn];
     ctx[fn] = function (t, x, y, ...rest) {
@@ -125,6 +146,19 @@
         }
         if (runMode === "daily") {
           $("level").textContent = "DAILY";
+          const tw = twist();
+          payTarget = 0; payShown = -1;
+          if (tw === "magnet") chase = "magnet";
+          if (tw === "payday") {
+            coins = coins.flatMap((c) => [c, { x: c.x + 40, y: c.y, taken: false }]);
+            coinsInLevel = coins.length;
+            payTarget = Math.ceil(coinsInLevel * 0.6);
+          }
+          if (tw === "showdown") {
+            chase = "none";
+            boss = { x: -170, mode: "wait", t: 200, charges: 0, spin: 0, speed: 6.2 + Math.min(level, 260) * 0.012, hammer: level > 200 };
+            if (boss.hammer) { boss.x = W + 200; boss.speed = 5.4 + Math.min(level - 200, 200) * 0.008; }
+          }
         }
       }
       const hs = upLvl("headstart");
@@ -133,10 +167,17 @@
     speedMul() {
       let m = rocket > 0 ? 1.8 : 1;
       if (runMode === "endless") m *= 1 + Math.min(0.75, scroll / 45000);
+      if (twist() === "turbo") m *= 1.35;
       return m;
     },
     tick(dt, speed) {
       if (slick > 0) slick -= dt;
+      const tw = twist();
+      if (tw === "float" && rocket <= 0) player.vy -= 0.64 * 0.45 * dt;
+      if (tw === "payday") {
+        const n = coinsTaken();
+        if (n !== payShown) { payShown = n; $("level").textContent = n + " / " + payTarget; $("tip").textContent = n >= payTarget ? "PAYDAY: " + n + " / " + payTarget + " coins. You've got enough. Reach the finish!" : "PAYDAY: " + n + " / " + payTarget + " coins"; }
+      }
       // the rocket burns out before the finish so you can land and get under or into the goal
       if (rocket > 0 && runMode !== "endless" && scroll > world - 1100) { rocket = 0; player.vy = 1; shield = Math.max(shield, 100); if (typeof toast === "function") toast("Rocket burned out. Land it!"); }
       if (rocket > 0) {
@@ -196,6 +237,14 @@
       }
     },
     drawOver() {
+      if (twist() === "night") {
+        const lx = player.x + 95, ly = player.y - 10;
+        const g = ctx.createRadialGradient(lx, ly, 70, lx, ly, 320);
+        g.addColorStop(0, "rgba(4,7,16,0)");
+        g.addColorStop(0.55, "rgba(4,7,16,.55)");
+        g.addColorStop(1, "rgba(4,7,16,.94)");
+        ctx.save(); ctx.fillStyle = g; ctx.fillRect(-W, -H, W * 3, H * 3); ctx.restore();
+      }
       if (rocket > 0 && !ready(rocketSprite)) {
         ctx.save();
         for (let k = 0; k < 3; k++) {
@@ -213,7 +262,14 @@
       }
     },
     onWin() {
-      if (runMode === "daily") { dailyWin(); return true; }
+      if (runMode === "daily") {
+        if (twist() === "payday" && coinsTaken() < payTarget) {
+          crash("NOT ENOUGH COINS!", "Payday needs " + payTarget + " coins and you grabbed " + coinsTaken() + ". Grab more on the way to the finish!", "TRY AGAIN", null);
+          return true;
+        }
+        dailyWin();
+        return true;
+      }
       return false;
     },
     afterWin() {
@@ -406,7 +462,7 @@
       reward = 40 + Math.min(6, d.streak - 1) * 10;
       addCoins(reward);
       if (d.streak >= 7 && unlockSkin("champ")) unlock = " NEW FINISH UNLOCKED: Daily Champ!";
-      desc = "Daily Challenge beaten! +" + reward + " coins. Streak: " + d.streak + " day" + (d.streak === 1 ? "" : "s") + "." + (d.streak < 7 ? " Reach a 7-day streak for the Daily Champ finish." : "") + unlock;
+      desc = twistOfDay().name + " beaten! +" + reward + " coins. Streak: " + d.streak + " day" + (d.streak === 1 ? "" : "s") + "." + (d.streak < 7 ? " Reach a 7-day streak for the Daily Champ finish." : "") + unlock;
     }
     render();
     popup("DAILY DONE!", desc + " (+" + runCoins + " coins collected)", "MAIN MENU", showMenu, "win");
@@ -587,7 +643,13 @@
     const tip = runMode === "adventure" ? null : $("tip").textContent;
     baseStart();
     if (runMode === "endless") $("tip").textContent = "ENDLESS: run as far as you can! Best " + LS.get("tenmm-endless-best", 0) + " m";
-    else if (runMode === "daily") { createLevelTip(); }
+    else if (runMode === "daily") {
+      createLevelTip();
+      const tw = twistOfDay();
+      if (tw.id === "showdown") $("tip").textContent = bossTip();
+      else if (tw.id === "payday") $("tip").textContent = "PAYDAY: grab " + payTarget + " coins! " + $("tip").textContent;
+      else if (tw.id !== "flip") $("tip").textContent = tw.name + "! " + $("tip").textContent;
+    }
     else if (boss) $("tip").textContent = bossTip();
     if (window.mirrorOn) $("tip").textContent = "MIRROR LEVEL! " + $("tip").textContent;
   };
@@ -601,11 +663,16 @@
   showReady = function () {
     baseShowReady();
     if (runMode === "endless") { $("rLevel").textContent = "ENDLESS"; $("rGoal").textContent = "Run as far as you can. Best: " + LS.get("tenmm-endless-best", 0) + " m"; }
-    if (runMode === "daily") { $("rLevel").textContent = "DAILY"; $("rTheme").textContent = "DAILY CHALLENGE • " + themeOf(level).name; }
-    if (boss) { $("rTheme").textContent = "BOSS LEVEL • " + themeOf(level).name; }
-    if (window.mirrorOn) { $("rTheme").textContent = "MIRROR LEVEL • " + $("rTheme").textContent; $("rGoal").textContent = "Everything is flipped: you're running the other way! " + $("rGoal").textContent; }
+    if (runMode === "daily") {
+      const tw = twistOfDay();
+      $("rLevel").textContent = "DAILY";
+      $("rTheme").textContent = tw.name + " • " + themeOf(level).name;
+      $("rGoal").textContent = (tw.id === "payday" ? "Double coins on the course. Grab " + payTarget + " of them before the finish!" : tw.rule) + " " + $("rGoal").textContent.replace(/^[A-Z ]+! /, "");
+    }
+    if (boss && runMode !== "daily") { $("rTheme").textContent = "BOSS LEVEL • " + themeOf(level).name; }
+    if (window.mirrorOn && runMode !== "daily") { $("rTheme").textContent = "MIRROR LEVEL • " + $("rTheme").textContent; $("rGoal").textContent = "Everything is flipped: you're running the other way! " + $("rGoal").textContent; }
   };
-  window.Feature = { debug: () => ({ boss, rocket, slick, bossImg: bossSprite.naturalWidth }), mode: () => runMode, startDaily, startEndless, showUpgrades, share, giftCheck, dailyState, today, isDailyDone: () => dailyState().last === today(), endlessBest: () => LS.get("tenmm-endless-best", 0), starsTotal: () => Object.values(LS.get("tenmm-stars", {})).reduce((a, b) => a + b, 0) };
+  window.Feature = { twistOfDay, debug: () => ({ boss, rocket, slick, bossImg: bossSprite.naturalWidth }), mode: () => runMode, startDaily, startEndless, showUpgrades, share, giftCheck, dailyState, today, isDailyDone: () => dailyState().last === today(), endlessBest: () => LS.get("tenmm-endless-best", 0), starsTotal: () => Object.values(LS.get("tenmm-stars", {})).reduce((a, b) => a + b, 0) };
 })();
 
 // ---------- Game Center (iPhone app only) ----------

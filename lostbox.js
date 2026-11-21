@@ -1091,30 +1091,28 @@
     const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
     const names = window.LT_LEVELS.map((l) => l.name);
     let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>Beat the boss guarding each drawer, then jump in. Tap a stop on the map to play.</p>';
-    // ---- stage map: drawer 1 at the bottom, the path winds up ----
-    const STEP = 128, PAD = 90, H = n * STEP + PAD * 2;
-    const X = (i) => 50 + 30 * Math.sin(i * 1.15 + 0.4);
-    const Y = (i) => H - PAD - i * STEP;
+    // ---- stage map: drawer 1 at the bottom, stops sit on the bolt path painted in map-bg (724x2172) ----
+    const BOLTS = [[280,2000],[317,1924],[455,1869],[410,1811],[280,1771],[325,1713],[455,1637],[360,1559],[317,1469],[452,1401],[400,1340],[319,1241],[465,1163],[409,1104],[328,1010],[470,931],[409,870],[274,817],[323,754],[479,671],[407,590],[331,494],[474,412],[305,326],[307,237],[428,172]];
+    const pick = (i) => BOLTS[Math.round((i * (BOLTS.length - 1)) / Math.max(1, n - 1))];
+    const X = (i) => (pick(i)[0] / 724) * 100, Yp = (i) => (pick(i)[1] / 2172) * 100;
     let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
-    let d = "M " + X(0) + " " + (Y(0) + PAD * 0.6);
-    for (let i = 0; i < n; i++) { const px = X(i - 1 < 0 ? 0 : i - 1), py = i ? Y(i - 1) : Y(0) + PAD * 0.6; d += " C " + px + " " + (py - STEP * 0.5) + ", " + X(i) + " " + (Y(i) + STEP * 0.5) + ", " + X(i) + " " + Y(i); }
-    h += '<div class="ltmap" style="height:' + H + 'px"><svg viewBox="0 0 100 ' + H + '" preserveAspectRatio="none"><path d="' + d + '" class="road"/><path d="' + d + '" class="dots"/></svg>';
-    for (let p = 5; p < n; p += 5) h += '<div class="ltmpart" style="top:' + (Y(p) + STEP / 2 - 14) + 'px">PART ' + (p / 5 + 1) + (p === 5 ? " · THE DEEP DRAWERS" : "") + "</div>";
+    h += '<div class="ltmap">';
+    if (n > 5) h += '<div class="ltmpart" style="top:' + ((Yp(4) + Yp(5)) / 2) + '%">PART 2 · THE DEEP DRAWERS</div>';
     names.forEach((nm, i) => {
       const done = s.done.includes(i), lock = !open(i), st = ((s.stars && s.stars[i]) || []).length, room = (s.rooms || []).includes(i);
-      h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Y(i) + 'px"' + (lock ? " disabled" : "") + ">" +
-        "<i>" + (lock ? "🔒" : i + 1) + "</i>" +
+      h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Yp(i) + '%"' + (lock ? " disabled" : "") + ">" +
+        "<i>" + (lock ? '<img src="lt/map-lock.webp" alt="locked">' : i + 1) + (done ? '<img class="ck" src="lt/map-done.webp" alt="cleared">' : "") + "</i>" +
         '<span class="nm">' + (i === 4 ? "GOLDEN DRAWER" : nm) + "</span>" +
-        (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<em class="rm">SECRET</em>' : "") + (done ? '<em class="ok">✓ ' + (s.coins[i] || 0) + "</em>" : '<em class="bs">BOSS</em>') + "</span>") + "</button>";
+        (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<img class="bg" src="lt/map-secret.webp" alt="secret room found">' : "") + (done ? '<em class="ok"><img src="lt/coin.webp" alt="">' + (s.coins[i] || 0) + "</em>" : '<img class="bg" src="lt/map-boss.webp" alt="boss">') + "</span>") + "</button>";
     });
-    h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:" + (Y(cur) - 34) + 'px">';
+    h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
     const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
     h += "</div><p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.length + "/" + n + " drawers cleared</p>";
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
     show(h);
-    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = parseFloat(b.style.top) - 34 + "px"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
+    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {

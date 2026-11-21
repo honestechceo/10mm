@@ -466,6 +466,36 @@ def level11():
     return l
 
 
+def level12():
+    l = L('TOW LOT TROUBLE', 250, 'pitlane', 'salvage')
+    l.floor(0, 250)
+    l.put(2, 10, '@')
+    l.put(8, 10, 'J'); l.put(13, 10, 'T'); l.put(11, 6, 'h')
+    l.pit(17, 24); l.mover(18, 9, 'L', dy=4, speed=85); l.row(21, 24, 7, 'q')
+    l.floor(24, 28, 8); l.put(26, 4, 'U'); l.ext.append([26, 4, {'pu': 'air'}]); l.pit(28, 33)
+    l.row(35, 47, 10, '<'); l.put(39, 6, 'b'); l.put(43, 9, 'g'); l.put(46, 10, 'p')
+    l.put(50, 10, '!')
+    l.put(53, 2, 'f'); l.put(56, 2, 'f'); l.put(59, 2, 'f')
+    l.row(62, 74, 11, 'i'); l.row(62, 74, 12, 'i'); l.put(66, 10, 'K'); l.put(71, 10, 'T'); l.put(68, 5, 'v')
+    l.pit(77, 85); l.row(78, 80, 9, 'q'); l.mover(81, 7, 'M', dx=2, speed=95)
+    l.floor(85, 89, 6); l.coins(85, 89, 5); l.pit(89, 93)
+    l.put(96, 10, '!')
+    l.row(99, 103, 7, '?'); l.put(101, 7, 'U'); l.ext.append([101, 7, {'pu': 'pound'}])
+    l.put(106, 10, 'k'); l.put(110, 10, 'k'); l.put(108, 6, 'b'); l.put(114, 10, 'e'); l.put(115, 10, 'e')
+    l.mover(119, 3, 'c', len=4); l.put(123, 4, 'v')
+    l.pit(127, 136); l.mover(128, 9, 'L', dy=5, speed=95); l.mover(131, 6, 'M', dx=2, speed=100); l.row(134, 136, 8, 'q')
+    l.floor(136, 140, 8); l.pit(140, 144)
+    l.put(146, 10, '!')
+    l.row(149, 161, 10, '>'); l.put(153, 6, 'h'); l.put(157, 10, 'J'); l.put(160, 4, 'v')
+    l.row(164, 176, 11, 'i'); l.row(164, 176, 12, 'i'); l.put(168, 10, 'P'); l.put(173, 10, 'K'); l.put(170, 6, 'b')
+    l.row(179, 183, 7, '?'); l.put(181, 7, 'U'); l.ext.append([181, 7, {'pu': 'heart'}])
+    l.pit(186, 193); l.row(187, 189, 9, 'q'); l.row(190, 193, 8, 'q')
+    l.floor(193, 196, 9); l.put(199, 10, 'T'); l.put(203, 10, 'T'); l.put(201, 5, 'v')
+    l.coins(206, 212, 10)
+    l.arena(216, 'stomper', 6, 1.3, 'THE JACK STAND GIANT')
+    return l
+
+
 SOLIDS = set('#=CU?RSD<>i'); SEMIS = set('-q')
 def decorate(l, idx):
     """5 hidden stars per drawer (high spots first) and one blue warp toolbox to a secret room."""
@@ -519,7 +549,7 @@ def room(idx):
     g[10][31] = 'y'
     return [''.join(r) for r in g]
 
-LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11()]
+LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11(), level12()]
 
 if __name__ == '__main__':
     out = []

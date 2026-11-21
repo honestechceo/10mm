@@ -16,9 +16,11 @@
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD! Blocks the next hit, no time limit"], torque: [10, "TORQUE STAR! Smash through anything"],
-    wrench: [12, "WRENCH TOSS! Tap THROW to hit enemies and bosses"], pound: [12, "GROUND POUND! Jump, then tap POUND to slam down"],
-    air: [12, "AIR COMPRESSOR! Hold JUMP while falling to float"], lucky: [15, "LUCKY SOCKET! Double coins"], heart: [0, "EXTRA HEART! 4 hit points this drawer"] };
-  const TIMED = ["speed", "slow", "magnet", "spring", "torque", "wrench", "pound", "air", "lucky"];
+    wrench: [2, "WRENCH TOSS! Tap THROW. Lasts until you take 2 hits"], pound: [2, "GROUND POUND! Jump, then tap POUND. Lasts until you take 2 hits"],
+    air: [2, "AIR COMPRESSOR! Hold JUMP while falling to float. Lasts until you take 2 hits"], lucky: [15, "LUCKY SOCKET! Double coins"], heart: [0, "EXTRA HEART! 4 hit points this drawer"] };
+  const TIMED = ["speed", "slow", "magnet", "spring", "torque", "lucky"];
+  const HITS = ["wrench", "pound", "air"]; // these stay until you take 2 hits
+  const BAG_MAX = 3;
 
   // ---------- art ----------
   const IMG = {};
@@ -60,7 +62,7 @@
     root.innerHTML =
       '<canvas id="ltc"></canvas>' +
       '<div class="lthud"><span class="lthp" id="ltHp"></span><span class="ltname" id="ltName"></span><span class="ltcoin"><img src="lt/coin.webp" alt="">×<b id="ltCoins">0</b></span><span class="ltcoin ltstar"><img src="lt/star.webp" alt="">×<b id="ltStars">0/5</b></span><button id="ltPause" aria-label="Pause">II</button></div>' +
-      '<div class="ltpow" id="ltPow"></div><div class="ltboss" id="ltBoss"></div>' +
+      '<div class="ltpow" id="ltPow"></div><div class="ltbag" id="ltBag"></div><div class="ltboss" id="ltBoss"></div>' +
       '<div class="ltmsg" id="ltMsg"></div>' +
       '<div class="ltpad"><button class="ltl" data-k="L" aria-label="Move left">◀</button><button class="ltr" data-k="R" aria-label="Move right">▶</button><button class="lta" data-k="A" aria-label="Use power"><img alt=""><span>THROW</span></button><button class="ltj" data-k="J" aria-label="Jump">JUMP</button></div>' +
       '<div class="ltcard hidden" id="ltCard"></div>';
@@ -197,7 +199,7 @@
     spawnPlayer();
     hud.Name.textContent = roomRows ? "SECRET ROOM" : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
-    inRoom = !!roomRows; starHud();
+    inRoom = !!roomRows; starHud(); bagHud();
     timeScale = 1; chase = null; t = 0;
   }
   let zoom = 1, inRoom = false, stash = null;
@@ -398,6 +400,7 @@
       return;
     }
     if (pow.shield) { pow.shield = 0; pl.inv = 1.2; say("hit"); haptic("medium"); toast("Shield saved you! It's used up."); return; }
+    for (const k of HITS) if (pow[k] > 0) { pow[k]--; if (!pow[k]) toast(PU[k][1].split("!")[0] + " is used up"); }
     hp--; pl.inv = 1.4; pl.hitT = 0.45; say("hit"); haptic("heavy");
     pl.vy = -420; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 220; pl.ground = false; pl.on = null;
     if (hp <= 0) die("hp");
@@ -682,7 +685,26 @@
         break;
     }
   }
-  function givePower(k) {
+  // ---- tool bag: a power you already have goes in the bag (up to 3, kept between drawers). Tap it to use it later.
+  function bagHud() {
+    const el = root && root.querySelector("#ltBag"); if (!el) return;
+    const b = load().bag || [];
+    el.innerHTML = '<img class="bg" src="svc-bag.webp" alt="Tool bag">' + Array.from({ length: BAG_MAX }, (_, i) => b[i] ? '<button data-i="' + i + '" aria-label="Use ' + b[i] + '"><img src="lt/pu-' + b[i] + '.webp" alt=""></button>' : "<i></i>").join("");
+    el.querySelectorAll("button").forEach((x) => (x.onclick = (ev) => { ev.stopPropagation(); useBag(+x.dataset.i); }));
+  }
+  function useBag(i) {
+    if (mode !== "play") return;
+    const s = load(), b = s.bag || [], k = b[i]; if (!k) return;
+    if (hasPower(k)) { toast("You already have that one on"); return; }
+    b.splice(i, 1); s.bag = b; store(s); bagHud(); givePower(k, true);
+  }
+  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp >= 4 : pow[k] > 0; }
+  function givePower(k, fromBag) {
+    if (!fromBag && k !== "torque" && hasPower(k)) {
+      const s = load(), b = (s.bag = s.bag || []);
+      if (b.length < BAG_MAX) { b.push(k); store(s); bagHud(); say("power"); haptic("success"); toast(PU[k][1].split("!")[0] + " saved in your tool bag"); return; }
+      toast("Tool bag is full! " + PU[k][1].split("!")[0] + " refreshed");
+    }
     say("power"); haptic("success");
     if (k === "shield") pow.shield = 1;
     else if (k === "heart") { maxHp = 4; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
@@ -691,7 +713,7 @@
       if (k === "wrench") pow.pound = 0; if (k === "pound") pow.wrench = 0;
       pow[k] = PU[k][0];
     }
-    toast(PU[k][1] + (PU[k][1].endsWith("!") ? "" : "!"));
+    toast(PU[k][1] + (PU[k][1].includes("!") ? "" : "!"));
   }
   // ---- action button: wrench toss / ground pound ----
   let throwCD = 0, actKey = "";
@@ -847,7 +869,8 @@
   function updHud() {
     const k = hp + "|" + pow.shield + "|" + (pow.mech || 0) + "|" + maxHp;
     if (k !== hudKey) { hudKey = k; hud.Hp.innerHTML = "●".repeat(Math.max(0, hp)).split("").map(() => '<i class="on"></i>').join("") + '<i></i>'.repeat(Math.max(0, maxHp - hp)) + (pow.shield ? '<span class="ltshield"><img src="lt/pu-shield.webp" alt="shield">1 HIT</span>' : "") + (pow.mech > 0 ? '<span class="ltshield"><img src="lt/pu-mech.webp" alt="mech">ARMOR ' + pow.mech + "</span>" : ""); }
-    const list = TIMED.filter((p) => pow[p] > 0).map((p) => { const f = Math.round(Math.min(1, pow[p] / PU[p][0]) * 25) * 4, n = Math.ceil(pow[p]); return '<span class="pw' + (n <= 2 ? " low" : "") + '" style="--p:' + f + '%"><img src="lt/pu-' + p + '.webp" alt=""><b>' + n + "</b></span>"; }).join("");
+    const list = TIMED.filter((p) => pow[p] > 0).map((p) => { const f = Math.round(Math.min(1, pow[p] / PU[p][0]) * 25) * 4, n = Math.ceil(pow[p]); return '<span class="pw' + (n <= 2 ? " low" : "") + '" style="--p:' + f + '%"><img src="lt/pu-' + p + '.webp" alt=""><b>' + n + "</b></span>"; }).join("")
+      + HITS.filter((p) => pow[p] > 0).map((p) => '<span class="pw hits' + (pow[p] === 1 ? " one" : "") + '" style="--p:' + pow[p] * 50 + '%"><img src="lt/pu-' + p + '.webp" alt=""><b>' + "♥".repeat(pow[p]) + "</b></span>").join("");
     if (hud.Pow._v !== list) { hud.Pow.innerHTML = list; hud.Pow._v = list; }
     const bb = root.querySelector("#ltBoss"), showB = boss && arena && arena.on && boss.st !== "dead";
     bb.classList.toggle("on", !!showB);
@@ -1217,7 +1240,7 @@
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }
@@ -1294,5 +1317,5 @@
     }
     return false;
   }
-  window.LostBox = { _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

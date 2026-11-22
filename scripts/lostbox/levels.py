@@ -602,6 +602,157 @@ def level15():
     return l
 
 
+
+# ---------------- Levels 16-50 and the 5 hideouts: built from sections, then reachability-checked ----------------
+import random
+PUS = ['shield', 'heart', 'wrench', 'pound', 'air', 'lucky', 'magnet', 'speed', 'spring']
+
+def sec_gang(l, x, r, d, crew, old):
+    n = 1 + (r.random() < 0.35 + d * 0.5) + (r.random() < d * 0.6)
+    w = 6 + n * 4
+    pool = crew * 2 + old
+    for k in range(n): l.put(x + 3 + k * 4, 10, r.choice(pool))
+    if r.random() < 0.4 + d * 0.3: l.put(x + 2 + r.randrange(w - 4), 6, r.choice('bh'))
+    l.arc(x + 1, min(w - 2, 6), 7)
+    return x + w
+
+def sec_pit(l, x, r, d, crew, old):
+    kind = r.random()
+    if kind < 0.35:
+        w = r.choice([3, 4]); l.pit(x + 1, x + 1 + w); l.arc(x, w + 2, 8); return x + w + 3
+    if kind < 0.7:
+        w = r.choice([6, 7, 8]); l.pit(x + 1, x + 1 + w)
+        l.mover(x + 2, 10, 'M', dx=w - 4, speed=int(65 + d * 40), phase=round(r.random(), 2))
+        l.coins(x + 3, x + w - 1, 7); return x + w + 3
+    w = r.choice([6, 7]); l.pit(x + 1, x + 1 + w)
+    l.row(x + 3, x + 5, 9, 'q'); l.row(x + w - 2, x + w, 8, 'q')
+    if r.random() < d: l.put(x + 1 + w // 2, 6, 'b')
+    return x + w + 3
+
+def sec_lift(l, x, r, d, crew, old):
+    w = 8; l.pit(x + 1, x + 1 + w)
+    l.mover(x + 2, 9, 'L', dy=4, speed=int(70 + d * 30))
+    l.floor(x + 5, x + 7, 7); l.coins(x + 5, x + 7, 6)
+    l.mover(x + 7, 7, 'M', dx=1, speed=int(70 + d * 30), phase=0.5)
+    return x + w + 3
+
+def sec_raised(l, x, r, d, crew, old):
+    top = r.choice([8, 9]); w = r.choice([6, 7, 8])
+    l.floor(x + 1, x + 1 + w, top); l.coins(x + 2, x + w, top - 1)
+    if r.random() < 0.5 + d * 0.4: l.put(x + 1 + w // 2, top - 1, r.choice(crew))
+    return x + w + 3
+
+def sec_blocks(l, x, r, d, crew, old):
+    l.row(x + 2, x + 6, 7, '?'); l.put(x + 4, 7, 'U'); l.ext.append([x + 4, 7, {'pu': r.choice(PUS)}])
+    if r.random() < 0.6: l.put(x + 8, 10, r.choice(crew))
+    return x + 11
+
+def sec_belt(l, x, r, d, crew, old):
+    w = 10; l.row(x + 1, x + 1 + w, 10, r.choice('<>'))
+    l.put(x + 4, 9, r.choice(crew + 'T')) if r.random() < 0.5 else l.put(x + 5, 6, 'h')
+    if r.random() < d: l.put(x + 8, 9, 'g')
+    return x + w + 3
+
+def sec_ice(l, x, r, d, crew, old):
+    w = 12; l.row(x + 1, x + 1 + w, 11, 'i'); l.row(x + 1, x + 1 + w, 12, 'i')
+    l.put(x + 4, 10, r.choice(crew)); l.put(x + 9, 10, r.choice(old[:3] + crew))
+    if r.random() < 0.5 + d * 0.3: l.put(x + 7, 4, 'v')
+    return x + w + 3
+
+def sec_hazard(l, x, r, d, crew, old):
+    k = r.random()
+    if k < 0.3:
+        for i in range(2 + (d > 0.5)): l.put(x + 2 + i * 3, 2, 'f')
+        return x + 11
+    if k < 0.55:
+        l.put(x + 3, 10, 'e'); l.put(x + 4, 10, 'e'); l.put(x + 8, 10, 'p'); return x + 11
+    if k < 0.8:
+        l.mover(x + 4, 3, 'c', len=4); l.put(x + 9, 10, r.choice(crew)); return x + 13
+    l.put(x + 3, 10, 'p'); l.put(x + 7, 9, 'g'); l.put(x + 10, 10, r.choice(crew)); return x + 13
+
+def sec_stairs(l, x, r, d, crew, old):
+    for i in range(3): l.floor(x + 1 + i, x + 2 + i, 10 - i)
+    l.floor(x + 4, x + 9, 8); l.coins(x + 4, x + 9, 7)
+    if r.random() < 0.5 + d * 0.4: l.put(x + 7, 7, r.choice(crew))
+    l.pit(x + 9, x + 12)
+    return x + 13
+
+SECTIONS = [(sec_gang, 5), (sec_pit, 3), (sec_lift, 1), (sec_raised, 2), (sec_blocks, 1.4), (sec_belt, 1.2), (sec_ice, 1), (sec_hazard, 2), (sec_stairs, 1.2)]
+
+def gen_level(num, name, bg, music, seed, crew, old, boss=None, width=None, hideout=False):
+    r = random.Random(seed)
+    d = min(1.0, max(0.0, (num - 16) / 34.0)) if not hideout else 0.75
+    W = width or (236 + int(d * 34))
+    l = L(name, W, bg, music)
+    l.floor(0, W); l.put(2, 10, '@')
+    x, last_cp, end = 7, 0, W - (24 if boss else 10)
+    secs, wts = zip(*SECTIONS)
+    if hideout: wts = [w * (4 if f is sec_gang else 1) for f, w in SECTIONS]
+    prev = None
+    while x < end - 14:
+        if x - last_cp > (42 if not hideout else 38):
+            l.put(x + 1, 10, '!'); last_cp = x; x += 4; continue
+        f = r.choices(secs, wts)[0]
+        if f is prev and f is not sec_gang: continue
+        prev = f; x = f(l, x, r, d, crew, old)
+    if boss:
+        kind, hp, spd, bname = boss
+        l.coins(x + 1, min(x + 6, W - 26), 10)
+        l.arena(max(x + 8, W - 22), kind, hp, spd, bname)
+    else:
+        l.coins(x + 1, x + 5, 10); l.put(min(x + 7, l.cols - 4), 10, 'X')
+        l.cols = len(l.g[0])
+    return l
+
+W2 = ('rm', 'TJKb')
+W3 = ('rmj', 'TJKkbh')
+W4 = ('rmjG', 'TJKkbhv')
+W5 = ('rmjG', 'TJKkbhv')
+NEW = [  # num, name, bg, music, crew/old, boss
+    (16, 'STRIPPED BOLT ALLEY', 'backlot', 'salvage', W2, None),
+    (17, 'RUST BUCKET ROW', 'backlot', 'salvage', W2, None),
+    (18, 'WRENCH GANG TURF', 'backlot', 'salvage', W2, None),
+    (19, 'THE LOADING DOCK', 'backlot', 'salvage', W2, None),
+    (20, 'THRONE OF RUST', 'backlot', 'grand', W2, ('king', 6, 1.3, 'THE RUSTY WRENCH KING')),
+    (21, 'TIRE SHOP TROUBLE', 'tireshop', 'pit', W3, None),
+    (22, 'BALANCING ACT', 'tireshop', 'pit', W3, None),
+    (23, 'LUG NUT LANE', 'tireshop', 'pit', W3, None),
+    (24, 'TREAD CAREFULLY', 'tireshop', 'pit', W3, None),
+    (25, 'NINJA NIGHT SHIFT', 'tireshop', 'pit', W3, ('serpent', 6, 1.35, 'THE TIMING BELT SERPENT II')),
+    (26, 'AIR HOSE ALLEY', 'tireshop', 'pit', W3, None),
+    (27, 'THE ROTATION', 'tireshop', 'pit', W3, None),
+    (28, 'BEAD BREAKER BAY', 'tireshop', 'pit', W3, None),
+    (29, 'FLAT OUT', 'tireshop', 'pit', W3, None),
+    (30, 'CAPTAIN\'S DECK', 'tireshop', 'grand', W3, ('captain', 6, 1.35, 'THE PRY BAR CAPTAIN')),
+    (31, 'LEVEL P1', 'parkgarage', 'engine', W4, None),
+    (32, 'RAMP RUNNERS', 'parkgarage', 'engine', W4, None),
+    (33, 'IMPACT ZONE', 'parkgarage', 'engine', W4, None),
+    (34, 'FLICKER LIGHTS', 'parkgarage', 'engine', W4, None),
+    (35, 'THE GARAGE GUNNER', 'parkgarage', 'engine', W4, ('gunner', 7, 1.4, 'IMPACT GUN KING II')),
+    (36, 'PUDDLE JUMPERS', 'parkgarage', 'engine', W4, None),
+    (37, 'EXIT ONLY', 'parkgarage', 'engine', W4, None),
+    (38, 'DEAD END DECK', 'parkgarage', 'engine', W4, None),
+    (39, 'ROOFTOP RUN', 'parkgarage', 'engine', W4, None),
+    (40, 'RETURN OF THE KING', 'parkgarage', 'grand', W4, ('king', 7, 1.45, 'THE RUSTY WRENCH KING')),
+    (41, 'JUNKYARD GATES', 'salvage', 'salvage', W5, None),
+    (42, 'CRUSHED CAR CANYON', 'salvage', 'salvage', W5, None),
+    (43, 'MAGNET CRANE MAYHEM', 'salvage', 'salvage', W5, None),
+    (44, 'SCRAP HEAP SPRINT', 'salvage', 'salvage', W5, None),
+    (45, 'THE BIG CLOG', 'salvage', 'salvage', W5, ('vac', 7, 1.45, 'THE SHOP VAC II')),
+    (46, 'BURNING BARREL BLUFF', 'salvage', 'salvage', W5, None),
+    (47, 'GANG HEADQUARTERS', 'salvage', 'salvage', W5, None),
+    (48, 'THE LAST STAND', 'salvage', 'salvage', W5, None),
+    (49, 'NO MORE DETOURS', 'salvage', 'salvage', W5, None),
+    (50, 'THE FINAL DRAWER', 'salvage', 'grand', W5, ('captain', 9, 1.55, 'CAPTAIN PRY BAR\'S LAST STAND')),
+]
+HIDEOUTS = [  # name, boss, which main drawer (0-based) hides the red toolbox
+    ('THE BOLT GANG HIDEOUT', ('king', 4, 1.1, 'BOLT GANG BOSS'), 6, ('r', '')),
+    ('THE WRENCH CLUB', ('king', 5, 1.25, 'WRENCH CLUB BOSS'), 16, ('rm', '')),
+    ('NINJA DOJO', ('captain', 5, 1.3, 'THE DOJO MASTER'), 26, ('rmj', '')),
+    ('THE GUN RANGE', ('captain', 6, 1.4, 'THE RANGE BOSS'), 36, ('rmjG', '')),
+    ('THE GANG VAULT', ('king', 7, 1.5, 'THE VAULT KEEPER'), 46, ('rmjG', '')),
+]
+
 SOLIDS = set('#=CU?RSD<>i'); SEMIS = set('-q')
 def decorate(l, idx):
     """5 hidden stars per drawer (high spots first) and one blue warp toolbox to a secret room."""
@@ -656,12 +807,42 @@ def room(idx):
     return [''.join(r) for r in g]
 
 LEVELS = [level1(), level2(), level3(), level4(), level5(), level6(), level7(), level8(), level9(), level10(), level11(), level12(), level13(), level14(), level15()]
+import os as _os; sys.path.insert(0, _os.path.dirname(_os.path.abspath(__file__)))
+from levelseeds import SEEDS, HSEEDS   # seeds that pass the reachability check (found by findseeds.py)
+for (num, name, bg, music, (crew, old_), boss) in NEW:
+    LEVELS.append(gen_level(num, name, bg, music, SEEDS[num], crew, old_, boss))
+HIDDEN = [gen_level(60 + k, name, 'hideout', 'grand', HSEEDS[k], crew, old_, boss, width=170, hideout=True)
+          for k, (name, boss, src, (crew, old_)) in enumerate(HIDEOUTS)]
+
+def place_hidewarp(l, to):
+    """red toolbox on a high, quiet ledge away from the blue warp box"""
+    g = l.g; W = l.cols
+    bx = next((x for x, y, kw in l.ext if 'boss' in kw), W - 12)
+    ys = [x for x in range(W) for y in range(ROWS) if g[y][x] == 'Y']
+    best = None
+    for x in range(12, bx - 12):
+        if any(abs(x - yx) < 15 for yx in ys): continue
+        for sy in range(4, 11):
+            ch = g[sy][x]
+            if ch in '.o*': continue
+            if (ch in SOLIDS or ch in SEMIS) and all(g[sy][xx] in SOLIDS | SEMIS and all(g[yy][xx] in '.o' for yy in range(sy - 3, sy)) for xx in (x - 1, x, x + 1)):
+                if best is None or sy < best[1]: best = (x, sy)
+            break
+    if best is None: raise SystemExit('no hideout spot in ' + l.name)
+    x, sy = best
+    l.put(x, sy - 1, 'V'); l.ext.append([x, sy - 1, {'to': to}])
 
 if __name__ == '__main__':
     out = []
     for i, l in enumerate(LEVELS):
         decorate(l, i)
+    for k, (name, boss, src, _) in enumerate(HIDEOUTS):
+        place_hidewarp(LEVELS[src], len(LEVELS) + k)
+    for i, l in enumerate(LEVELS):
         out.append({'name': l.name, 'bg': l.bg, 'music': l.music, 'rows': l.text(), 'ext': l.ext, 'room': room(i)})
+    for k, l in enumerate(HIDDEN):
+        decorate(l, len(LEVELS) + k)
+        out.append({'name': l.name, 'bg': l.bg, 'music': l.music, 'rows': l.text(), 'ext': l.ext, 'room': room(len(LEVELS) + k), 'hidden': True})
     js = '// generated by lt-tools/levels.py — do not hand edit\nwindow.LT_LEVELS = ' + json.dumps(out) + ';\n'
     open(sys.argv[1] if len(sys.argv) > 1 else 'levels.js', 'w').write(js)
     for l in LEVELS:

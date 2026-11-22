@@ -5,14 +5,14 @@
 (function () {
   "use strict";
   const T = 48, ROWS = 13;
-  const NLV = () => window.LT_LEVELS.length;
+  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden).length; // hidden hideout levels sit after the main drawers
   // keep in sync with lt-tools/validate.py
   const P = { MAXV: 260, ACC: 1900, ACC_AIR: 1300, FRIC: 2400, G_HOLD: 1500, G: 2600, JUMP: 640, DJUMP: 560, MAXFALL: 1000, SPRING: 1050 };
   const PW = 30, PH = 44, STEP = 1 / 120;
   const SOLID = "#=CU?RSD<>i";
   const SEMI = "-q"; // land from above only (q crumbles)
   const SAVE = "tenmm-lt";
-  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg" };
+  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg", tireshop: "bg-tireshop.jpg", parkgarage: "bg-parkgarage.jpg", hideout: "room-bg" };
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD! Blocks the next hit, no time limit"], torque: [10, "TORQUE STAR! Smash through anything"],
@@ -39,6 +39,8 @@
     Object.values(FR).flat().forEach(img);
     "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break bl-ground bl-wall bl-beam bl-conveyor bl-crusher bl-slick bl-engine bl-gremlin bl-bat bl-lift".split(" ").forEach(img);
     img("tool-piston.webp");
+    for (const k of ["sbolt", "rwrench", "ninja", "igun"]) for (let f = 0; f < 4; f++) img("en-" + k + f);
+    img("en-bullet");
     "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead js-idle js-attack js-hit js-dead ck-idle ck-attack ck-hit ck-dead tb-idle tb-attack tb-hit tb-dead sv-idle sv-attack sv-hit sv-dead".split(" ").forEach(img);
   }
 
@@ -179,6 +181,12 @@
         case "Y": e({ k: "warp", w: 60, h: 60 }); grid[y][x] = "."; break;
         case "y": e({ k: "warpback", w: 60, h: 60 }); grid[y][x] = "."; break;
         case "Q": e({ k: "gchest", w: 56, h: 50 }); grid[y][x] = "."; break;
+        // the bad-guy crew
+        case "r": e({ k: "sbolt", w: 38, h: 52, vx: -70, walker: 1, edge: 1, stomp: 1, hurt: 1, crew: 1 }); grid[y][x] = "."; break;
+        case "m": e({ k: "rwrench", w: 40, h: 62, vx: -50, walker: 1, edge: 1, stomp: 1, hurt: 1, crew: 1 }); grid[y][x] = "."; break;
+        case "j": e({ k: "ninja", w: 36, h: 46, vx: -80, walker: 1, edge: 1, stomp: 1, hurt: 1, crew: 1 }); grid[y][x] = "."; break;
+        case "G": e({ k: "igun", w: 40, h: 56, vx: -40, walker: 1, edge: 1, stomp: 1, hurt: 1, crew: 1 }); grid[y][x] = "."; break;
+        case "V": e({ k: "hidewarp", w: 60, h: 60, to: kw.to }); grid[y][x] = "."; break;
       }
     }
     crumbles = []; boss = ents.find((e) => e.k === "boss") || null; arena = null;
@@ -198,7 +206,7 @@
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
-    hud.Name.textContent = roomRows ? "SECRET ROOM" : "DRAWER " + (i + 1) + " · " + L.name;
+    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
     BL = L.bg === "backlot" && !roomRows;
     inRoom = !!roomRows; starHud(); bagHud();
@@ -233,6 +241,12 @@
     hp = keep.hp; pow = keep.pow;
     mode = "intro"; drawerT = 0; say("power"); haptic("success"); toast("SECRET ROOM!");
     const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); }
+  }
+  // red toolbox: a hidden hideout level full of bad guys. Finding it unlocks it on the map for good.
+  let hideFrom = null;
+  function enterHideout(e) {
+    const s = load(); s.hide = s.hide || []; if (!s.hide.includes(e.to)) { s.hide.push(e.to); store(s); }
+    hideFrom = lvI; play(e.to); toast("HIDEOUT FOUND! Beat the gang!");
   }
   function leaveRoom() {
     if (!stash) return;
@@ -439,6 +453,7 @@
         e.y = ny; e.rot = (e.rot || 0) + (e.vx * hd) / 17;
         if (e.y > ROWS * T + 100) e.alive = false;
       }
+      if (e.crew && !e.dead) crewStep(e, hd);
       if (e.dead) { e.dead -= dt; e.y += 300 * dt; if (e.dead <= 0) e.alive = false; continue; }
       if (e.k === "piston") e.y = e.y0 - (0.5 - 0.5 * Math.cos((t * timeScale * 2.4 + e.ph * 6.28))) * 2.6 * T;
       if (e.k === "gear") { e.rot = (e.rot || 0) + 3 * hd; e.y = e.y0 - 4 + Math.sin(t * 2 + e.ph * 6) * 6; }
@@ -497,6 +512,35 @@
       if (chase.x + 70 > pl.x - PW / 2 && mode === "play") { toast("The magnet got you!"); chase.x = pl.x - 400; die("magnet"); }
     }
   }
+  // ---------- the bad-guy crew ----------
+  // Stripped Bolt charges, Rusty Wrench swings, Lug Nut Ninja leaps at you, Impact Gun fires bolts. All of them can be stomped.
+  function crewStep(e, hd) {
+    const dx = pl.x - e.x, dy = pl.y - e.y, dir = Math.sign(dx) || -1, sees = mode === "play" && Math.abs(dy) < 1.6 * T;
+    e.cd = (e.cd || 0) - hd; e.tt = (e.tt || 0) - hd;
+    const walk = { sbolt: 70, rwrench: 50, ninja: 80, igun: 40 }[e.k];
+    if (e.k === "sbolt") {
+      if (e.st === "wind") { e.vx = 0; e.shake = 1; if (e.tt <= 0) { e.st = "charge"; e.shake = 0; e.vx = e.face * 300; e.tt = 1.0; say("grab"); } }
+      else if (e.st === "charge") { if (e.tt <= 0 || e.vx === 0) { e.st = null; e.vx = (Math.sign(e.vx) || e.face) * walk; e.cd = 2.2; } }
+      else if (sees && e.cd <= 0 && Math.abs(dx) < 6 * T && Math.sign(dx) === Math.sign(e.vx)) { e.st = "wind"; e.face = dir; e.tt = 0.38; }
+    } else if (e.k === "rwrench") {
+      if (e.st === "wind") { e.vx = 0; e.shake = 1; if (e.tt <= 0) { e.st = "swing"; e.shake = 0; e.tt = 0.32; e.w = 104; say("slam"); } }
+      else if (e.st === "swing") { if (e.tt <= 0) { e.st = null; e.w = 40; e.vx = e.face * walk; e.cd = 1.5; } }
+      else if (sees && e.cd <= 0 && Math.abs(dx) < 2.3 * T) { e.st = "wind"; e.face = dir; e.tt = 0.45; }
+    } else if (e.k === "ninja") {
+      if (e.st === "leap") { e.air -= hd; if (e.air <= 0 && e.onG) { e.st = null; e.vx = (Math.sign(e.vx) || dir) * walk; e.cd = 1.8; } }
+      else if (e.onG && e.cd <= 0 && mode === "play" && Math.abs(dy) < 3 * T && Math.abs(dx) < 6 * T) {
+        e.st = "leap"; e.air = 0.15; e.face = dir; e.vy = -760; e.vx = Math.max(-340, Math.min(340, dx / 0.75)); e.onG = false; say("flap");
+      }
+    } else if (e.k === "igun") {
+      if (e.st === "aim") { e.vx = 0; e.shake = 1; if (e.tt <= 0) {
+          e.shake = 0; e.st = "fire"; e.tt = 0.3; say("shot"); puff(e.x + e.face * 34, e.y - 34, 4, "#fff");
+          ents.push({ k: "bolt", str: 1, x: e.x + e.face * 34, y: e.y - 24, vx: e.face * 320, vy: 0, w: 28, h: 16, x0: 0, y0: 0, alive: true, hurt: 1, life: 2.4, art: "en-bullet" });
+        } }
+      else if (e.st === "fire") { if (e.tt <= 0) { e.st = null; e.vx = e.face * walk; e.cd = 2.6; } }
+      else if (sees && e.cd <= 0 && Math.abs(dx) < 8 * T) { e.st = "aim"; e.face = dir; e.tt = 0.45; }
+    }
+    if (!e.st && e.vx) e.face = Math.sign(e.vx);
+  }
   function box(e) {
     const y = e.k === "pu" ? e.y - e.rise * 34 : e.y;
     return { x0: e.x - e.w / 2, x1: e.x + e.w / 2, y0: y - e.h, y1: y };
@@ -517,6 +561,7 @@
       case "mechpu": if (pow.mech > 0) return; e.alive = false; pow.mech = 3; pow.wrench = pow.pound = 0; say("power"); haptic("success"); shakeT = 0.25; fx.push({ k: "mfx", x: pl.x, y: pl.y - 50, t: 0.4 }); toast("RATCHET MECH! Tap PUNCH to fight the boss head-on"); hudKey = ""; return;
       case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
       case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
+      case "hidewarp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
       case "gchest": if (!e.open) { e.open = 1; collected.add("chest" + lvI); fx.push({ k: "spark", x: e.x, y: e.y - 40, t: 0.5 }); for (let k = 0; k < 20; k++) addCoin(e.x, e.y - 40, k % 4 === 0); pow.torqueBank = 1; say("power"); haptic("success"); toast("TORQUE STAR saved! It kicks in when you go back up"); } return;
       case "check": if (!e.on) { ents.forEach((o) => o.k === "check" && (o.on = false)); e.on = true; cp = { x: e.x, y: e.y }; toast("CHECKPOINT!"); say("win"); haptic("success"); } return;
       case "spring": if (pl.vy >= 0 && py1 - b.y0 < 26) { pl.vy = -P.SPRING * (key.J ? 1.1 : 1); pl.jumps = 1; pl.ground = false; pl.on = null; e.squash = 0.2; say("flap"); } return;
@@ -559,9 +604,10 @@
   function startBoss() {
     arena.on = true; boss.st = "intro"; boss.tt = 1.1; boss.inv = 0;
     toast(boss.name + "!"); say("roar"); music("boss"); haptic("medium");
-    const tip = { walker: "Stomp it on the head!", charger: "Jump over its charge, stomp it when it stops!", flyer: "Dodge the sparks. Stomp it when it swoops down!", roller: "Stay away until it overheats, then stomp!", magnet: "Don't get pulled in! Stomp it when it swoops!" }[boss.kind];
+    const tip = { walker: "Stomp it on the head!", charger: "Jump over its charge, stomp it when it stops!", flyer: "Dodge the sparks. Stomp it when it swoops down!", roller: "Stay away until it overheats, then stomp!", magnet: "Don't get pulled in! Stomp it when it swoops!", king: "Jump the shockwaves, then stomp his crown!", captain: "He lunges at you! Dodge, then stomp him while he's dazed!", stomper: "Jump the shockwaves, then stomp it!", serpent: "Dodge the leap, stomp it while it's dazed!", gunner: "Jump the lug nuts, stomp the crown!", kraken: "Dodge the coolant, stomp it!", vac: "Walk away from the suction, stomp it when it clogs!" }[boss.kind];
     setTimeout(() => mode === "play" && arena && arena.on && toast(tip), 1300);
   }
+  const BEH = { king: "stomper", captain: "serpent" };
   function stepBoss(e, hd, dt) {
     if (arena && !arena.on && !arena.done && e.st === "wait" && pl.x > arena.l + 2 * T && mode === "play") startBoss();
     if (e.st === "wait") { e.y = (e.hy || e.home.y) + Math.sin(t * 2) * (e.hy ? 6 : 0); return; }
@@ -574,7 +620,7 @@
     if (e.st === "intro") { if (e.tt <= 0) { e.st = "move"; e.tt = 1.2; } return; }
     if (e.st === "stun") { if (e.kind === "flyer" || e.kind === "magnet") { e.y = Math.max(e.y - 120 * hd, e.hy); } else ground(); if (e.tt <= 0) { e.st = "move"; e.tt = 1.0; } return; }
     e.face = pl.x < e.x ? -1 : 1;
-    switch (e.kind) {
+    switch (BEH[e.kind] || e.kind) {
       case "walker": // waddles at you, hops now and then
         e.x += e.face * 95 * sp * hd; walls();
         if (ground() && e.tt <= 0) { e.vy = -760; e.tt = 1.7 / sp; puff(e.x, e.y, 4, "#ddd"); }
@@ -792,8 +838,11 @@
     chase = null;
   }
   function finishLevel() {
-    const s = load(), first = !s.done.includes(lvI);
-    if (first) s.done.push(lvI);
+    const s = load(), hid = !!window.LT_LEVELS[lvI].hidden;
+    s.hideDone = s.hideDone || [];
+    const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
+    if (first) (hid ? s.hideDone : s.done).push(lvI);
+    if (hid && first) coinsRun += 250;
     s.coins[lvI] = Math.max(s.coins[lvI] || 0, coinsRun);
     let golden = false;
     if (lvI === 4 && !tester() && !s.golden) {
@@ -837,7 +886,7 @@
       drawerT += dt;
       const e = exitEnt;
       pl.x += (e.x - pl.x) * 0.15; pl.y += (e.y - 20 - pl.y) * 0.15;
-      if (drawerT > 0.7) { if (e.k === "warp") enterRoom(e); else leaveRoom(); }
+      if (drawerT > 0.7) { if (e.k === "hidewarp") enterHideout(e); else if (e.k === "warp") enterRoom(e); else leaveRoom(); }
       updHud(); return;
     }
     if (mode === "drawer") {
@@ -867,7 +916,7 @@
   }
   function resetHazards() {
     // put moving hazards back where they started so a respawn is fair
-    for (const e of ents) if (e.walker) { if (!e.dead && e.alive) { e.x = e.x0; e.y = e.y0; e.vy = 0; } }
+    for (const e of ents) if (e.walker) { if (!e.dead && e.alive) { e.x = e.x0; e.y = e.y0; e.vy = 0; if (e.crew) { e.st = null; e.cd = 1; e.shake = 0; e.w = e.k === "rwrench" ? 40 : e.w; e.vx = -Math.abs(e.vx || 60); } } }
     for (const e of ents) if (e.k === "chaseOn" && pl.x < e.x) e.used = 0;
     chase = null;
     ents = ents.filter((e) => e.k !== "bolt");
@@ -975,6 +1024,14 @@
     const sx = l && r ? 0 : l ? 0 : r ? iw - cap * 1.6 : cap, sw = l && r ? iw : l || r ? cap * 1.6 : iw - cap * 2;
     ctx.drawImage(im, sx, 0, sw, ih, X, Y, T + 0.5, h);
   }
+  let redWarpC = null;
+  function redWarp() { // the blue warp box tinted red, made once
+    if (redWarpC) return redWarpC;
+    const im = img("warp"); if (!ready(im)) return null;
+    const c = document.createElement("canvas"); c.width = im.naturalWidth; c.height = im.naturalHeight;
+    const x = c.getContext("2d"); x.drawImage(im, 0, 0); x.globalCompositeOperation = "source-atop"; x.fillStyle = "rgba(210,30,25,.55)"; x.fillRect(0, 0, c.width, c.height);
+    return (redWarpC = c);
+  }
   function drawImg(k, x, y, w, h) { const im = img(k); if (ready(im)) ctx.drawImage(im, x, y, w, h); }
   function fitImg(k, cx, by, w) { const im = img(k); if (!ready(im)) return; const h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, cx - w / 2, by - h, w, h); }
   function drawMover(m) {
@@ -1017,6 +1074,25 @@
         ctx.save(); if (e.open) ctx.globalAlpha = 0.55; fitImg("chest-gold", e.x, e.y + 2, 60); ctx.restore(); return; }
       case "coin": { const s = Math.abs(Math.cos(t * 3 + e.x0 * 0.01)); const im = img("coin"); if (ready(im)) ctx.drawImage(im, e.x - 13 * Math.max(0.25, s), e.y - 26, 26 * Math.max(0.25, s), 26); return; }
       case "pan": fitImg("pan", e.x, e.y + 2, 46); return;
+      case "sbolt": case "rwrench": case "ninja": case "igun": {
+        const H = { sbolt: 62, rwrench: 74, ninja: 56, igun: 64 }[e.k];
+        const atk = e.st === "charge" || e.st === "swing" || e.st === "leap" || e.st === "fire" || (e.k === "igun" && e.st === "aim");
+        const f = e.dead ? 3 : atk ? 2 : Math.floor(t * (e.st === "wind" ? 0 : 7)) % 2, im = img("en-" + e.k + f);
+        if (!ready(im)) return;
+        const h = f === 3 ? H * 0.55 : H, w = (h * im.naturalWidth) / im.naturalHeight, sh = e.shake ? (Math.random() - 0.5) * 4 : 0;
+        ctx.save(); ctx.translate(e.x + sh, e.y + 3);
+        if (e.dead) ctx.globalAlpha = Math.max(0, e.dead / 0.6);
+        if ((e.face || Math.sign(e.vx) || -1) > 0) ctx.scale(-1, 1);
+        ctx.drawImage(im, -w / 2, -h, w, h); ctx.restore(); ctx.globalAlpha = 1;
+        return;
+      }
+      case "hidewarp": {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 5);
+        ctx.save(); ctx.globalAlpha = 0.3 + 0.3 * pulse; ctx.fillStyle = "#ff3b2e"; ctx.beginPath(); ctx.ellipse(e.x, e.y - 30, 48, 42, 0, 0, 7); ctx.fill(); ctx.restore();
+        const im = redWarp(); if (im) { const w = 70, h = (w * im.height) / im.width; ctx.drawImage(im, e.x - w / 2, e.y + 2 - h, w, h); }
+        ctx.fillStyle = "#ffd0c8"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillText("?", e.x, e.y - 74 - pulse * 5);
+        return;
+      }
       case "tire": case "jack": case "creeper": case "toolcart": {
         const k = e.k, w = { tire: 38, jack: 54, creeper: 56, toolcart: 58 }[k];
         ctx.save(); ctx.translate(e.x, e.y);
@@ -1077,11 +1153,11 @@
         }
         return;
       }
-      case "bolt": if (e.glob || e.pud) { ctx.save(); ctx.globalAlpha = e.pud ? Math.min(1, e.life * 1.5) * 0.9 : 1; ctx.fillStyle = "#4fe03a"; ctx.strokeStyle = "#0b3d08"; ctx.lineWidth = 3; ctx.beginPath(); if (e.pud) ctx.ellipse(e.x, e.y - 4, 30, 8, 0, 0, 7); else ctx.ellipse(e.x, e.y - 10, 11, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8ff9e"; ctx.beginPath(); ctx.arc(e.x - 4, e.y - (e.pud ? 7 : 15), 3, 0, 7); ctx.fill(); ctx.restore(); return; } if (e.wave) { ctx.save(); ctx.globalAlpha = Math.min(1, e.life * 2); if (e.vx < 0) { ctx.translate(e.x, 0); ctx.scale(-1, 1); ctx.translate(-e.x, 0); } fitImg("fx-pound", e.x, e.y + 8, 76); ctx.restore(); return; } if (e.str) { const im = img("nut"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.spin || 0); ctx.drawImage(im, -14, -14, 28, 28); ctx.restore(); } return; } fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
+      case "bolt": if (e.glob || e.pud) { ctx.save(); ctx.globalAlpha = e.pud ? Math.min(1, e.life * 1.5) * 0.9 : 1; ctx.fillStyle = "#4fe03a"; ctx.strokeStyle = "#0b3d08"; ctx.lineWidth = 3; ctx.beginPath(); if (e.pud) ctx.ellipse(e.x, e.y - 4, 30, 8, 0, 0, 7); else ctx.ellipse(e.x, e.y - 10, 11, 13, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.fillStyle = "#c8ff9e"; ctx.beginPath(); ctx.arc(e.x - 4, e.y - (e.pud ? 7 : 15), 3, 0, 7); ctx.fill(); ctx.restore(); return; } if (e.wave) { ctx.save(); ctx.globalAlpha = Math.min(1, e.life * 2); if (e.vx < 0) { ctx.translate(e.x, 0); ctx.scale(-1, 1); ctx.translate(-e.x, 0); } fitImg("fx-pound", e.x, e.y + 8, 76); ctx.restore(); return; } if (e.art === "en-bullet") { const im = img("en-bullet"); if (ready(im)) { const w = 34, h = (w * im.naturalHeight) / im.naturalWidth; ctx.save(); ctx.translate(e.x, e.y - 8); if (e.vx > 0) ctx.scale(-1, 1); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); } return; } if (e.str) { const im = img("nut"); if (ready(im)) { ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.spin || 0); ctx.drawImage(im, -14, -14, 28, 28); ctx.restore(); } return; } fitImg(e.art || "nut", e.x, e.y + 11, 24); return;
       case "boss": {
-        const SPR = { gunner: ["gk", "shoot", 150], stomper: ["js", "attack", 175], kraken: ["ck", "attack", 150], serpent: ["tb", "attack", 140], vac: ["sv", "attack", 160] }[e.kind];
+        const SPR = { gunner: ["gk", "shoot", 150], stomper: ["js", "attack", 175], kraken: ["ck", "attack", 150], serpent: ["tb", "attack", 140], vac: ["sv", "attack", 160], king: ["wk", "attack", 190], captain: ["pc", "attack", 185] }[e.kind];
         if (SPR) {
-          const atk = { gunner: e.st === "fire", stomper: e.st === "rear" || e.st === "slam", kraken: e.st === "spray", serpent: e.st === "coil" || e.st === "leap", vac: e.st === "suck" }[e.kind] || e.pose > 0;
+          const atk = { gunner: e.st === "fire", stomper: e.st === "rear" || e.st === "slam", kraken: e.st === "spray", serpent: e.st === "coil" || e.st === "leap", vac: e.st === "suck", king: e.st === "rear" || e.st === "slam", captain: e.st === "coil" || e.st === "leap" }[e.kind] || e.pose > 0;
           const pose = SPR[0] + "-" + (e.st === "dead" ? "dead" : e.inv > 0.5 || e.st === "stun" || (e.st === "dazed" && e.kind === "vac") ? "hit" : atk ? SPR[1] : "idle");
           const im = img(pose); if (!ready(im)) return;
           const sh = e.shake ? (Math.random() - 0.5) * 6 : 0, H = e.st === "dead" ? SPR[2] * 0.62 : SPR[2], W = (H * im.naturalWidth) / im.naturalHeight;
@@ -1125,7 +1201,7 @@
         else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
         ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
-        const lab = arena && !arena.done ? "BEAT THE BOSS" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
+        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
         ctx.strokeText(lab, e.x, e.y - 112); ctx.fillText(lab, e.x, e.y - 112);
         return;
       }
@@ -1247,7 +1323,7 @@
     const s = load(), n = NLV();
     // a drawer opens once the one before it is cleared
     const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
-    const names = window.LT_LEVELS.map((l) => l.name);
+    const names = window.LT_LEVELS.slice(0, n).map((l) => l.name);
     let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>Beat the boss guarding each drawer, then jump in. Tap a stop on the map to play.</p>';
     // ---- stage map: drawer 1 at the bottom, stops sit on the bolt path painted in map-bg (724x2172) ----
     const BOLTS = [[280,2000],[317,1924],[455,1869],[410,1811],[280,1771],[325,1713],[455,1637],[360,1559],[317,1469],[452,1401],[400,1340],[319,1241],[465,1163],[409,1104],[328,1010],[470,931],[409,870],[274,817],[323,754],[479,671],[407,590],[331,494],[474,412],[305,326],[307,237],[428,172]];
@@ -1260,7 +1336,8 @@
     let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
     h += '<div class="ltmap" style="aspect-ratio:1/' + 3 * COP + ';background-size:100% ' + 100 / COP + '%;background-repeat:repeat-y">';
     if (n > 5) h += '<div class="ltmpart" style="top:' + ((Yp(4) + Yp(5)) / 2) + '%">PART 2 · THE DEEP DRAWERS</div>';
-    if (n > 10) h += '<div class="ltmpart" style="top:' + ((Yp(9) + Yp(10)) / 2) + '%">PART 3 · THE BACK LOT</div>';
+    for (const [k, label] of [[10, "PART 3 · THE BACK LOT"], [20, "PART 4 · THE TIRE SHOP"], [30, "PART 5 · THE PARKING GARAGE"], [40, "PART 6 · THE JUNKYARD GANG"]])
+      if (n > k) h += '<div class="ltmpart" style="top:' + ((Yp(k - 1) + Yp(k)) / 2) + '%">' + label + "</div>";
     names.forEach((nm, i) => {
       const done = s.done.includes(i), lock = !open(i), st = ((s.stars && s.stars[i]) || []).length, room = (s.rooms || []).includes(i);
       h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Yp(i) + '%"' + (lock ? " disabled" : "") + ">" +
@@ -1270,7 +1347,17 @@
     });
     h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
     const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
-    h += "</div><p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.length + "/" + n + " drawers cleared</p>";
+    h += "</div><p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.filter((i) => i < n).length + "/" + n + " drawers cleared</p>";
+    // hideouts: secret bad-guy levels behind red toolboxes, one per part
+    const hides = window.LT_LEVELS.map((l, i) => [l, i]).filter(([l]) => l.hidden);
+    if (hides.length) {
+      h += '<div class="lthide"><b>HIDEOUTS</b><span>Find the red toolboxes hidden in the drawers.</span><div>';
+      for (const [l, i] of hides) {
+        const found = tester() || (s.hide || []).includes(i), done = (s.hideDone || []).includes(i);
+        h += '<button class="lthb' + (found ? "" : " lock") + (done ? " done" : "") + '" data-i="' + i + '"' + (found ? "" : " disabled") + "><i>" + (done ? "✓" : found ? "!" : "?") + "</i>" + (found ? l.name : "???") + "</button>";
+      }
+      h += "</div></div>";
+    }
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
@@ -1278,6 +1365,7 @@
     card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
+    card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
       show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
@@ -1304,6 +1392,15 @@
     card.querySelector("#ltMenu").onclick = menu;
   }
   function showClear() {
+    if (window.LT_LEVELS[lvI].hidden) {
+      const c = clearInfo, back = hideFrom;
+      let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +250 hideout bonus)" : "") + " added to your wallet.</p>";
+      h += (back != null ? '<button class="ltbtn" id="ltNext">BACK TO DRAWER ' + (back + 1) + "</button>" : "") + '<button class="ltbtn' + (back != null ? " sub" : "") + '" id="ltMenu">ALL DRAWERS</button>';
+      show(h); say("win"); haptic("success");
+      const nx = card.querySelector("#ltNext"); if (nx) nx.onclick = () => { hideFrom = null; play(back); };
+      card.querySelector("#ltMenu").onclick = () => { hideFrom = null; menu(); };
+      return;
+    }
     const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
     let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';

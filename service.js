@@ -12,7 +12,19 @@
     funnel: { name: "Funnel", img: "svc-funnel.webp", kind: "tool" },
     ragblue: { name: "Blue shop rag", img: "svc-rag-blue.webp", kind: "tool" },
     ragred: { name: "Red shop rag", img: "svc-rag-red.webp", kind: "tool" },
-    jack: { name: "Floor jack", img: "tool-floorjack.webp", kind: "tool" },
+    jack: { name: "Floor jack", img: "svc-jack2.webp", kind: "tool" },
+    chock: { name: "Wheel chock", img: "svc-chock.webp", kind: "tool" },
+    impact: { name: "Impact gun", img: "svc-impact.webp", kind: "tool" },
+    prybar: { name: "Pry bar", img: "svc-prybar.webp", kind: "tool" },
+    compressor: { name: "Piston compressor", img: "svc-compressor.webp", kind: "tool" },
+    mallet: { name: "Rubber mallet", img: "svc-mallet.webp", kind: "tool" },
+    cleaner: { name: "Brake cleaner", img: "svc-cleaner.webp", kind: "tool" },
+    grease: { name: "Caliper grease", img: "svc-grease.webp", kind: "tool" },
+    padlube: { name: "Pad lubricant", img: "svc-padlube.webp", kind: "tool" },
+    torque: { name: "Torque wrench", img: "svc-torque.webp", kind: "tool" },
+    rotor: { name: "New rotor", img: "svc-rotor.webp", kind: "part" },
+    pads: { name: "Brake pads", img: "svc-pads.webp", kind: "part" },
+    clips: { name: "Pad clips", img: "svc-clips.webp", kind: "part" },
     lugwrench: { name: "Lug wrench", img: "svc-lugwrench.webp", kind: "tool" },
     piston: { name: "Caliper piston tool", img: "svc-piston.webp", kind: "tool" },
     filter: { name: "Oil filter", img: "svc-filter.webp", kind: "part" },
@@ -30,7 +42,7 @@
   };
   const JOBS = {
     oil: { name: "OIL CHANGE", short: "Oil change", needs: ["gloves", "pan", "wrenches", "filter", "ratchet", "funnel", "oil", "ragblue", "ragred"], secs: 60 },
-    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["gloves", "jack", "lugwrench", "ratchet", "piston", "brakes"], secs: 50 },
+    brake: { name: "FRONT BRAKE JOB", short: "Brake job", needs: ["chock", "impact", "jack", "ratchet", "prybar", "compressor", "mallet", "wirebrush", "cleaner", "grease", "padlube", "torque", "rotor", "pads", "clips"], secs: 95 },
     tire: { name: "TIRE REPLACEMENT", short: "Tire job", needs: ["valvetool", "beadbreaker", "tirebar", "wirebrush", "lube", "airhose", "weighthammer", "newtire", "weights"], secs: 85 },
   };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
@@ -123,7 +135,7 @@
     stores.innerHTML = '<div><img src="svc-bag.webp" alt=""><b>TOOL BAG</b><small>' + G.bag.length + " tools</small></div>" +
       '<div><img src="svc-cart.webp" alt=""><b>TOOL CART</b><small>' + Object.values(G.cart).reduce((a, b) => a + b, 0) + " parts</small></div>";
     box.append(stores);
-    if (tester()) { for (const id of JOBS.tire.needs) if (!has(id)) addItem(id); }
+    if (tester()) { for (const j of JOB_IDS()) for (const id of JOBS[j].needs) if (!has(id)) addItem(id); }
     for (const j of JOB_IDS()) {
       const job = JOBS[j], card = document.createElement("div");
       card.className = "gjob";
@@ -153,16 +165,33 @@
     { say: "Tap the oil cap to close it", tap: [0.6, 0.41, 0.18, 0.22], scene: "scene-engine-open.webp", next: "scene-engine-closed.webp", before: (s) => s.showFunnel(false) },
     { say: "Wipe up the spills with the red rag", use: "ragred", scene: "scene-engine-closed.webp" },
   ];
+  // brake view: layered wheel / caliper / pads / bracket / rotor, toggled with classes on #sBrk
+  const BK = (s, add, rem) => { const b = document.getElementById("sBrk"); (add || "").split(" ").filter(Boolean).forEach((c) => b.classList.add(c)); (rem || "").split(" ").filter(Boolean).forEach((c) => b.classList.remove(c)); };
   const BRAKE_STEPS = [
-    { say: "Put on your gloves", use: "gloves", scene: "car" },
+    { say: "Chock the rear wheels", use: "chock", scene: "car", before: () => BK(0, "", "nowheel hung nopads noclips nobracket norotor newrotor clean"), after: (s) => s.label("Chocked. It won't roll.") },
+    { say: "Break the lug nuts loose with the impact gun", use: "impact", scene: "car", after: (s) => s.wait("BRRRAP! BRRRAP!", 900) },
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Loosen the lug nuts and take the wheel off", use: "lugwrench", scene: "car", next: "svc-car-jack.webp" },
-    { say: "Unbolt the caliper", use: "ratchet", scene: "svc-car-jack.webp", next: "svc-brakes-worn.webp", after: (s) => { s.label("Worn out! Rusty rotor, pads down to metal."); s.wait("Pulling the old rotor and pads…", 1600); } },
-    { say: "Push the caliper piston back in", use: "piston", scene: "svc-brakes-worn.webp", after: (s) => s.label("Piston pushed back. Room for the thick new pads!") },
-    { say: "Install the new rotor & pads", use: "brakes", consume: "brakes", scene: "svc-brakes-worn.webp", next: "svc-brakes-new.webp", after: (s) => s.label("Fresh rotor and pads!") },
-    { say: "Bolt the caliper back on", use: "ratchet", scene: "svc-brakes-new.webp" },
-    { say: "Put the wheel back on and tighten the lug nuts", use: "lugwrench", scene: "svc-car-jack.webp", next: "car" },
+    { say: "Spin the lug nuts off with the impact gun", use: "impact", scene: "brk", after: (s) => s.wait("Zip, zip, zip…", 900) },
+    { say: "Pull the wheel off", act: "PULL THE WHEEL OFF", scene: "brk", after: (s) => { BK(s, "nowheel"); s.label("Worn out! Grooved, rusty rotor."); } },
+    { say: "Remove the caliper slide bolts", use: "ratchet", scene: "brk" },
+    { say: "Pry the caliper off and hang it", use: "prybar", scene: "brk", after: (s) => { BK(s, "hung"); s.label("Hang it, never let it dangle on the hose!"); } },
+    { say: "HOLD the piston compressor to push the piston back", use: "compressor", hold: 1400, scene: "brk", holdText: "Squeezing… keep holding" },
+    { say: "Pull out the old pads and clips", act: "PULL OLD PADS", scene: "brk", after: (s) => BK(s, "nopads noclips") },
+    { say: "Unbolt the caliper bracket", use: "ratchet", scene: "brk", after: (s) => BK(s, "nobracket") },
+    { say: "Knock the rusty rotor loose with the mallet", use: "mallet", scene: "brk", after: (s) => { BK(s, "norotor"); s.label("Rotor off. Look at that rusty hub!"); } },
+    { say: "HOLD the wire brush to clean the hub", use: "wirebrush", hold: 1400, scene: "brk", holdText: "Scrubbing… keep holding", after: (s) => BK(s, "clean") },
+    { say: "Slide the new rotor on", use: "rotor", consume: "rotor", scene: "brk", after: (s) => BK(s, "newrotor", "norotor") },
+    { say: "Spray the new rotor with brake cleaner", use: "cleaner", scene: "brk", after: (s) => s.wait("Pssssht! Cleaning off the factory oil…", 1100) },
+    { say: "Bolt the caliper bracket back on", use: "ratchet", scene: "brk", after: (s) => BK(s, "", "nobracket") },
+    { say: "Snap in the new pad clips", use: "clips", consume: "clips", scene: "brk", after: (s) => BK(s, "", "noclips") },
+    { say: "Grease the slide pins", use: "grease", scene: "brk", after: (s) => s.label("Pins slide nice and smooth.") },
+    { say: "Put pad lube on the back of the new pads", use: "padlube", scene: "brk", after: (s) => s.label("No squeaks!") },
+    { say: "Install the new brake pads", use: "pads", consume: "pads", scene: "brk", after: (s) => BK(s, "", "nopads") },
+    { say: "Slide the caliper back over the pads", act: "MOUNT CALIPER", scene: "brk", after: (s) => BK(s, "", "hung") },
+    { say: "Tighten the caliper slide bolts", use: "ratchet", scene: "brk" },
+    { say: "Put the wheel on and run the lug nuts down", use: "impact", scene: "brk", after: (s) => { BK(s, "", "nowheel"); s.wait("Snugging them down…", 800); } },
     { say: "Lower the car", use: "jack", scene: "car", after: (s) => s.lift(false) },
+    { say: "Torque the lug nuts to spec in a star pattern", use: "torque", scene: "car", after: (s) => s.wait("Click… click… click… 100 ft-lb", 1100) },
     { say: "Pump the brake pedal 3 times", pump: 3, scene: "car" },
   ];
 
@@ -199,7 +228,7 @@
     const tools = JOBS[j].needs.slice().sort(() => Math.random() - 0.5);
     el.className = "";
     el.innerHTML = '<div class="sh"><div><b>' + JOBS[j].name + '</b><small id="sStep"></small></div><div id="sTime"></div></div><div class="bbar"><i id="sBar"></i></div>' +
-      '<div class="sscene" id="sScene"><img id="sImg" alt=""><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div><div id="sScreen" class="sscreen"></div><div id="sPsi" class="spsi"><b>0</b><small>PSI</small></div><div id="sHold" class="swait"><span></span><i></i></div></div>' +
+      '<div class="sscene" id="sScene"><img id="sImg" alt=""><div id="sBrk"><i class="hub"></i><img class="rotor" src="brk-rotor.webp" alt=""><img class="bracket" src="brk-bracket.webp" alt=""><img class="clips" src="brk-clips.webp" alt=""><img class="pads" src="brk-pads.webp" alt=""><img class="caliper" src="brk-caliper.webp" alt=""><img class="wheel" src="brk-wheel.webp" alt=""></div><img id="sCar" class="scar" alt=""><img id="sJack" class="sjack" src="tool-floorjack.webp" alt=""><img id="sPan" class="span" src="svc-pan.webp" alt=""><img id="sFunnel" class="sfunnel" src="svc-funnel.webp" alt=""><img id="sDip" class="sdip" alt=""><div id="sTap" class="stap"></div><div id="sLabel" class="slabel"></div><div id="sMeter" class="smeter"><i></i><span>MAX</span><span>MIN</span></div><button id="sAct" class="sact"></button><div id="sWait" class="swait"><span></span><i></i></div><div id="sScreen" class="sscreen"></div><div id="sPsi" class="spsi"><b>0</b><small>PSI</small></div><div id="sHold" class="swait"><span></span><i></i></div></div>' +
       '<div class="stray"><div class="sl">TOOL BAG</div><div class="srow" id="sBag"></div><div class="sl">TOOL CART</div><div class="srow" id="sCartRow"></div></div>';
     // the brake job zooms in on a blue sedan with its wheel off, so start with that same sedan
     const carSrc = j === "oil" ? "car-" + (1 + (level % 7)) + ".webp" : "car-7.webp";
@@ -236,9 +265,9 @@
       wait: (t, ms) => { busy = true; const w = $("sWait"); w.querySelector("span").textContent = t; w.classList.add("on"); w.querySelector("i").style.transition = "none"; w.querySelector("i").style.transform = "scaleX(0)"; void w.offsetWidth; w.querySelector("i").style.transition = "transform " + ms + "ms linear"; w.querySelector("i").style.transform = "scaleX(1)"; setTimeout(() => { w.classList.remove("on"); busy = false; }, ms); },
     };
     function setScene(src) {
-      const isCar = src === "car";
-      $("sScene").classList.toggle("carview", isCar);
-      if (!isCar) $("sImg").src = src;
+      const isCar = src === "car", isBrk = src === "brk";
+      $("sScene").classList.toggle("carview", isCar); $("sScene").classList.toggle("brkview", isBrk);
+      if (!isCar && !isBrk) $("sImg").src = src;
     }
     function nextStep() {
       i++;
@@ -347,5 +376,5 @@
     nextStep();
   }
 
-  window.Service = { G, ready, missing, showGarage, runJob, addItem, ITEMS, JOBS, TIRE_STEPS };
+  window.Service = { G, ready, missing, showGarage, runJob, addItem, ITEMS, JOBS, TIRE_STEPS, BRAKE_STEPS };
 })();

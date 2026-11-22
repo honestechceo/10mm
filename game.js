@@ -3404,6 +3404,13 @@ function giftCheck(amount, id) {
 function redeemGift() {
   const raw = (window.prompt("Enter your gift code") || "").trim().toUpperCase().replace(/\s+/g, "");
   if (!raw) return;
+  // the tester code (only its fingerprint lives here) turns tester mode on or off
+  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "TE4SZJNC") {
+    const on = localStorage.getItem("tenmm-tester") !== "1";
+    localStorage.setItem("tenmm-tester", on ? "1" : "0");
+    $("details").textContent = on ? "Tester mode ON: every level, drawer and Service Bay kit is open." : "Tester mode OFF.";
+    buzz("success"); return;
+  }
   const m = raw.match(/^(\d{1,5})-([A-Z0-9]{4})-([A-Z0-9]{4})$/);
   let used = []; try { used = JSON.parse(localStorage.getItem("tenmm-redeemed") || "[]"); } catch (e) {}
   if (!m || giftCheck(+m[1], m[2]) !== m[3] || +m[1] > 20000) { $("details").textContent = "That code doesn't look right. Check it and try again."; buzz("heavy"); return; }
@@ -3852,20 +3859,9 @@ function showLevels() {
   $("message").textContent = "PICK A GARAGE";
   const tester = localStorage.getItem("tenmm-tester") === "1";
   $("details").textContent = tester
-    ? "TESTER MODE: every level is open. Tap the title 7 times to turn it off."
+    ? "TESTER MODE: every level is open. Enter the tester code again in Settings > Gift code to turn it off."
     : "Replay any level you have unlocked (" + best + " of " + MAX_LEVEL + ").";
-  // hidden tester switch: tap the title 7 times quickly. Opens every level without touching real progress.
-  $("message").onclick = () => {
-    const now = Date.now();
-    showLevels.taps = (now - (showLevels.last || 0) < 1500 ? (showLevels.taps || 0) : 0) + 1;
-    showLevels.last = now;
-    if (showLevels.taps >= 7) {
-      showLevels.taps = 0;
-      localStorage.setItem("tenmm-tester", tester ? "0" : "1");
-      buzz("success");
-      showLevels();
-    }
-  };
+  $("message").onclick = null;
   $("menuExtra").style.display = "none";
   $("menuSettings").style.display = "none";
   $("menuLevels").style.display = "none";

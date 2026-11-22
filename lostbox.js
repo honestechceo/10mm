@@ -12,7 +12,7 @@
   const SOLID = "#=CU?RSD<>i";
   const SEMI = "-q"; // land from above only (q crumbles)
   const SAVE = "tenmm-lt";
-  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg", tireshop: "bg-tireshop.jpg", parkgarage: "bg-parkgarage.jpg", hideout: "room-bg" };
+  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg", tireshop: "bg-tireshop.jpg", parkgarage: "bg-parkgarage.jpg", junkyard: "bg-junkyard.jpg", paintshop: "bg-paintshop.jpg", hideout: "room-bg" };
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD! Blocks the next hit, no time limit"], torque: [10, "TORQUE STAR! Smash through anything"],
@@ -1336,7 +1336,7 @@
     let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
     h += '<div class="ltmap" style="aspect-ratio:1/' + 3 * COP + ';background-size:100% ' + 100 / COP + '%;background-repeat:repeat-y">';
     if (n > 5) h += '<div class="ltmpart" style="top:' + ((Yp(4) + Yp(5)) / 2) + '%">PART 2 · THE DEEP DRAWERS</div>';
-    for (const [k, label] of [[10, "PART 3 · THE BACK LOT"], [20, "PART 4 · THE TIRE SHOP"], [30, "PART 5 · THE PARKING GARAGE"], [40, "PART 6 · THE JUNKYARD GANG"]])
+    for (const [k, label] of [[10, "PART 3 · THE BACK LOT"], [15, "PART 4 · THE BODY SHOP"], [20, "PART 5 · THE TIRE SHOP"], [30, "PART 6 · THE PARKING GARAGE"], [40, "PART 7 · THE JUNKYARD GANG"]])
       if (n > k) h += '<div class="ltmpart" style="top:' + ((Yp(k - 1) + Yp(k)) / 2) + '%">' + label + "</div>";
     names.forEach((nm, i) => {
       const done = s.done.includes(i), lock = !open(i), st = ((s.stars && s.stars[i]) || []).length, room = (s.rooms || []).includes(i);

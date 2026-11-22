@@ -1204,10 +1204,10 @@
       else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + Math.abs(pl.vx) / 60 / 34; mf = "mech-walk" + (1 + (Math.floor(pl.rp) % 4)); }
       const mi = img(mf);
       if (ready(mi)) {
-        const h = 150, w = (h * mi.naturalWidth) / mi.naturalHeight;
+        const h = 171, w = (h * mi.naturalWidth) / mi.naturalHeight;
         ctx.save(); ctx.translate(pl.x, pl.y + 3); if (pl.face < 0) ctx.scale(-1, 1);
         if (pow.torque > 0) { ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 14); ctx.fillStyle = "hsl(" + ((t * 360) % 360) + ",100%,60%)"; ctx.beginPath(); ctx.ellipse(0, -h * 0.45, w * 0.45, h * 0.52, 0, 0, 7); ctx.fill(); ctx.globalAlpha = 1; }
-        ctx.drawImage(mi, -w / 2, -h * 0.98, w, h);
+        ctx.drawImage(mi, -w / 2, -h * 0.985, w, h);
         ctx.restore();
       }
       return;
@@ -1235,7 +1235,7 @@
     if (f.k === "coinpop") { ctx.globalAlpha = Math.min(1, f.t * 3); fitImg("coin", f.x, f.y, 26); ctx.globalAlpha = 1; }
     if (f.k === "pound") { ctx.globalAlpha = Math.min(1, f.t / 0.25); const w = 150 * (1.25 - f.t * 0.6); fitImg("fx-pound", f.x, f.y + 14, w); ctx.globalAlpha = 1; }
     if (f.k === "mfx") { ctx.globalAlpha = Math.min(1, f.t / 0.2); const w = 90 * (1.3 - f.t); fitImg("mech-impact", f.x, f.y + w * 0.3, w); ctx.globalAlpha = 1; }
-    if (f.k === "mbreak") { const im = img("mech-break"); if (ready(im)) { ctx.save(); ctx.globalAlpha = Math.min(1, f.t / 0.4); ctx.translate(f.x, f.y + 3); if (f.f < 0) ctx.scale(-1, 1); const h = 150, w = h * im.naturalWidth / im.naturalHeight; ctx.drawImage(im, -w / 2, -h * 0.98 - (0.8 - f.t) * 30, w, h); ctx.restore(); } }
+    if (f.k === "mbreak") { const im = img("mech-break"); if (ready(im)) { ctx.save(); ctx.globalAlpha = Math.min(1, f.t / 0.4); ctx.translate(f.x, f.y + 3); if (f.f < 0) ctx.scale(-1, 1); const h = 171, w = h * im.naturalWidth / im.naturalHeight; ctx.drawImage(im, -w / 2, -h * 0.985 - (0.8 - f.t) * 30, w, h); ctx.restore(); } }
     if (f.k === "spark") { ctx.globalAlpha = f.t / 0.35; fitImg("star", f.x, f.y + 14, 30 * (1.4 - f.t)); ctx.globalAlpha = 1; }
   }
 

@@ -212,14 +212,14 @@
   }
   function grabStar(e) {
     e.alive = false; fx.push({ k: "spark", x: e.x, y: e.y - 17, t: 0.45 });
-    if (e.ghost) { say("grab"); return; }
+    if (e.ghost) { say("coin"); return; }
     const s = load(); s.stars = s.stars || {}; const a = (s.stars[lvI] = s.stars[lvI] || []);
     if (!a.includes(e.sid)) a.push(e.sid);
     const tot = starTotal(s), due = Math.floor(tot / STAR_STEP);
     let paid = 0;
     if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY; s.starPaid = due; }
     store(s);
-    say("power"); haptic("success"); starHud();
+    say("star"); haptic("success"); starHud();
     if (paid) {
       try { totalCoins += paid; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (x) {}
       toast("★ " + tot + " STARS! +" + paid + " COINS to your wallet");
@@ -244,7 +244,7 @@
     pl.x = S.back.x; pl.y = S.back.y; pl.vx = 0; pl.vy = -300; pl.ground = false; pl.on = null; pl.inv = 1.2;
     hp = keep.hp; pow = keep.pow; fx = [];
     cam = Math.max(0, Math.min(W * T - VW(), pl.x - VW() * 0.35));
-    mode = "play"; say("grab"); haptic("medium");
+    mode = "play"; say("warp"); haptic("medium");
     if (pow.torqueBank) { pow.torqueBank = 0; givePower("torque"); }
   }
   const VW = () => viewW / zoom;
@@ -374,36 +374,36 @@
     if (pl.y > ROWS * T + 80) die("pit");
   }
   function bonk(cx, cy, ch) {
-    if (ch === "?") { grid[cy][cx] = "S"; addCoin(cx * T + T / 2, cy * T - 20, true); fx.push({ k: "bump", cx, cy, t: 0.15 }); say("grab"); }
+    if (ch === "?") { grid[cy][cx] = "S"; addCoin(cx * T + T / 2, cy * T - 20, true); fx.push({ k: "bump", cx, cy, t: 0.15 }); say("bump"); }
     else if (ch === "U") {
       grid[cy][cx] = "S"; fx.push({ k: "bump", cx, cy, t: 0.15 }); say("power");
       const kind = (blockKw[cx + "," + cy] || {}).pu || "shield";
       ents.push({ k: "pu", pu: kind, x: cx * T + T / 2, y: cy * T, x0: 0, y0: 0, w: 34, h: 34, alive: true, rise: 0 });
     } else if (ch === "C") {
-      grid[cy][cx] = "."; say("hit"); haptic("light");
+      grid[cy][cx] = "."; say("crate"); haptic("light");
       for (let i = 0; i < 6; i++) fx.push({ k: "chip", x: cx * T + T / 2, y: cy * T + T / 2, vx: (Math.random() - 0.5) * 360, vy: -200 - Math.random() * 260, t: 0.9, c: i % 2 ? "#e39a2c" : "#a5641a" });
       if ((cx * 7 + cy * 3) % 3 === 0) addCoin(cx * T + T / 2, cy * T, true);
-    } else if (ch === "H") { grid[cy][cx] = "S"; addCoin(cx * T + T / 2, cy * T - 20, true); fx.push({ k: "bump", cx, cy, t: 0.15 }); say("grab"); toast("Hidden block!"); }
+    } else if (ch === "H") { grid[cy][cx] = "S"; addCoin(cx * T + T / 2, cy * T - 20, true); fx.push({ k: "bump", cx, cy, t: 0.15 }); say("bump"); toast("Hidden block!"); }
     else fx.push({ k: "bump", cx, cy, t: 0.08 });
   }
   function gain(n) { coinsRun += n * (pow && pow.lucky > 0 ? 2 : 1); hud.Coins.textContent = coinsRun; }
   function addCoin(x, y, pop) {
     gain(1);
     if (pop) fx.push({ k: "coinpop", x, y, t: 0.5 });
-    say("grab");
+    say("coin");
   }
   function hurt(src) {
     if (pl.inv > 0 || mode !== "play" || pow.torque > 0) return;
     if (pow.mech > 0) {
-      pow.mech--; pl.inv = 1.2; pl.hitT = 0.45; say("hit"); haptic("heavy"); shakeT = 0.2; hudKey = "";
+      pow.mech--; pl.inv = 1.2; pl.hitT = 0.45; say("clank"); haptic("heavy"); shakeT = 0.2; hudKey = "";
       pl.vy = -300; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 180; pl.ground = false; pl.on = null;
       if (pow.mech === 0) { fx.push({ k: "mbreak", x: pl.x, y: pl.y, t: 0.8, f: pl.face }); toast("MECH BROKEN! Finish it the old way"); }
       else toast("Armor hit! " + pow.mech + " plate" + (pow.mech > 1 ? "s" : "") + " left");
       return;
     }
-    if (pow.shield) { pow.shield = 0; pl.inv = 1.2; say("hit"); haptic("medium"); toast("Shield saved you! It's used up."); return; }
+    if (pow.shield) { pow.shield = 0; pl.inv = 1.2; say("clank"); haptic("medium"); toast("Shield saved you! It's used up."); return; }
     for (const k of HITS) if (pow[k] > 0) { pow[k]--; if (!pow[k]) toast(PU[k][1].split("!")[0] + " is used up"); }
-    hp--; pl.inv = 1.4; pl.hitT = 0.45; say("hit"); haptic("heavy");
+    hp--; pl.inv = 1.4; pl.hitT = 0.45; say("hurt"); haptic("heavy");
     pl.vy = -420; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 220; pl.ground = false; pl.on = null;
     if (hp <= 0) die("hp");
   }
@@ -446,7 +446,7 @@
         const c = ((t * timeScale) / 2.8 + e.ph) % 1, fl = e.y0, up = e.up;
         e.warn = c > 0.5 && c < 0.66;
         e.y = c < 0.66 ? up : c < 0.7 ? up + (fl - up) * ((c - 0.66) / 0.04) : c < 0.82 ? fl : fl - (fl - up) * ((c - 0.82) / 0.18);
-        if (c >= 0.7 && c < 0.72 && !e.thud) { e.thud = 1; if (Math.abs(e.x - pl.x) < 9 * T) { shakeT = Math.max(shakeT, 0.15); puff(e.x, fl, 6, "#c9b38a"); } }
+        if (c >= 0.7 && c < 0.72 && !e.thud) { e.thud = 1; if (Math.abs(e.x - pl.x) < 9 * T) { shakeT = Math.max(shakeT, 0.15); say("slam"); puff(e.x, fl, 6, "#c9b38a"); } }
         if (c < 0.7) e.thud = 0;
       }
       if (e.k === "chain") { e.ang = 0.95 * Math.sin(t * timeScale * 1.7 + e.ph * 6.28); e.x = e.ax + Math.sin(e.ang) * e.len; e.y = e.ay + Math.cos(e.ang) * e.len + e.h / 2; }
@@ -515,8 +515,8 @@
       case "pu": e.alive = false; givePower(e.pu); return;
       case "star": grabStar(e); return;
       case "mechpu": if (pow.mech > 0) return; e.alive = false; pow.mech = 3; pow.wrench = pow.pound = 0; say("power"); haptic("success"); shakeT = 0.25; fx.push({ k: "mfx", x: pl.x, y: pl.y - 50, t: 0.4 }); toast("RATCHET MECH! Tap PUNCH to fight the boss head-on"); hudKey = ""; return;
-      case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
-      case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); } return;
+      case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
+      case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
       case "gchest": if (!e.open) { e.open = 1; collected.add("chest" + lvI); fx.push({ k: "spark", x: e.x, y: e.y - 40, t: 0.5 }); for (let k = 0; k < 20; k++) addCoin(e.x, e.y - 40, k % 4 === 0); pow.torqueBank = 1; say("power"); haptic("success"); toast("TORQUE STAR saved! It kicks in when you go back up"); } return;
       case "check": if (!e.on) { ents.forEach((o) => o.k === "check" && (o.on = false)); e.on = true; cp = { x: e.x, y: e.y }; toast("CHECKPOINT!"); say("win"); haptic("success"); } return;
       case "spring": if (pl.vy >= 0 && py1 - b.y0 < 26) { pl.vy = -P.SPRING * (key.J ? 1.1 : 1); pl.jumps = 1; pl.ground = false; pl.on = null; e.squash = 0.2; say("flap"); } return;
@@ -524,7 +524,7 @@
     }
     // torque star: plow through anything that walks, flies or rolls (bosses just can't hurt you)
     if (pow.torque > 0) {
-      if (e.k !== "boss" && (e.stomp || e.walker || e.fly || e.bounce) && !e.dead) { e.dead = 0.6; e.vx = 0; gain(1); say("hit"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); return; }
+      if (e.k !== "boss" && (e.stomp || e.walker || e.fly || e.bounce) && !e.dead) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); return; }
       if (e.k === "boss" && pl.vy > 60 && py1 - b.y0 < 30 && e.inv <= 0 && bossStompable(e)) { bossHit(e); return; }
       return;
     }
@@ -538,7 +538,7 @@
     }
     if ((e.stomp || e.bounce) && fromAbove) {
       pl.vy = -P.JUMP * (key.J ? 0.95 : 0.7); pl.jumps = 1; pl.held = key.J;
-      if (e.stomp) { e.dead = 0.6; e.vx = 0; gain(1); say("hit"); haptic("medium"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); }
+      if (e.stomp) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); haptic("medium"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); }
       else say("land");
       return;
     }
@@ -547,18 +547,18 @@
   // ---------- bosses ----------
   function bossStompable(e) { return e.kind === "roller" ? e.st === "hot" : true; }
   function bossHit(e, ranged) {
-    e.hp--; e.inv = 0.9; if (!ranged) { pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; } say("hit"); haptic("heavy");
+    e.hp--; e.inv = 0.9; if (e.hp === 1) music("bossfast"); if (!ranged) { pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; } say("bosshit"); haptic("heavy");
     for (let i = 0; i < 6; i++) fx.push({ k: "chip", x: e.x, y: e.y - e.h / 2, vx: (Math.random() - 0.5) * 400, vy: -200 - Math.random() * 300, t: 0.6, c: i % 2 ? "#ffd23f" : "#fff", s: 7 });
     if (e.hp <= 0) {
       if (pow && pow.mech > 0) setTimeout(() => { gain(50); toast("MECH FINISH! +50 coins"); }, 900);
       e.st = "dead"; e.tt = 1.2; say("win"); haptic("success");
       for (let i = 0; i < 10; i++) ents.push({ k: "coin", x: e.x + (i - 4.5) * 20, y: e.y - 40 - (i % 3) * 18, x0: -1, y0: -1, w: 26, h: 26, alive: true, ph: 0 });
-      arena.on = false; arena.done = true; toast("DRAWER UNLOCKED!");
+      arena.on = false; arena.done = true; toast("DRAWER UNLOCKED!"); say("win"); music("lostbox");
     } else { e.st = "stun"; e.tt = 0.7; toast(e.hp === 1 ? "One more hit!" : e.hp + " hits to go!"); }
   }
   function startBoss() {
     arena.on = true; boss.st = "intro"; boss.tt = 1.1; boss.inv = 0;
-    toast(boss.name + "!"); say("grab"); haptic("medium");
+    toast(boss.name + "!"); say("roar"); music("boss"); haptic("medium");
     const tip = { walker: "Stomp it on the head!", charger: "Jump over its charge, stomp it when it stops!", flyer: "Dodge the sparks. Stomp it when it swoops down!", roller: "Stay away until it overheats, then stomp!", magnet: "Don't get pulled in! Stomp it when it swoops!" }[boss.kind];
     setTimeout(() => mode === "play" && arena && arena.on && toast(tip), 1300);
   }
@@ -583,7 +583,7 @@
         ground();
         if (e.st === "move") { if (e.tt <= 0) { e.st = "wind"; e.tt = 0.55; e.dir = e.face; } }
         else if (e.st === "wind") { e.shake = 1; if (e.tt <= 0) { e.st = "charge"; e.shake = 0; } }
-        else if (e.st === "charge") { e.x += e.dir * 430 * sp * hd; if (walls()) { e.st = "dazed"; e.tt = 1.3; say("hit"); haptic("medium"); puff(e.x + e.dir * 30, e.y - 30, 8, "#fff"); } }
+        else if (e.st === "charge") { e.x += e.dir * 430 * sp * hd; if (walls()) { e.st = "dazed"; e.tt = 1.3; say("slam"); haptic("medium"); puff(e.x + e.dir * 30, e.y - 30, 8, "#fff"); } }
         else if (e.st === "dazed") { if (e.tt <= 0) { e.st = "move"; e.tt = 0.9 / sp; } }
         break;
       case "flyer": case "magnet": // hovers high and drops sparks; every few seconds swoops down low
@@ -611,7 +611,7 @@
               const lob = e.shots === 0 && sp > 1.3;
               ents.push(lob ? { k: "bolt", x: e.x + e.dir * 60, y: e.y - 70, vx: e.dir * 300, vy: -520, w: 22, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, art: "nut" }
                             : { k: "bolt", str: 1, x: e.x + e.dir * 70, y: e.y - 34, vx: e.dir * 420 * Math.min(1.4, sp), vy: 0, w: 24, h: 22, x0: 0, y0: 0, alive: true, hurt: 1, art: "nut" });
-              say("hit"); shakeT = Math.max(shakeT, 0.08); puff(e.x + e.dir * 70, e.y - 40, 5, "#fff"); e.tt = 0.42; e.pose = 0.3;
+              say("shot"); shakeT = Math.max(shakeT, 0.08); puff(e.x + e.dir * 70, e.y - 40, 5, "#fff"); e.tt = 0.42; e.pose = 0.3;
             } else { e.st = "move"; e.tt = 2.4 / sp; }
           }
         }
@@ -750,12 +750,12 @@
   }
   function action() {
     if (mode !== "play" || !pow) return;
-    if (pow.mech > 0) { if (punchT <= 0) { punchT = 0.34; punchHit = false; say("hit"); } return; }
+    if (pow.mech > 0) { if (punchT <= 0) { punchT = 0.34; punchHit = false; say("punch"); } return; }
     if (pow.wrench > 0 && throwCD <= 0) {
       throwCD = 0.28; say("flap"); haptic("light");
       ents.push({ k: "wrench", x: pl.x + pl.face * 20, y: pl.y - 26, vx: pl.face * 640 + pl.vx * 0.3, vy: -140, w: 30, h: 30, alive: true, life: 1.1, rot: 0, x0: 0, y0: 0 });
     } else if (pow.pound > 0 && !pl.ground && !pl.pounding) {
-      pl.pounding = true; pl.vx = 0; pl.vy = 1150; say("hit");
+      pl.pounding = true; pl.vx = 0; pl.vy = 1150; say("whoosh");
     }
   }
   function wrenchStep(e, dt) {
@@ -767,11 +767,11 @@
       const b = { x0: o.x - o.w / 2, x1: o.x + o.w / 2, y0: o.y - o.h, y1: o.y };
       if (e.x < b.x0 - 10 || e.x > b.x1 + 10 || e.y < b.y0 - 10 || e.y > b.y1 + 10) continue;
       if (o.k === "boss") { if (o.st !== "wait" && o.st !== "dead" && (o.inv || 0) <= 0 && bossStompable(o)) { bossHit(o, true); e.alive = false; } continue; }
-      if (o.stomp || o.walker || o.fly || o.bounce) { o.dead = 0.6; o.vx = 0; gain(1); say("hit"); fx.push({ k: "spark", x: o.x, y: b.y0, t: 0.35 }); e.alive = false; return; }
+      if (o.stomp || o.walker || o.fly || o.bounce) { o.dead = 0.6; o.vx = 0; gain(1); say("stomp"); fx.push({ k: "spark", x: o.x, y: b.y0, t: 0.35 }); e.alive = false; return; }
     }
   }
   function poundImpact() {
-    pl.pounding = false; shakeT = 0.3; say("hit"); haptic("heavy");
+    pl.pounding = false; shakeT = 0.3; say("slam"); haptic("heavy");
     fx.push({ k: "pound", x: pl.x, y: pl.y, t: 0.45 });
     for (const o of ents) {
       if (!o.alive || o.dead) continue;
@@ -788,7 +788,7 @@
   // ---------- drawer sequence ----------
   let exitEnt = null;
   function enterDrawer(e) {
-    mode = "drawer"; drawerT = 0; exitEnt = e; pl.vx = 0; say("grab"); haptic("success");
+    mode = "drawer"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); music("lostbox"); haptic("success");
     chase = null;
   }
   function finishLevel() {
@@ -1282,7 +1282,9 @@
   // Ratchet Mech: 3 random drawers per session get a mech pickup before the boss arena
   let mechSet = null;
   function pickMech() { const a = [...Array(NLV()).keys()].sort(() => Math.random() - 0.5); mechSet = new Set(a.slice(0, 3)); }
+  const music = (w) => { try { window.startMusic && startMusic(w); } catch (e) {} };
   function play(i) {
+    music("lostbox");
     if (!mechSet) pickMech();
     hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; fit();
     startLevel(i); coinsRun = 0; hud.Coins.textContent = 0;

@@ -12,7 +12,7 @@
   const SOLID = "#=CU?RSD<>i";
   const SEMI = "-q"; // land from above only (q crumbles)
   const SAVE = "tenmm-lt";
-  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg", tireshop: "bg-tireshop.jpg", parkgarage: "bg-parkgarage.jpg", junkyard: "bg-junkyard.jpg", paintshop: "bg-paintshop.jpg", hideout: "room-bg" };
+  const BG = { garage: "bg-garage.jpg", servicecenter: "bg-servicecenter.jpg", partsstore: "bg-partsstore.jpg", engineshop: "bg-engineshop.jpg", evtech: "bg-evtech.jpg", carwash: "bg-carwash.jpg", salvage: "bg-salvage.jpg", pitlane: "bg-pitlane.jpg", snow: "bg-snow.jpg", repairshop: "bg-repairshop.jpg", backlot: "bg-backlot.jpg", tireshop: "bg-tireshop.jpg", parkgarage: "bg-parkgarage.jpg", junkyard: "bg-junkyard.jpg", tireshop2: "bg-tireshop2.jpg", paintshop: "bg-paintshop.jpg", hideout: "bg-hideout.jpg" };
   const SLICK = { carwash: ["rgba(120,200,255,.45)", "#e8f6ff"], snow: ["rgba(190,230,255,.55)", "#ffffff"] };
   const BOSS_ART = { walker: "filter", charger: "jack", flyer: "meter", roller: "gear", magnet: "magnet" };
   const PU = { speed: [8, "SPEED BOOST"], slow: [6, "SLOW-MO"], magnet: [10, "COIN MAGNET"], spring: [10, "SUPER JUMP"], shield: [0, "SHIELD! Blocks the next hit, no time limit"], torque: [10, "TORQUE STAR! Smash through anything"],

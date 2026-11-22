@@ -3585,16 +3585,29 @@ function faceFor(skin) {
 const LOOK_HEAD = 150, LOOK_FOOT = 100; // extra room above (hats) and below (aura glow)
 const lookImgs = {};
 for (const l of LOOKS) { const im = new Image(); im.src = l.img || "look-" + l.id + ".webp"; lookImgs[l.id] = im; }
+// on the socket, lashes draw over a thick brow base so the skin's own brows are covered
+const lashFit = new Image(); lashFit.src = "look-lashes-fit.webp";
 const LSget = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } };
 const ownedLooks = () => LSget("tenmm-looks-owned", []);
 const equippedLooks = () => LSget("tenmm-looks", {});
 var heroComp = { key: "", url: "" };
 function lookKey() { const eq = equippedLooks(); return equippedSkin() + "|" + Object.keys(LOOK_SLOTS).map((s) => eq[s] || "").join(","); }
+const FACEBOX = {"chrome":[588,80,845,165,600,142,840,218,622,248,826,297],"golden10":[615,140,822,210,640,180,835,250,650,255,820,300],"rusty":[555,115,790,200,585,150,790,228,610,232,752,282],"black":[555,115,790,200,585,150,790,228,610,232,752,282],"candy":[555,115,790,200,585,150,790,228,610,232,752,282],"gold":[555,115,790,200,585,150,790,228,610,232,752,282],"neon":[555,115,790,200,585,150,790,228,610,232,752,282],"purple":[555,115,790,200,585,150,790,228,610,232,752,282],"champ":[555,115,790,200,585,150,790,228,610,232,752,282],"afterburner":[555,115,790,200,585,150,790,228,610,232,752,282],"diamond":[555,115,790,200,585,150,790,228,610,232,752,282],"santa":[555,115,790,200,585,150,790,228,610,232,752,282],"candycane":[555,115,790,200,585,150,790,228,610,232,752,282],"valentine":[555,115,790,200,585,150,790,228,610,232,752,282],"shamrock":[555,115,790,200,585,150,790,228,610,232,752,282],"easter":[555,115,790,200,585,150,790,228,610,232,752,282],"usa":[555,115,790,200,585,150,790,228,610,232,752,282],"pumpkin":[555,115,790,200,585,150,790,228,610,232,752,282],"turkey":[555,115,790,200,585,150,790,228,610,232,752,282],"pitcrew":[588,82,845,167,600,144,840,218,622,248,826,286],"firered":[588,75,845,160,600,137,840,204,622,234,826,272],"electric":[588,81,845,166,600,143,840,213,622,243,826,283],"pink":[588,76,845,161,600,138,840,206,622,236,826,275],"royal":[588,80,845,165,600,142,840,211,622,241,826,279],"camo":[588,90,845,175,600,152,840,217,622,249,826,286],"barnfind":[588,87,845,172,600,149,840,213,622,245,826,282],"checkered":[588,85,845,170,600,147,840,216,622,244,826,281],"oldglory":[588,76,845,161,600,138,840,208,622,238,826,277],"puertorico":[588,82,845,167,600,144,840,211,622,239,826,288],"blueline":[588,76,845,161,600,138,840,215,622,245,826,283],"carbon":[588,81,845,166,600,143,840,215,622,247,826,284],"trackday":[588,82,845,167,600,144,840,212,622,241,826,281],"goldrush":[588,85,845,170,600,147,840,214,622,246,826,284],"titanium":[588,80,845,165,600,142,840,208,622,238,826,276],"visor":[588,83,845,168,600,145,840,215,622,244,826,281],"menace":[588,93,845,178,600,155,840,218,622,252,826,278],"flames":[588,75,845,160,600,137,840,204,622,235,826,274],"frost":[588,85,845,170,600,147,840,212,622,243,826,280],"storm":[588,82,845,167,600,144,840,217,622,247,826,286],"haze":[588,85,845,170,600,147,840,212,622,240,826,277],"slime":[588,80,845,165,600,142,840,205,622,235,826,270],"biohazard":[588,91,845,176,600,153,840,217,622,249,826,285],"skull":[588,83,845,168,600,145,840,215,622,244,826,281],"galaxy":[588,83,845,168,600,145,840,212,622,242,826,280]};
+// eye and mouth looks fit boxes measured on each skin: B = brows, E = eyes, M = mouth (teeth)
+const LOOK_FIT = { brows: ["B", 1.04, "c", 0, 1.12], lashes: ["B", 1.06, "c", 0.05, 1.12], glasses: ["B", 1.0, "t", -0.05], ninja: ["E", 1.32, "c", -0.25], welding: ["E", 1.5, "c", -0.35],
+  lips: ["M", 1.15, "c", 0.05], grin: ["M", 1.12, "c", 0], mustache: ["M", 1.15, "b", 0.75], beard: ["M", 1.38, "t", -0.15] };
+function fitLook(skin, id, iw, ih) {
+  const fb = FACEBOX[skin], r = LOOK_FIT[id]; if (!fb || !r) return null;
+  const o = { B: 0, E: 4, M: 8 }[r[0]], x0 = fb[o], y0 = fb[o + 1], x1 = fb[o + 2], y1 = fb[o + 3], bh = y1 - y0;
+  const w = (x1 - x0) * r[1], h = r[4] ? bh * r[4] : (ih * w) / iw, cx = (x0 + x1) / 2;
+  const top = r[2] === "c" ? (y0 + y1) / 2 + r[3] * bh - h / 2 : r[2] === "t" ? y0 + r[3] * bh : y0 + r[3] * bh - h;
+  return [cx - w / 2, top, w, h];
+}
 function composeHero(done) {
   const key = lookKey(), eq = equippedLooks(), ids = Object.keys(LOOK_SLOTS).map((s) => eq[s]).filter((id) => id && lookImgs[id]);
   if (!ids.length) { heroComp = { key, url: "" }; return done && done(); }
   const base = new Image();
-  const all = [base, ...ids.map((id) => lookImgs[id])];
+  const all = [base, ...ids.map((id) => (id === "lashes" ? lashFit : lookImgs[id]))];
   const go = () => {
     if (!all.every((im) => im.complete)) return;
     if (lookKey() !== key) return;
@@ -3610,8 +3623,10 @@ function composeHero(done) {
     if (base.naturalWidth) x.drawImage(base, 0, LOOK_HEAD, 900, 430);
     for (const id of ids) {
       if (id === eq.aura) continue;
-      const L = LOOKS.find((l) => l.id === id), im = lookImgs[id];
+      const L = LOOKS.find((l) => l.id === id), im = id === "lashes" && lashFit.naturalWidth ? lashFit : lookImgs[id];
       if (!L || !im.naturalWidth) continue;
+      const fit = fitLook(equippedSkin(), id, im.naturalWidth, im.naturalHeight);
+      if (fit) { x.drawImage(im, fit[0], fit[1] + LOOK_HEAD, fit[2], fit[3]); continue; }
       const [an, ws, dy, mode] = L.at, [ax, ay, aw] = F[an];
       const pw = aw * ws, ph = (im.naturalHeight * pw) / im.naturalWidth, cy = ay + dy * aw + LOOK_HEAD;
       x.drawImage(im, ax - pw / 2, mode === "c" ? cy - ph / 2 : mode === "b" ? cy - ph : cy, pw, ph);

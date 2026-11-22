@@ -37,7 +37,7 @@
   };
   function preload() {
     Object.values(FR).flat().forEach(img);
-    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break bl-ground bl-wall bl-beam bl-conveyor bl-crusher bl-slick bl-engine bl-gremlin bl-bat".split(" ").forEach(img);
+    "t-square t-redbox t-bench t-crate drum qblock usedblk spring pan tire jack creeper toolcart gear hoist screw nut filter magnet coin pu-speed pu-slow pu-magnet pu-spring pu-shield drawer0 drawer1 drawer2 drawer3 chest lift-l star warp warpback chest-gold pu-torque pu-air pu-pound pu-wrench pu-lucky pu-heart wrench fx-air fx-pound pu-mech mech-pickup mech-impact mech-idle1 mech-idle2 mech-walk1 mech-walk2 mech-walk3 mech-walk4 mech-jump mech-wind mech-punch mech-hit mech-break bl-ground bl-wall bl-beam bl-conveyor bl-crusher bl-slick bl-engine bl-gremlin bl-bat bl-lift".split(" ").forEach(img);
     img("tool-piston.webp");
     "fly-nut fly-drone fly-screw ob-conveyor ob-ledge ob-ledge-cracked ob-zap-on ob-zap-off ob-scissor ob-flag-red ob-flag-green ob-chain logo bossa-filter bossa-jack bossa-meter bossa-gear bossa-magnet bossb-filter bossb-jack bossb-meter bossb-gear bossb-magnet gk-idle gk-shoot gk-hit gk-dead js-idle js-attack js-hit js-dead ck-idle ck-attack ck-hit ck-dead tb-idle tb-attack tb-hit tb-dead sv-idle sv-attack sv-hit sv-dead".split(" ").forEach(img);
   }
@@ -978,6 +978,17 @@
   function drawImg(k, x, y, w, h) { const im = img(k); if (ready(im)) ctx.drawImage(im, x, y, w, h); }
   function fitImg(k, cx, by, w) { const im = img(k); if (!ready(im)) return; const h = (w * im.naturalHeight) / im.naturalWidth; ctx.drawImage(im, cx - w / 2, by - h, w, h); }
   function drawMover(m) {
+    if (BL) { // Back Lot: two-post car lift arm; vertical lifts ride a red post
+      const li = img("bl-lift"); if (!ready(li)) return;
+      const k = li.naturalWidth / 269, aw = m.w + 22, ah = (62 * aw) / 205, px = m.x + m.w + 8;
+      if (m.k === "lift") {
+        const top = m.y0 - m.dy - 50, base = m.y0 + 40, pw = 34;
+        ctx.drawImage(li, 175 * k, 4 * k, 73 * k, 56 * k, px, top, pw, base - top - 14);
+        ctx.drawImage(li, 152 * k, 175 * k, 117 * k, 37 * k, px - 12, base - 16, pw + 24, 16);
+      }
+      ctx.drawImage(li, 0, 78 * k, 205 * k, 62 * k, m.x - 6, m.y - 5, aw, ah);
+      return;
+    }
     const im = img("ob-scissor"); if (!ready(im)) return;
     const iw = im.naturalWidth, ih = im.naturalHeight, topH = ih * 0.3;
     if (m.k === "lift") {

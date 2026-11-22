@@ -169,9 +169,8 @@
   const BK = (s, add, rem) => { const b = document.getElementById("sBrk"); (add || "").split(" ").filter(Boolean).forEach((c) => b.classList.add(c)); (rem || "").split(" ").filter(Boolean).forEach((c) => b.classList.remove(c)); };
   const BRAKE_STEPS = [
     { say: "Chock the rear wheels", use: "chock", scene: "car", before: () => BK(0, "", "nowheel hung nopads noclips nobracket norotor newrotor clean"), after: (s) => s.label("Chocked. It won't roll.") },
-    { say: "Break the lug nuts loose with the impact gun", use: "impact", scene: "car", after: (s) => s.wait("BRRRAP! BRRRAP!", 900) },
     { say: "Raise the car with the floor jack", use: "jack", scene: "car", after: (s) => s.lift(true) },
-    { say: "Spin the lug nuts off with the impact gun", use: "impact", scene: "brk", after: (s) => s.wait("Zip, zip, zip…", 900) },
+    { say: "Remove the lug nuts with the impact gun", use: "impact", scene: "brk", after: (s) => s.wait("BRRRAP! Zip, zip, zip…", 1000) },
     { say: "Pull the wheel off", act: "PULL THE WHEEL OFF", scene: "brk", after: (s) => { BK(s, "nowheel"); s.label("Worn out! Grooved, rusty rotor."); } },
     { say: "Remove the caliper slide bolts", use: "ratchet", scene: "brk" },
     { say: "Pry the caliper off and hang it", use: "prybar", scene: "brk", after: (s) => { BK(s, "hung"); s.label("Hang it, never let it dangle on the hose!"); } },

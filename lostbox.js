@@ -1251,10 +1251,14 @@
     let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>Beat the boss guarding each drawer, then jump in. Tap a stop on the map to play.</p>';
     // ---- stage map: drawer 1 at the bottom, stops sit on the bolt path painted in map-bg (724x2172) ----
     const BOLTS = [[280,2000],[317,1924],[455,1869],[410,1811],[280,1771],[325,1713],[455,1637],[360,1559],[317,1469],[452,1401],[400,1340],[319,1241],[465,1163],[409,1104],[328,1010],[470,931],[409,870],[274,817],[323,754],[479,671],[407,590],[331,494],[474,412],[305,326],[307,237],[428,172]];
-    const pick = (i) => BOLTS[Math.round((i * (BOLTS.length - 1)) / Math.max(1, n - 1))];
-    const X = (i) => (pick(i)[0] / 724) * 100, Yp = (i) => (pick(i)[1] / 2172) * 100;
+    // one copy of the toolbox art per 10 drawers, stacked; the bolt path continues up through each copy
+    const COP = Math.max(1, Math.ceil(n / 10)), PTS = [];
+    for (let k = 0; k < COP; k++) for (const [bx, by] of BOLTS) PTS.push([bx, (COP - 1 - k) * 2172 + by]);
+    const span = Math.min(PTS.length - 1, Math.round((BOLTS.length - 1) * (n / 10)));
+    const pick = (i) => PTS[Math.round((i * span) / Math.max(1, n - 1))];
+    const X = (i) => (pick(i)[0] / 724) * 100, Yp = (i) => (pick(i)[1] / (2172 * COP)) * 100;
     let cur = names.findIndex((_, i) => open(i) && !s.done.includes(i)); if (cur < 0) cur = n - 1;
-    h += '<div class="ltmap">';
+    h += '<div class="ltmap" style="aspect-ratio:1/' + 3 * COP + ';background-size:100% ' + 100 / COP + '%;background-repeat:repeat-y">';
     if (n > 5) h += '<div class="ltmpart" style="top:' + ((Yp(4) + Yp(5)) / 2) + '%">PART 2 · THE DEEP DRAWERS</div>';
     if (n > 10) h += '<div class="ltmpart" style="top:' + ((Yp(9) + Yp(10)) / 2) + '%">PART 3 · THE BACK LOT</div>';
     names.forEach((nm, i) => {

@@ -2653,6 +2653,8 @@ function loadSettings() {
     layout: "two",
     startMode: "tap",
     radio: null,
+    sfxVol: 1,
+    musicVol: 0.8,
   };
   try {
     const saved = JSON.parse(localStorage.getItem("tenmm-settings") || "{}");
@@ -3191,6 +3193,26 @@ function renderOptions() {
           audioReady();
           sfx("power");
         }
+      },
+    ],
+    [
+      "FX Volume",
+      Math.round((settings.sfxVol ?? 1) * 100) + "%",
+      settings.sfx,
+      () => {
+        const L = [1, 0.75, 0.5, 0.25], i = L.indexOf(settings.sfxVol ?? 1);
+        settings.sfxVol = L[(i + 1) % L.length];
+        window.applyVolumes && applyVolumes(); audioReady(); sfx("coin");
+      },
+    ],
+    [
+      "Music Volume",
+      Math.round((settings.musicVol ?? 0.8) * 100) + "%",
+      settings.radio !== "off",
+      () => {
+        const L = [0.8, 0.6, 0.4, 0.2, 1], i = L.indexOf(settings.musicVol ?? 0.8);
+        settings.musicVol = L[(i + 1) % L.length];
+        window.applyVolumes && applyVolumes();
       },
     ],
     [

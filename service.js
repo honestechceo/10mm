@@ -221,7 +221,7 @@
   let S = null;
   function runJob(j) {
     for (const id of JOBS[j].needs) if (!has(id)) return showGarage();
-    hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("bonus");
+    hidePanels(); $("overlay").classList.add("hidden"); stopMusic(); state = "bonus"; startMusic("service");
     let el = $("svc");
     if (!el) { el = document.createElement("div"); el.id = "svc"; document.body.append(el); }
     const steps = j === "oil" ? OIL_STEPS : j === "tire" ? TIRE_STEPS : BRAKE_STEPS, secs = JOBS[j].secs;
@@ -289,7 +289,7 @@
     }
     function done(st) {
       if (st.consume) { G.cart[st.consume] = Math.max(0, (G.cart[st.consume] || 0) - 1); save(); const b = el.querySelector('.stool[data-id="' + st.consume + '"]'); if (b) b.classList.add("used"); }
-      sfx("power"); buzz("light"); pop("✓", true);
+      sfx((window.TOOL_SFX && TOOL_SFX[st.use]) || (st.pump ? "pedal" : "ok")); if (st.use && window.TOOL_SFX && TOOL_SFX[st.use]) setTimeout(() => sfx("ok"), 380); buzz("light"); pop("✓", true);
       if (st.next) setScene(st.next);
       if (st.after) st.after(S);
       setTimeout(() => { const go = () => (busy ? setTimeout(go, 100) : nextStep()); go(); }, 350);
@@ -326,7 +326,7 @@
       e.preventDefault(); if (over || busy) return;
       const st = steps[i];
       if (st.act) { $("sAct").className = "sact"; done(st); return; }
-      if (st.pump) { pumps++; sfx("flap"); buzz("medium"); pop("PUMP " + pumps, true); if (pumps >= st.pump) { $("sAct").className = "sact"; done(st); } return; }
+      if (st.pump) { pumps++; sfx("pedal"); buzz("medium"); pop("PUMP " + pumps, true); if (pumps >= st.pump) { $("sAct").className = "sact"; done(st); } return; }
       if (!st.check) return;
       const full = oilLvl >= 0.7 && oilLvl <= 0.9;
       S.dip(oilLvl < 0.7 ? "dip-low.webp" : "dip-full.webp");

@@ -60,7 +60,7 @@ window.__ltReach = function (li, room) {
   const onLedge = (x, y, up) => S.findIndex((s) => s.mover === undefined && s.y === (y + up) * T && s.cols[0] <= x && x < s.cols[1]);
   L.forEach((r, y) => [...r].forEach((c, x) => {
     if (c === "*" && !seen.has(onLedge(x, y, 2))) problems.push("star at column " + x + " row " + y + " not reachable");
-    if ((c === "Y" || c === "Q") && !seen.has(onLedge(x, y, 1))) problems.push(c + " at column " + x + " not reachable");
+    if ((c === "Y" || c === "Q" || c === "V") && !seen.has(onLedge(x, y, 1))) problems.push(c + " at column " + x + " not reachable");
   }));
   const unreached = S.map((s, i) => [s, i]).filter(([s, i]) => !seen.has(i) && s.mover === undefined).map(([s]) => s.cols.join("-") + "@" + s.y / T);
   return { level: li + 1, surfaces: S.length, reachable: seen.size, probes, problems, unreached };

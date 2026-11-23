@@ -2226,19 +2226,22 @@ function render() {
     ctx.fill();
     ctx.restore();
   }
-  ctx.save();
-  ctx.translate(player.x, player.y);
-  ctx.rotate(Math.sin(player.angle) * 0.22);
-  const hero = heroSprites.socket;
-  if (hero && hero.complete && hero.naturalWidth) {
-    // a composite (skin + looks) has headroom above and below the 900x430 sprite
-    const big = hero.naturalHeight > 430, k = 62 / 430;
-    if (big) ctx.drawImage(hero, -87, -33 - LOOK_HEAD * k, 131, hero.naturalHeight * k);
-    else ctx.drawImage(hero, -87, -33, 131, 62);
-  } else {
-    image("socket10", 0, 0, 52, 52);
+  // the upright Runner (runner.js) or the rolling socket; both use the same hitbox
+  if (!(window.Runner && Runner.active() && Runner.draw(ctx))) {
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(Math.sin(player.angle) * 0.22);
+    const hero = heroSprites.socket;
+    if (hero && hero.complete && hero.naturalWidth) {
+      // a composite (skin + looks) has headroom above and below the 900x430 sprite
+      const big = hero.naturalHeight > 430, k = 62 / 430;
+      if (big) ctx.drawImage(hero, -87, -33 - LOOK_HEAD * k, 131, hero.naturalHeight * k);
+      else ctx.drawImage(hero, -87, -33, 131, 62);
+    } else {
+      image("socket10", 0, 0, 52, 52);
+    }
+    ctx.restore();
   }
-  ctx.restore();
   if (window.FX) FX.drawOver();
 
   ctx.fillStyle = "#ffcb43";
@@ -2726,6 +2729,7 @@ const ICON = {
     "</svg>",
 };
 function setArt(x) {
+  const runner = window.Runner && Runner.active(), skinSrc = () => (runner ? (x === "win" ? "lt/u-victory.webp" : "lt/u-idle_01.webp") : skinArt());
   const el = $("menuArt"),
     img = (src, st) =>
       '<img src="' + src + '" alt="" style="' + (st || "") + '">';
@@ -3638,6 +3642,7 @@ function composeHero(done) {
   base.src = skinFile(equippedSkin());
   go();
 }
+function skinArt() { return skinSrc(); }
 function skinSrc() {
   if (typeof heroComp !== "undefined" && heroComp && heroComp.url && heroComp.key === lookKey()) return heroComp.url;
   return skinFile(equippedSkin());
@@ -3784,6 +3789,7 @@ function renderShop() {
   box.innerHTML = "";
   shopTabs(box);
   if (shopTab === "garage") return renderGarage(box);
+  if (window.Runner) Runner.shopRow(box);
   renderLooks(box);
   const sh = document.createElement("div");
   sh.className = "lvhead";

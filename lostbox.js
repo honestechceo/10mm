@@ -1256,6 +1256,31 @@
       if (tilt) ctx.restore();
     }
   }
+  function drawUpright(c2, name, w) {
+    const im = img(name); if (!ready(im)) return false;
+    const keep = ctx; ctx = c2;
+    try {
+      const h = (w * im.naturalHeight) / im.naturalWidth, fk = w / im.naturalWidth;
+      drawLooks(name, fk, w, h, true); ctx.drawImage(im, -w / 2, -h, w, h); drawLooks(name, fk, w, h, false);
+    } finally { ctx = keep; }
+    return true;
+  }
+  // character pick for the Lost Toolbox: the upright 10mm (default) or the classic rolling socket
+  const ltChar = () => (localStorage.getItem("tenmm-lt-char") === "roller" ? "roller" : "runner");
+  function drawRoller(s) {
+    const hero = typeof heroSprites !== "undefined" && heroSprites.socket;
+    if (!hero || !hero.complete || !hero.naturalWidth) return false;
+    pl.spin = (pl.spin || 0) + (Math.abs(pl.vx) / 60) * 0.12 + (pl.ground ? 0 : 0.05);
+    const k = 0.9 * s, big = hero.naturalHeight > 430, kk = (62 / 430) * k;
+    ctx.save(); ctx.translate(pl.x, pl.y + 3 - 31 * k);
+    if (pl.face < 0) ctx.scale(-1, 1);
+    ctx.rotate(Math.sin(pl.spin) * 0.22 + (pl.hitT > 0 ? -0.4 : 0));
+    if (pow.shield) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 6); ctx.strokeStyle = "#6fd3ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(-12 * k, 0, 52 * k, 40 * k, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+    if (big) ctx.drawImage(hero, -87 * k, -33 * k - (typeof LOOK_HEAD !== "undefined" ? LOOK_HEAD : 150) * kk, 131 * k, hero.naturalHeight * kk);
+    else ctx.drawImage(hero, -87 * k, -33 * k, 131 * k, 62 * k);
+    ctx.restore();
+    return true;
+  }
   function drawPlayer() {
     if (mode === "drawer" && drawerT > 0.5) return;
     if (pl.inv > 0 && mode === "play" && Math.floor(pl.inv * 14) % 2) return;
@@ -1288,11 +1313,12 @@
       }
       return;
     }
-    const im = img(FR[set][fi]);
-    if (!ready(im)) return;
     let s = 1;
     if (mode === "intro") s = Math.min(1, drawerT * 2.2);
     if (mode === "warp") s = Math.max(0.05, 1 - drawerT * 1.5);
+    if (ltChar() === "roller" && drawRoller(s)) return;
+    const im = img(FR[set][fi]);
+    if (!ready(im)) return;
     const w = 94 * s, h = (w * im.naturalHeight) / im.naturalWidth;
     ctx.save(); ctx.translate(pl.x, pl.y + 3);
     if (pl.face < 0) ctx.scale(-1, 1);
@@ -1347,7 +1373,8 @@
     });
     h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
     const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
-    h += "</div><p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.filter((i) => i < n).length + "/" + n + " drawers cleared</p>";
+    h += '</div><div class="ltchar"><b>CHARACTER</b><button data-c="runner" class="' + (ltChar() === "runner" ? "on" : "") + '"><img src="lt/u-idle_01.webp" alt="">RUNNER</button><button data-c="roller" class="' + (ltChar() === "roller" ? "on" : "") + '"><img src="' + (typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp") + '" alt="">ROLLER</button></div>';
+    h += "<p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.filter((i) => i < n).length + "/" + n + " drawers cleared</p>";
     // hideouts: secret bad-guy levels behind red toolboxes, one per part
     const hides = window.LT_LEVELS.map((l, i) => [l, i]).filter(([l]) => l.hidden);
     if (hides.length) {
@@ -1365,6 +1392,7 @@
     card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
+    card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
       show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
@@ -1455,5 +1483,5 @@
     }
     return false;
   }
-  window.LostBox = { _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { drawUpright, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

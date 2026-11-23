@@ -24,12 +24,14 @@ WHERE'S MY 10MM?! puts you in control of the runaway socket. Roll across the sho
 • 16 LOCATIONS: the garage, a home driveway, a parking garage, the junkyard, an auto parts store, a dealer service drive, a race pit lane, a snowy roadside, the Engine Shop, Main Street Repair, Auto Parts Plaza, the Used Car Lot, the Neon Car Wash, the Salvage Yard, the Service Center and the EV Tech Center
 • BOSS LEVELS: outrun the Air Hammer and double-jump the charging BIG 12
 • NEW HAZARDS in every location: bouncing basketballs, rolling tires, runaway shopping carts, speeding pit jacks, snowballs and more
+• THE LOST TOOLBOX: a whole second game! A 50-drawer platform adventure through the Body Shop, Tire Shop, Parking Garage and Junkyard. Stomp the bad-guy gang (Stripped Bolt, Rusty Wrench, Lug Nut Ninja and Impact Gun), beat bosses like the Rusty Wrench King and the Pry Bar Captain, and hunt for 5 secret hideouts
+• PICK YOUR 10MM: roll as the classic socket or run as the upright 10mm, in both games
 • SIMPLE ONE-TAP CONTROLS: tap to jump, double-tap for more height, triple-tap to fly
 • POWER-UPS: shield, slow-mo, speed boost, coin magnet and spring
-• SOCKET SHOP: spend your coins on new finishes like Junkyard Rust, 24K Gold and Neon Blue, plus holiday finishes (Santa, Jack-o-Lantern, Shamrock and more) that go half price in season
+• SOCKET SHOP: spend your coins on new finishes like Junkyard Rust, 24K Gold and Neon Blue, glowing auras, and face looks and disguises like lashes, a mustache, a hard hat and a ninja mask, plus holiday finishes (Santa, Jack-o-Lantern, Shamrock and more) that go half price in season
 • SERVICE BAY: grab tools and parts in the levels, then do a real oil change or front brake job against the clock
 • MY RADIO: play your own music from Spotify, Apple Music, YouTube Music and more while the game's sound effects play on top
-• DAILY CHALLENGE: a new level every day
+• DAILY CHALLENGE: a new level every day, with a different twist for each day of the week: Turbo Tuesday, Thursday Night Shift, Friday Payday and more
 • ENDLESS MODE: see how far you can roll (unlocks after level 25)
 • BONUS ROUNDS: after every 10th level, find the 10mm in a tool drawer before time runs out
 • GAME CENTER: leaderboards and achievements
@@ -43,12 +45,21 @@ Free to play with ads. Remove the full-screen ads forever with a one-time purcha
 ## Keywords (100 max, comma-separated, no spaces)
 mechanic,socket,wrench,garage,runner,arcade,jump,tools,car,auto,repair,escape,casual,platformer,funny
 
-## What's New (version 1.2)
-200 NEW LEVELS! The runaway 10mm now has 400 levels to escape.
-• 8 new locations, 16 in all, including the Neon Car Wash and the EV Tech Center
-• New hazards: pistons, creepers, tube men, car-wash brushes, hubcaps, oil drums and EV batteries
-• My Radio: play your own music from Spotify, Apple Music and more
-• Turkey Day socket half price all November
+## What's New (version 1.4)
+THE LOST TOOLBOX GETS HUGE
+• 50 drawers across the Body Shop, Tire Shop, Parking Garage and Junkyard
+• Meet the gang: Stripped Bolt, Rusty Wrench, Lug Nut Ninja and Impact Gun
+• New bosses: the Rusty Wrench King and the Pry Bar Captain
+• 5 secret hideouts: find the red toolboxes hidden in the drawers
+
+PICK YOUR 10MM
+• Play as the upright 10mm Runner in the main game (unlock in the Shop or by clearing Lost Toolbox drawer 50)
+• Roll through the Lost Toolbox as the classic socket
+
+FIXES
+• Sound effects and music now play even with your phone on silent
+• The home menu scrolls, so every button is easy to reach
+• Cleaner aura art in the Socket Shop
 
 ## Screenshots
 Upload `iphone-6.9-1.jpg` … `iphone-6.9-6.jpg` (1320 × 2868) under **iPhone 6.9" Display**. If App Store Connect asks for the 6.3" size too, upload `iphone-6.3-1.jpg` … `iphone-6.3-6.jpg` (1206 × 2622).

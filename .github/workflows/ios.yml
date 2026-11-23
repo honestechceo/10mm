@@ -48,6 +48,7 @@ jobs:
       - name: Game files (www/)
         run: |
           node scripts/prepare-web.mjs --app
+          node scripts/live-version.mjs
           ls www | head -60
       - name: Make the Xcode project
         run: |

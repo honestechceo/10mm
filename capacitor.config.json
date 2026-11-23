@@ -9,5 +9,15 @@
   "ios": {
     "backgroundColor": "#071526",
     "scrollEnabled": false
+  },
+  "plugins": {
+    "CapacitorUpdater": {
+      "autoUpdate": false,
+      "resetWhenUpdate": true,
+      "autoDeletePrevious": true,
+      "autoDeleteFailed": true,
+      "statsUrl": "",
+      "appReadyTimeout": 15000
+    }
   }
 }

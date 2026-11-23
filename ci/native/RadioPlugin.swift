@@ -28,11 +28,13 @@ public class RadioPlugin: CAPPlugin, CAPBridgedPlugin {
     private func apply() {
         let session = AVAudioSession.sharedInstance()
         do {
+            // .playback: the game is heard even when the ring/silent switch is on silent
+            // (.ambient / .soloAmbient are muted by the switch, so players heard nothing)
             if mix {
-                // ambient + mix: the game's effects play on top of Spotify / Apple Music / YouTube Music
-                try session.setCategory(.ambient, mode: .default, options: [.mixWithOthers])
+                // MY MUSIC: the game's effects play on top of Spotify / Apple Music / YouTube Music
+                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
             } else {
-                try session.setCategory(.soloAmbient, mode: .default, options: [])
+                try session.setCategory(.playback, mode: .default, options: [])
             }
             try session.setActive(true, options: [])
         } catch {

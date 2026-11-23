@@ -17,11 +17,14 @@
   function mode() { return settings.radio || (settings.music ? "game" : "off"); }
 
   // tell the phone whether the game should share the speaker with other apps
+  // "playback" so effects and music are heard even with the ring/silent switch on silent.
+  // Only MY MUSIC mixes with the player's own music app (WebKit can only mix as "ambient").
   function applyAudioSession() {
-    const mix = mode() !== "game";
-    try { if (navigator.audioSession) navigator.audioSession.type = mix ? "ambient" : "auto"; } catch (e) {}
+    const mix = mode() === "mine";
+    try { if (navigator.audioSession) navigator.audioSession.type = mix ? "ambient" : "playback"; } catch (e) {}
     if (P) P.setMix({ mix }).catch(() => {});
   }
+  window.applyAudioSession = applyAudioSession;
 
   function setMode(m) {
     if (!MODES[m]) return;

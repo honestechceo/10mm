@@ -341,7 +341,7 @@ function showHome(intro) {
   if (lb && window.LostBox) {
     let ls = {}; try { ls = JSON.parse(localStorage.getItem("tenmm-lt") || "{}"); } catch (e) {}
     const d = (ls.done || []).length;
-    $("hLostSub").textContent = ls.golden ? "Golden 10MM earned! Replay any drawer" : d ? d + " of " + ((window.LT_LEVELS || []).length || 10) + " drawers cleared" : "NEW! 15-drawer platform adventure";
+    $("hLostSub").textContent = ls.golden ? "Golden 10MM earned! Replay any drawer" : d ? d + " of " + ((window.LT_LEVELS || []).filter((l) => !l.hidden).length || 50) + " drawers cleared" : "NEW! 50 drawers, a bad-guy crew and hidden hideouts";
     lb.onclick = () => { audioReady(); stopMusic(); window.LostBox.open(); };
   }
   $("hShop").onclick = run(() => showShop("shop"));

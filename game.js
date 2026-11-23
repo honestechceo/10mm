@@ -551,6 +551,8 @@ function audioReady() {
       audioCtx
         .resume()
         .then(() => {
+          // WebKit can reset the phone's audio session when sound starts: put ours back
+          if (window.applyAudioSession) applyAudioSession();
           if (state === "running") sfx("power");
         })
         .catch(() => {});
@@ -3397,6 +3399,9 @@ function renderOptions() {
 }
 // ---------- support: gift codes (coins back for players who lost them) ----------
 // Code = AMOUNT-ID-CHECK, e.g. 500-K7Q2-X9F3. Each ID works once per device. Make codes with scripts/gift_code.py.
+// tester code version: bumping it (new code) switches off tester mode that was turned on with an older code
+const TESTER_V = "2";
+try { if (localStorage.getItem("tenmm-tester") === "1" && localStorage.getItem("tenmm-tester-v") !== TESTER_V) localStorage.setItem("tenmm-tester", "0"); } catch (e) {}
 const GIFT_SALT = "honestech-10mm-wrench-7731";
 function giftCheck(amount, id) {
   let h = 2166136261;
@@ -3409,9 +3414,9 @@ function redeemGift() {
   const raw = (window.prompt("Enter your gift code") || "").trim().toUpperCase().replace(/\s+/g, "");
   if (!raw) return;
   // the tester code (only its fingerprint lives here) turns tester mode on or off
-  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "TE4SZJNC") {
+  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "UW4S2GNB") {
     const on = localStorage.getItem("tenmm-tester") !== "1";
-    localStorage.setItem("tenmm-tester", on ? "1" : "0");
+    localStorage.setItem("tenmm-tester", on ? "1" : "0"); localStorage.setItem("tenmm-tester-v", TESTER_V);
     $("details").textContent = on ? "Tester mode ON: every level, drawer and Service Bay kit is open." : "Tester mode OFF.";
     buzz("success"); return;
   }

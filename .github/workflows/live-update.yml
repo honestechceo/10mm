@@ -1,0 +1,55 @@
+# Live update: publishes the game's web files so the iPhone app can update itself without App Store review.
+# Phones download it in the background and switch over the next time the game restarts.
+# Only phones whose App Store build has the same native fingerprint take it (see scripts/live-version.mjs),
+# so a change to plugins or Swift code waits for a real App Store update instead.
+name: Live update
+on:
+  push:
+    branches: [main]
+    paths: ["index.html", "*.js", "ads-config.json", "*.svg", "*.webp", "*.png", "*.jpg", "lt/**", "scripts/prepare-web.mjs", "scripts/live-version.mjs"]
+  workflow_dispatch:
+concurrency:
+  group: live-update
+  cancel-in-progress: false
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Capacitor (for capacitor.js)
+        run: npm install --no-audit --no-fund
+      - name: Game files
+        run: |
+          node scripts/prepare-web.mjs --app
+          node scripts/live-version.mjs > live-version.out
+          cat live-version.out
+      - name: Zip and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          N=$(node -p "require('./www/live-version.json').n")
+          FP=$(node -p "require('./www/live-version.json').fp")
+          APP_VERSION=$(grep -oE 'APP_VERSION: "[0-9.]+"' .github/workflows/ios.yml | grep -oE '[0-9.]+')
+          TAG="live-$N"
+          VERSION="$APP_VERSION.$N"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "::notice::$TAG is already published"; exit 0; fi
+          (cd www && zip -qr -X ../bundle.zip . -x '.*')
+          URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/$TAG/bundle.zip"
+          node -e "require('fs').writeFileSync('live.json', JSON.stringify({ n: $N, fp: '$FP', version: '$VERSION', url: '$URL', sha: '${GITHUB_SHA::7}' }))"
+          cat live.json
+          gh release create "$TAG" bundle.zip live.json --title "Live update $VERSION" --notes "Over-the-air update of the game's web files (commit ${GITHUB_SHA::7}). Phones on an App Store build with native fingerprint $FP pick it up." --latest
+          echo "::notice::Published live update $VERSION ($(du -h bundle.zip | cut -f1)). Phones switch to it the next time the game restarts."
+      - name: Keep only the last 5 live updates
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName,createdAt --jq '[.[] | select(.tagName | startswith("live-"))] | sort_by(.createdAt) | reverse | .[5:] | .[].tagName' | while read -r t; do
+            gh release delete "$t" --cleanup-tag --yes && echo "removed $t"
+          done

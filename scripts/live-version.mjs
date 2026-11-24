@@ -22,6 +22,9 @@ const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 h.update(JSON.stringify(pkg.dependencies || {}));
 h.update(await readFile('capacitor.config.json'));
 for (const f of (await files('ci')).sort()) { h.update(f); h.update(await readFile(f)); }
+// the App Store version is part of it too: a bundle made for 1.5 never lands on a 1.4 phone
+const ver = ((await readFile('.github/workflows/ios.yml', 'utf8')).match(/APP_VERSION:\s*"([^"]+)"/) || [])[1] || '';
+if (ver !== '1.4') h.update('app ' + ver);
 const fp = h.digest('hex').slice(0, 16);
 let n = Math.floor(Date.now() / 1000);
 try { n = +execSync('git log -1 --format=%ct').toString().trim() || n; } catch (e) {}

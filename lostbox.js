@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   const T = 48, ROWS = 13;
-  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden).length; // hidden hideout levels sit after the main drawers
+  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden && !l.custom).length; // hidden hideout levels sit after the main drawers
   // keep in sync with lt-tools/validate.py
   const P = { MAXV: 260, ACC: 1900, ACC_AIR: 1300, FRIC: 2400, G_HOLD: 1500, G: 2600, JUMP: 640, DJUMP: 560, MAXFALL: 1000, SPRING: 1050 };
   const PW = 30, PH = 44, STEP = 1 / 120;
@@ -206,7 +206,7 @@
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
-    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
+    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.custom ? "CUSTOM · " + (L.name || "MY LEVEL") : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
     BL = L.bg === "backlot" && !roomRows;
     inRoom = !!roomRows; starHud(); bagHud();
@@ -215,6 +215,7 @@
   let zoom = 1, inRoom = false, stash = null, BL = false; // BL: Back Lot art set
   function starHud() {
     if (!hud.Stars) return;
+    const sp = hud.Stars.parentNode; if (sp) sp.style.display = window.LT_LEVELS[lvI] && window.LT_LEVELS[lvI].custom ? "none" : ""; // custom levels have no stars
     const s = load(), n = ((s.stars && s.stars[lvI]) || []).length;
     hud.Stars.textContent = n + "/5";
   }
@@ -838,6 +839,8 @@
     chase = null;
   }
   function finishLevel() {
+    // custom levels are just for fun: nothing is saved and their coins never reach the wallet
+    if (window.LT_LEVELS[lvI].custom) { clearInfo = { first: false, golden: false, coins: coinsRun, time: t }; showClear(); return; }
     const s = load(), hid = !!window.LT_LEVELS[lvI].hidden;
     s.hideDone = s.hideDone || [];
     const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
@@ -1201,7 +1204,7 @@
         else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
         ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
-        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
+        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden || window.LT_LEVELS[lvI].custom ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
         ctx.strokeText(lab, e.x, e.y - 112); ctx.fillText(lab, e.x, e.y - 112);
         return;
       }
@@ -1385,6 +1388,7 @@
       }
       h += "</div></div>";
     }
+    if (window.LTBuild) h += '<div class="ltbld"><b>LEVEL BUILDER</b><span>Pick the place, the pits, the bad guys and the boss. Save your levels and share them with a code.</span><button class="ltbtn" id="ltBuild">BUILD A LEVEL</button></div>';
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
@@ -1392,6 +1396,7 @@
     card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
+    const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTBuild.list(); };
     card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
@@ -1414,12 +1419,13 @@
   function pauseMenu() {
     if (mode !== "play") return;
     mode = "pause"; key.L = key.R = key.J = false;
-    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>');
+    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom ? "MY LEVELS" : "ALL DRAWERS") + "</button>");
     card.querySelector("#ltRes").onclick = () => { hideCard(); mode = "play"; last = performance.now(); };
     card.querySelector("#ltRe").onclick = () => play(lvI);
-    card.querySelector("#ltMenu").onclick = menu;
+    card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTBuild ? window.LTBuild.list() : menu());
   }
   function showClear() {
+    if (window.LT_LEVELS[lvI].custom && window.LTBuild) { say("win"); haptic("success"); window.LTBuild.cleared(clearInfo); return; }
     if (window.LT_LEVELS[lvI].hidden) {
       const c = clearInfo, back = hideFrom;
       let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +250 hideout bonus)" : "") + " added to your wallet.</p>";
@@ -1483,5 +1489,5 @@
     }
     return false;
   }
-  window.LostBox = { drawUpright, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

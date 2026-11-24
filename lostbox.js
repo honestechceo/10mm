@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   const T = 48, ROWS = 13;
-  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden && !l.custom).length; // hidden hideout levels sit after the main drawers
+  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden && !l.custom && !l.train).length; // hidden hideout levels sit after the main drawers
   // keep in sync with lt-tools/validate.py
   const P = { MAXV: 260, ACC: 1900, ACC_AIR: 1300, FRIC: 2400, G_HOLD: 1500, G: 2600, JUMP: 640, DJUMP: 560, MAXFALL: 1000, SPRING: 1050 };
   const PW = 30, PH = 44, STEP = 1 / 120;
@@ -51,6 +51,21 @@
   const starTotal = (s) => Object.values(s.stars || {}).reduce((n, a) => n + a.length, 0);
   const store = (s) => { try { localStorage.setItem(SAVE, JSON.stringify(s)); } catch (e) {} };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
+  // Game Center: Lost Toolbox achievements and leaderboards, worked out from the save so a new phone catches up
+  function gcSync() {
+    const G = window.GC; if (!G || !G.on || tester()) return;
+    const s = load(), n = NLV(), done = s.done.filter((i) => i < n).length, stars = starTotal(s);
+    const hides = window.LT_LEVELS.filter((l) => l.hidden).length, hd = (s.hideDone || []).length;
+    let ex = {}; try { ex = JSON.parse(localStorage.getItem("tenmm-lt-ach") || "{}"); } catch (e) {}
+    if (done >= 1) G.achieve("lt_first_drawer"); if (done >= 25) G.achieve("lt_drawers_25"); if (done >= n && n) G.achieve("lt_drawers_50");
+    if (s.golden) G.achieve("lt_golden");
+    if (hd >= 1) G.achieve("lt_hideout_1"); if (hides && hd >= hides) G.achieve("lt_hideouts_all");
+    if (stars >= 50) G.achieve("lt_stars_50"); if (stars >= n * 5 && n) G.achieve("lt_stars_250");
+    if ((s.rooms || []).length) G.achieve("lt_secret_room");
+    if (s.mechWin) G.achieve("lt_mech");
+    if (ex.maker) G.achieve("lt_maker"); if (ex.friend) G.achieve("lt_friend");
+    G.score("lt_stars", stars); G.score("lt_drawers", done);
+  }
   const say = (n) => { try { window.sfx && sfx(n); } catch (e) {} };
   const haptic = (n) => { try { window.buzz && buzz(n); } catch (e) {} };
 
@@ -207,7 +222,8 @@
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
-    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.custom ? "CUSTOM · " + (L.name || "MY LEVEL") : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
+    tipsSeen = new Set();
+    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.train ? "TRAINING DRAWER" : L.custom ? "CUSTOM · " + (L.name || "MY LEVEL") : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
     BL = L.bg === "backlot" && !roomRows;
     inRoom = !!roomRows; starHud(); bagHud();
@@ -216,7 +232,7 @@
   let zoom = 1, inRoom = false, stash = null, BL = false; // BL: Back Lot art set
   function starHud() {
     if (!hud.Stars) return;
-    const sp = hud.Stars.parentNode; if (sp) sp.style.display = window.LT_LEVELS[lvI] && window.LT_LEVELS[lvI].custom ? "none" : ""; // custom levels have no stars
+    const sp = hud.Stars.parentNode; if (sp) sp.style.display = window.LT_LEVELS[lvI] && (window.LT_LEVELS[lvI].custom || window.LT_LEVELS[lvI].train) ? "none" : ""; // custom levels have no stars
     const s = load(), n = ((s.stars && s.stars[lvI]) || []).length;
     hud.Stars.textContent = n + "/5";
   }
@@ -228,7 +244,7 @@
     const tot = starTotal(s), due = Math.floor(tot / STAR_STEP);
     let paid = 0;
     if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY; s.starPaid = due; }
-    store(s);
+    store(s); gcSync();
     say("star"); haptic("success"); starHud();
     if (paid) {
       try { totalCoins += paid; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (x) {}
@@ -242,7 +258,7 @@
     startLevel(lvI, false, L.room);
     hp = keep.hp; pow = keep.pow;
     mode = "intro"; drawerT = 0; say("power"); haptic("success"); toast("SECRET ROOM!");
-    const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); }
+    const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); gcSync(); }
   }
   // red toolbox: a hidden hideout level full of bad guys. Finding it unlocks it on the map for good.
   let hideFrom = null;
@@ -264,6 +280,7 @@
     if (pow.torqueBank) { pow.torqueBank = 0; givePower("torque"); }
   }
   const VW = () => viewW / zoom;
+  let tipsSeen = new Set(); // training drawer tips already shown this run
   let hitStop = 0; // a split-second freeze on big hits, so they land with weight
   let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 }, crumbles = [], arena = null, boss = null;
   function crumble(cx, cy) {
@@ -856,6 +873,7 @@
   function finishLevel() {
     // custom levels are just for fun: nothing is saved and their coins never reach the wallet
     if (window.LT_LEVELS[lvI].custom) { clearInfo = { first: false, golden: false, coins: coinsRun, time: t }; showClear(); return; }
+    if (window.LT_LEVELS[lvI].train) { const s = load(); s.trained = true; store(s); clearInfo = { first: false, golden: false, coins: 0, time: t }; showClear(); return; }
     const s = load(), hid = !!window.LT_LEVELS[lvI].hidden;
     s.hideDone = s.hideDone || [];
     const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
@@ -871,7 +889,10 @@
         localStorage.setItem("tenmm-skins", JSON.stringify(own));
       } catch (e) {}
     }
+    if (boss && arena && arena.done && pow && pow.mech > 0) s.mechWin = true; // beat the boss while riding the Ratchet Mech
     store(s);
+    gcSync();
+    if (lvI === 4 && !hid && !tester() && window.GC) GC.score("lt_golden", Math.round(t * 100)); // hundredths of a second
     // coins go into the main wallet
     try { totalCoins += coinsRun; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
     clearInfo = { first, golden, coins: coinsRun, time: t };
@@ -916,6 +937,7 @@
       updHud(); return;
     }
     pl.inv -= dt; pl.hitT -= dt; pl.landT -= dt; pl.djT -= dt;
+    { const TL = window.LT_LEVELS[lvI]; if (TL && TL.tips && !inRoom && mode === "play") for (const [tx, tt] of TL.tips) if (!tipsSeen.has(tx) && pl.x > tx * T) { tipsSeen.add(tx); toast(tt, 3.2); } }
     if (pl.sq) { pl.sq -= pl.sq * Math.min(1, dt * 13); if (Math.abs(pl.sq) < 0.01) pl.sq = 0; }
     if (pl.ground && Math.abs(pl.vx) > P.MAXV * 0.85 && mode === "play") { pl.dustT = (pl.dustT || 0) - dt; if (pl.dustT <= 0) { pl.dustT = 0.13; dust(pl.x - Math.sign(pl.vx) * 12, pl.y, 1); } }
     stepPlayer(dt);
@@ -955,7 +977,7 @@
     bb.classList.toggle("on", !!showB);
     if (showB) { const k2 = boss.name + boss.hp; if (bb._v !== k2) { bb._v = k2; bb.innerHTML = "<b>" + boss.name + "</b><span>" + '<i class="on"></i>'.repeat(boss.hp) + "<i></i>".repeat(boss.max - boss.hp) + "</span>"; } }
   }
-  function toast(m) { hud.Msg.textContent = m; hud.Msg.classList.add("on"); msgT = 1.8; }
+  function toast(m, dur) { hud.Msg.textContent = m; hud.Msg.classList.add("on"); msgT = dur || 1.8; }
 
   // ---------- drawing ----------
   function draw() {
@@ -1225,7 +1247,7 @@
         else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
         ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
-        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden || window.LT_LEVELS[lvI].custom ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
+        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden || window.LT_LEVELS[lvI].custom || window.LT_LEVELS[lvI].train ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
         ctx.strokeText(lab, e.x, e.y - 112); ctx.fillText(lab, e.x, e.y - 112);
         return;
       }
@@ -1418,9 +1440,18 @@
     if (window.LTEdit) h += '<div class="ltbld"><b>LEVEL MAKER</b><span>Build your own drawer square by square: ground, pits, every bad guy, every trap and the boss. Beat it, then share it with friends.</span><button class="ltbtn" id="ltBuild">MAKE A LEVEL</button></div>';
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
-    h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
+    const TI = window.LT_LEVELS.findIndex((l) => l.train);
+    if (TI >= 0) h += '<button class="ltbtn" id="ltTrain">TRAINING DRAWER' + (s.trained ? " ✓" : "") + "</button>";
+    h += '<button class="ltbtn sub" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
     show(h);
-    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
+    const tb = card.querySelector("#ltTrain"); if (tb) tb.onclick = () => { say("grab"); play(TI); };
+    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return;
+      if (+b.dataset.i === 0 && TI >= 0 && !s.trained && !s.done.length) {
+        show('<div class="ltlogo">FIRST TIME HERE?</div><img class="ltclr" src="lt/u-idle_01.webp" alt=""><p>Play the 1-minute Training Drawer to learn the moves, or jump straight into Drawer 1.</p><button class="ltbtn" id="ltT1">PLAY TRAINING</button><button class="ltbtn sub" id="ltT2">SKIP TO DRAWER 1</button>');
+        card.querySelector("#ltT1").onclick = () => { say("grab"); play(TI); };
+        card.querySelector("#ltT2").onclick = () => { const s2 = load(); s2.trained = true; store(s2); say("grab"); play(0); };
+        return;
+      } const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
     const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTEdit.list(); };
@@ -1452,6 +1483,13 @@
     card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.fromPause() : menu());
   }
   function showClear() {
+    if (window.LT_LEVELS[lvI].train) {
+      say("win"); haptic("success");
+      show('<div class="ltlogo">TRAINING DONE!</div><img class="ltclr" src="lt/u-victory.webp" alt=""><p>You know the moves: run, jump, double jump, stomp, bonk blocks and beat the boss. Now find the real drawers!</p><p class="ltbnote">Training pays no coins.</p><button class="ltbtn" id="ltNext">PLAY DRAWER 1</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>');
+      card.querySelector("#ltNext").onclick = () => play(0);
+      card.querySelector("#ltMenu").onclick = menu;
+      return;
+    }
     if (window.LT_LEVELS[lvI].custom && window.LTEdit) { say("win"); haptic("success"); window.LTEdit.cleared(clearInfo); return; }
     if (window.LT_LEVELS[lvI].hidden) {
       const c = clearInfo, back = hideFrom;
@@ -1542,5 +1580,5 @@
     return { x: Math.floor(wx / T), y: Math.floor(wy / T), wx, wy };
   }
   const editPx = () => dpr / (scale * zoom); // world pixels per CSS pixel
-  window.LostBox = { _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { _gcSync: gcSync, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

@@ -373,6 +373,8 @@
     const v = lastPlayed, ui = U(), wasTest = testing;
     const fresh = v && v.src === "mine" && !v.ok;
     if (v && v.src === "mine") { v.ok = true; saveLv(v); }
+    // Game Center: beat your own level / beat a friend's level
+    try { const ex = JSON.parse(localStorage.getItem("tenmm-lt-ach") || "{}"); if (v && v.src === "friend") ex.friend = 1; else if (v) ex.maker = 1; localStorage.setItem("tenmm-lt-ach", JSON.stringify(ex)); LB()._gcSync(); } catch (e) {}
     let h = '<div class="ltlogo">' + (fresh ? "YOU BEAT IT!" : "LEVEL CLEAR!") + '</div><img class="ltclr" src="lt/drawer3.webp" alt=""><p><b>' + esc(nameOf(v || {})) + "</b> · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
     if (fresh) h += '<p class="ltbnote">Sharing is unlocked for this level. Send the code to your friends!</p>';
     h += "<p>" + c.coins + (c.coins === 1 ? " coin" : " coins") + ' grabbed. <span class="ltbnote">Custom level coins are just for fun and don\'t go to your wallet.</span></p>';

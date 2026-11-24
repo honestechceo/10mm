@@ -112,7 +112,7 @@
     if (!cv) return;
     dpr = Math.min(3, window.devicePixelRatio || 1);
     // a wide-ish window onto the level: never taller than 1.15x its width, so you can see what's coming
-    const wrap = cv.parentElement.getBoundingClientRect(), pad = root.querySelector(".ltpad").getBoundingClientRect().height;
+    const wrap = cv.parentElement.getBoundingClientRect(), edp = root.classList.contains("editing") && document.getElementById("ltePanel"), pad = (edp || root.querySelector(".ltpad")).getBoundingClientRect().height;
     const avail = wrap.height - pad - 56;
     cv.style.height = Math.max(200, Math.min(avail, wrap.width * 1.6)) + "px";
     const r = cv.getBoundingClientRect();
@@ -977,6 +977,7 @@
       // on wide screens the room is narrower than the view: solid rock past the back wall
       if (cam + vw > W * T) { ctx.fillStyle = "#1b120b"; ctx.fillRect(W * T, 2 * T, cam + vw - W * T + 2, H - 2 * T); ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(W * T, 2 * T, 6, H - 2 * T); }
     }
+    if (mode === "edit" && window.LTEdit) window.LTEdit.overlay(ctx, cam, vw, oy, T);
     ctx.restore();
     if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, -oy, vw, H + oy); }
   }
@@ -1389,7 +1390,7 @@
       }
       h += "</div></div>";
     }
-    if (window.LTBuild) h += '<div class="ltbld"><b>LEVEL BUILDER</b><span>Pick the place, the pits, the bad guys and the boss. Save your levels and share them with a code.</span><button class="ltbtn" id="ltBuild">BUILD A LEVEL</button></div>';
+    if (window.LTEdit) h += '<div class="ltbld"><b>LEVEL MAKER</b><span>Build your own drawer square by square: ground, pits, every bad guy, every trap and the boss. Beat it, then share it with friends.</span><button class="ltbtn" id="ltBuild">MAKE A LEVEL</button></div>';
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
     h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
@@ -1397,7 +1398,7 @@
     card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
-    const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTBuild.list(); };
+    const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTEdit.list(); };
     card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
@@ -1420,13 +1421,13 @@
   function pauseMenu() {
     if (mode !== "play") return;
     mode = "pause"; key.L = key.R = key.J = false;
-    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom ? "MY LEVELS" : "ALL DRAWERS") + "</button>");
+    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.pauseLabel() : "ALL DRAWERS") + "</button>");
     card.querySelector("#ltRes").onclick = () => { hideCard(); mode = "play"; last = performance.now(); };
     card.querySelector("#ltRe").onclick = () => play(lvI);
-    card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTBuild ? window.LTBuild.list() : menu());
+    card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.fromPause() : menu());
   }
   function showClear() {
-    if (window.LT_LEVELS[lvI].custom && window.LTBuild) { say("win"); haptic("success"); window.LTBuild.cleared(clearInfo); return; }
+    if (window.LT_LEVELS[lvI].custom && window.LTEdit) { say("win"); haptic("success"); window.LTEdit.cleared(clearInfo); return; }
     if (window.LT_LEVELS[lvI].hidden) {
       const c = clearInfo, back = hideFrom;
       let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +250 hideout bonus)" : "") + " added to your wallet.</p>";
@@ -1490,5 +1491,17 @@
     }
     return false;
   }
-  window.LostBox = { drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  // ---- level maker: show a level frozen with the real art, and turn a tap into a grid cell ----
+  function editShow(i, camX, z) {
+    startLevel(i); mode = "edit"; zoom = z || 1; key.L = key.R = key.J = false;
+    cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), camX || 0));
+    return { cam, W, vw: VW() };
+  }
+  function editCell(clientX, clientY) {
+    const r = cv.getBoundingClientRect(), k = scale * zoom, oy = cv.height / k - ROWS * T;
+    const wx = cam + ((clientX - r.left) * dpr) / k, wy = ((clientY - r.top) * dpr) / k - oy;
+    return { x: Math.floor(wx / T), y: Math.floor(wy / T), wx, wy };
+  }
+  const editPx = () => dpr / (scale * zoom); // world pixels per CSS pixel
+  window.LostBox = { _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

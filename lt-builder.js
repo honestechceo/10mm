@@ -257,86 +257,29 @@
   }
   function load(st, seed) { const i = slot(); window.LT_LEVELS[i] = build(st, seed); return i; }
 
-  // ---------- share codes: settings + seed in 13 characters ----------
-  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const FIELDS = [["ver", 2], ["bg", 5], ["len", 2], ["pits", 2], ["obstacles", 8], ["obsAmt", 2], ["enemies", 11], ["enAmt", 2], ["boss", 4], ["bossHard", 2], ["diff", 2], ["hp", 2], ["coins", 2], ["powerups", 2], ["seed", 20]];
-  function pack(st, seed) {
-    const v = { ...st, ver: VER, seed, obstacles: OBST.reduce((m, o, i) => m | (st.obstacles.includes(o) ? 1 << i : 0), 0), enemies: ENEMIES.reduce((m, c, i) => m | (st.enemies.includes(c) ? 1 << i : 0), 0), bossHard: +st.bossHard || 0, diff: st.diff == null ? 1 : st.diff, hp: (st.hp || 3) - 1, len: st.len - 1 };
-    let n = 0n;
-    for (const [k, b] of FIELDS) n = (n << BigInt(b)) | BigInt((v[k] >>> 0) & ((1 << b) - 1));
-    let sum = 0; for (let t = n; t > 0n; t >>= 5n) sum = (sum * 7 + Number(t & 31n)) % 32;
-    n = (n << 5n) | BigInt(sum);
-    let s = ""; for (let i = 0; i < 15; i++) { s = A[Number(n & 31n)] + s; n >>= 5n; }
-    return s.slice(0, 5) + "-" + s.slice(5, 10) + "-" + s.slice(10);
-  }
-  function unpack(code) {
-    const s = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/O/g, "0").replace(/I/g, "1");
-    if (s.length !== 15) return null;
-    let n = 0n;
-    for (const ch of s) { const i = A.indexOf(ch); if (i < 0) return null; n = (n << 5n) | BigInt(i); }
-    const sum = Number(n & 31n); n >>= 5n;
-    let chk = 0; for (let t = n; t > 0n; t >>= 5n) chk = (chk * 7 + Number(t & 31n)) % 32;
-    if (chk !== sum) return null;
-    const v = {};
-    for (const [k, b] of [...FIELDS].reverse()) { v[k] = Number(n & BigInt((1 << b) - 1)); n >>= BigInt(b); }
-    if (v.ver !== VER || v.bg >= BGS.length || v.boss >= BOSSES.length) return null;
-    return { settings: { bg: v.bg, len: v.len + 1, pits: Math.min(2, v.pits), obstacles: OBST.filter((_, i) => v.obstacles & (1 << i)), obsAmt: Math.min(2, v.obsAmt), enemies: ENEMIES.filter((_, i) => v.enemies & (1 << i)), enAmt: Math.min(3, v.enAmt), boss: v.boss, bossHard: Math.min(2, v.bossHard), diff: v.diff, hp: Math.min(3, v.hp + 1), coins: Math.min(2, v.coins), powerups: Math.min(2, v.powerups) }, seed: v.seed };
-  }
-
-  // ---------- builder screens (shown in the Lost Toolbox card) ----------
-  const KEY = "tenmm-lt-custom", MAX = 30;
+  // ---------- AUTO-BUILD screen: picks in, a ready-made layout out (then it opens in the Level Maker) ----------
   const U = () => window.LostBox._ui;
-  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
-  const mine = () => { try { const a = JSON.parse(localStorage.getItem(KEY) || "[]"); return Array.isArray(a) ? a.filter((v) => v && v.st && typeof v.seed === "number") : []; } catch (e) { return []; } };
-  const keep = (a) => { try { localStorage.setItem(KEY, JSON.stringify(a.slice(0, MAX))); } catch (e) {} };
   const OB_NAMES = { crushers: "Crushers", belts: "Conveyor belts", zappers: "Zappers", falling: "Falling parts", platforms: "Moving platforms", ice: "Slick floors", pistons: "Pistons & gears", chains: "Swinging chains" };
   const EN_INFO = { r: ["Stripped Bolt", "en-sbolt0"], m: ["Rusty Wrench", "en-rwrench0"], j: ["Lug Nut Ninja", "en-ninja0"], G: ["Impact Gun", "en-igun0"], T: ["Rolling Tire", "tire"], J: ["Floor Jack", "jack"], K: ["Creeper", "creeper"], k: ["Tool Cart", "toolcart"], b: ["Flying Nut", "fly-nut"], h: ["Drone", "fly-drone"], v: ["Diving Screw", "fly-screw"] };
   const BOSS_ART = { walker: "bossa-filter", charger: "bossa-jack", flyer: "bossa-meter", roller: "bossa-gear", magnet: "bossa-magnet", gunner: "gk-idle", stomper: "js-idle", serpent: "tb-idle", vac: "sv-idle", kraken: "ck-idle", king: "wk-idle", captain: "pc-idle" };
-  const LEN = ["", "SHORT", "MEDIUM", "LONG"], AMT3 = ["NONE", "SOME", "LOTS"], OAMT = ["FEW", "SOME", "LOTS"], EAMT = ["FEW", "SOME", "LOTS", "SWARM"];
-  const nameOf = (v) => (v.name || "MY LEVEL");
-  const sameSt = (a, b) => JSON.stringify(a) === JSON.stringify(b);
-  let ed = null, lastPlayed = null; // ed: level being edited {id, name, st, seed}
-
-  function list(note) {
-    const ui = U(); ui.idle();
-    const a = mine();
-    let h = '<div class="ltlogo">MY LEVELS</div><p>Build your own drawer: pick the place, the pits, the obstacles, the bad guys and the boss. Coins in custom levels are just for fun and don\'t go to your wallet.</p>';
-    if (note) h += '<p class="ltbnote">' + esc(note) + "</p>";
-    h += '<button class="ltbtn" id="lbNew">+ NEW LEVEL</button>';
-    if (a.length) {
-      h += '<div class="lblist">';
-      a.forEach((v, i) => {
-        const bs = BOSSES[v.st.boss];
-        h += '<div class="lbrow"><img src="lt/' + (bs ? BOSS_ART[bs] : "drawer3") + '.webp" alt=""><div class="lbinfo"><b>' + esc(nameOf(v)) + "</b><span>" + BG_NAMES[v.st.bg] + " · " + ["EASY", "NORMAL", "HARD", "EXTREME"][v.st.diff == null ? 1 : v.st.diff] + " · " + (bs ? BOSS_NAMES[bs] : "no boss") + '</span></div><div class="lbacts"><button class="lbplay" data-p="' + i + '">PLAY</button><button data-e="' + i + '">EDIT</button><button data-s="' + i + '">SHARE</button><button class="lbdel" data-d="' + i + '">✕</button></div></div>';
-      });
-      h += "</div>";
-    } else h += '<p class="ltbnote">No levels yet. Tap NEW LEVEL to make your first one.</p>';
-    h += '<button class="ltbtn sub" id="lbCode">PLAY A FRIEND\'S CODE</button><button class="ltbtn sub" id="lbBack">ALL DRAWERS</button>';
-    ui.show(h);
-    const c = ui.card();
-    c.querySelector("#lbNew").onclick = () => { ui.say("grab"); edit({ name: "", st: JSON.parse(JSON.stringify(DEFAULT)) }); };
-    c.querySelector("#lbBack").onclick = () => ui.menu();
-    c.querySelector("#lbCode").onclick = enterCode;
-    c.querySelectorAll("[data-p]").forEach((b) => (b.onclick = () => playSaved(mine()[+b.dataset.p])));
-    c.querySelectorAll("[data-e]").forEach((b) => (b.onclick = () => { ui.say("grab"); edit(JSON.parse(JSON.stringify(mine()[+b.dataset.e]))); }));
-    c.querySelectorAll("[data-s]").forEach((b) => (b.onclick = () => share(mine()[+b.dataset.s])));
-    c.querySelectorAll("[data-d]").forEach((b) => (b.onclick = () => {
-      const v = mine()[+b.dataset.d]; if (!v) return;
-      if (b.dataset.sure) { keep(mine().filter((x) => x.id !== v.id)); list(); return; }
-      b.dataset.sure = 1; b.textContent = "DELETE?"; b.classList.add("sure");
-    }));
-    c.scrollTop = 0;
-  }
-
+  const AMT3 = ["NONE", "SOME", "LOTS"], OAMT = ["FEW", "SOME", "LOTS"], EAMT = ["FEW", "SOME", "LOTS", "SWARM"];
   function chips(id, opts, sel, multi) {
     return '<div class="lbchips" data-g="' + id + '"' + (multi ? ' data-multi="1"' : "") + ">" + opts.map(([v, label, art]) => '<button data-v="' + v + '" class="' + ((multi ? sel.includes(v) : sel === v) ? "on" : "") + '">' + (art ? '<img src="lt/' + art + '.webp" alt="">' : "") + label + "</button>").join("") + "</div>";
   }
-  function edit(v) {
-    ed = v; const st = v.st, ui = U(); ui.idle();
-    let h = '<div class="ltlogo">' + (v.id ? "EDIT LEVEL" : "NEW LEVEL") + "</div>";
-    h += '<label class="lbl">NAME</label><input class="lbname" id="lbName" maxlength="18" placeholder="MY LEVEL" value="' + esc(v.name || "") + '" autocomplete="off" autocapitalize="characters">';
-    h += '<label class="lbl">PLACE</label><div class="lbprev" id="lbPrev" style="background-image:url(bg-' + BGS[st.bg] + '.jpg)"><span>' + BG_NAMES[st.bg] + "</span></div>" + chips("bg", BGS.map((_, i) => [i, BG_NAMES[i]]), st.bg);
-    h += '<label class="lbl">DIFFICULTY</label>' + chips("diff", [[0, "EASY"], [1, "NORMAL"], [2, "HARD"], [3, "EXTREME"]], st.diff == null ? 1 : st.diff) + '<span class="lbsub">HEARTS</span>' + chips("hp", [[3, "3 HEARTS"], [2, "2 HEARTS"], [1, "1 HIT = OUT"]], st.hp || 3);
+  function wire(c, st, onPick) {
+    c.querySelectorAll(".lbchips").forEach((g) => g.querySelectorAll("button").forEach((b) => (b.onclick = () => {
+      const k = g.dataset.g, raw = b.dataset.v, val = /^\d+$/.test(raw) && k !== "enemies" ? +raw : raw;
+      if (g.dataset.multi) { const a = st[k]; const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); b.classList.toggle("on"); }
+      else { st[k] = val; g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }
+      if (onPick) onPick(k, val);
+      U().haptic("light");
+    })));
+  }
+  let last = null;
+  function auto(onBuilt, onCancel) {
+    const st = last ? JSON.parse(JSON.stringify(last)) : JSON.parse(JSON.stringify(DEFAULT)), ui = U(); ui.idle();
+    let h = '<div class="ltlogo">AUTO-BUILD</div><p>Pick what goes in and we\'ll lay out a starting level. Then you can change anything, square by square.</p>';
+    h += '<label class="lbl">DIFFICULTY</label>' + chips("diff", [[0, "EASY"], [1, "NORMAL"], [2, "HARD"], [3, "EXTREME"]], st.diff == null ? 1 : st.diff);
     h += '<label class="lbl">LENGTH</label>' + chips("len", [[1, "SHORT"], [2, "MEDIUM"], [3, "LONG"]], st.len);
     h += '<label class="lbl">PITS</label>' + chips("pits", [[0, "NONE"], [1, "SOME"], [2, "LOTS"]], st.pits);
     h += '<label class="lbl">OBSTACLES</label>' + chips("obstacles", OBST.map((o) => [o, OB_NAMES[o]]), st.obstacles, true) + '<span class="lbsub">HOW MANY</span>' + chips("obsAmt", OAMT.map((l, i) => [i, l]), st.obsAmt);
@@ -344,92 +287,25 @@
     h += '<label class="lbl">BOSS</label>' + chips("boss", BOSSES.map((b, i) => [i, b ? BOSS_NAMES[b].replace(/^THE /, "") : "NO BOSS", b ? BOSS_ART[b] : ""]), st.boss) + '<span class="lbsub">BOSS STRENGTH</span>' + chips("bossHard", [[0, "NORMAL"], [1, "TOUGH"], [2, "BRUTAL"]], +st.bossHard || 0);
     h += '<label class="lbl">COINS</label>' + chips("coins", AMT3.map((l, i) => [i, i === 1 ? "NORMAL" : i === 2 ? "EXTRA" : l]), st.coins);
     h += '<label class="lbl">POWER-UPS</label>' + chips("powerups", AMT3.map((l, i) => [i, l]), st.powerups);
-    h += '<button class="ltbtn" id="lbGo">SAVE &amp; PLAY</button><button class="ltbtn sub" id="lbRand">SURPRISE ME</button><button class="ltbtn sub" id="lbCancel">CANCEL</button>';
+    h += '<button class="ltbtn" id="lbGo">BUILD IT</button><button class="ltbtn sub" id="lbCancel">BACK</button>';
     ui.show(h);
-    const c = ui.card();
-    c.querySelectorAll(".lbchips").forEach((g) => g.querySelectorAll("button").forEach((b) => (b.onclick = () => {
-      const k = g.dataset.g, raw = b.dataset.v, val = /^\d+$/.test(raw) && k !== "enemies" ? +raw : raw;
-      if (g.dataset.multi) { const a = st[k]; const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); b.classList.toggle("on"); }
-      else { st[k] = val; g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }
-      if (k === "bg") { const p = c.querySelector("#lbPrev"); p.style.backgroundImage = "url(bg-" + BGS[val] + ".jpg)"; p.firstChild.textContent = BG_NAMES[val]; }
-      ui.haptic("light");
-    })));
-    c.querySelector("#lbName").oninput = (e) => { ed.name = e.target.value.toUpperCase().slice(0, 18); };
-    c.querySelector("#lbCancel").onclick = () => list();
-    c.querySelector("#lbRand").onclick = () => { ed.name = c.querySelector("#lbName").value; ed.st = surprise(); edit(ed); };
+    const c = ui.card(); wire(c, st);
+    c.querySelector("#lbCancel").onclick = onCancel;
     c.querySelector("#lbGo").onclick = () => {
-      ed.name = c.querySelector("#lbName").value.trim().toUpperCase().slice(0, 18);
-      if (!ed.st.enemies.length && !BOSSES[ed.st.boss] && !ed.st.pits && !ed.st.obstacles.length) ed.st.enemies.push("r");
-      const old = ed.id && mine().find((x) => x.id === ed.id);
-      const seed = old && sameSt(old.st, ed.st) ? old.seed : Math.floor(Math.random() * 1048576);
-      check(ed.st, seed, (res) => {
-        const lv = { id: ed.id || Date.now().toString(36) + Math.random().toString(36).slice(2, 6), name: ed.name, st: ed.st, seed: res.seed };
-        const a = mine(), i = a.findIndex((x) => x.id === lv.id);
-        if (i >= 0) a[i] = lv; else a.unshift(lv);
-        keep(a); playSaved(lv);
-      }, () => edit(ed));
+      if (!st.enemies.length && !BOSSES[st.boss] && !st.pits && !st.obstacles.length) st.enemies.push("r");
+      last = st;
+      ui.show('<div class="ltlogo">BUILDING…</div><img class="ltclr" src="lt/drawer2.webp" alt=""><p>Laying out your level.</p>');
+      setTimeout(() => {
+        let res = { ok: false };
+        try { res = make(st, Math.floor(Math.random() * 1048576)); } catch (e) {}
+        const lv = res.ok ? res.level : build(st, Math.floor(Math.random() * 1048576));
+        ui.idle(); onBuilt(lv, st);
+      }, 60);
     };
     c.scrollTop = 0;
   }
-  function surprise() {
-    const r = Math.random, pickSome = (arr, n) => arr.slice().sort(() => r() - 0.5).slice(0, n);
-    return { bg: Math.floor(r() * BGS.length), len: 1 + Math.floor(r() * 3), pits: Math.floor(r() * 3), obstacles: pickSome(OBST, 2 + Math.floor(r() * 3)), obsAmt: Math.floor(r() * 3), enemies: pickSome(ENEMIES, 2 + Math.floor(r() * 4)), enAmt: Math.floor(r() * 4), boss: 1 + Math.floor(r() * 12), bossHard: Math.floor(r() * 3), diff: Math.floor(r() * 4), hp: 3 - Math.floor(r() * 3), coins: 1 + Math.floor(r() * 2), powerups: 1 + Math.floor(r() * 2) };
-  }
-  // run the beatable check behind a "checking" card, so the screen updates first
-  function check(st, seed, ok, back) {
-    const ui = U();
-    ui.show('<div class="ltlogo">BUILDING…</div><img class="ltclr" src="lt/drawer2.webp" alt=""><p>Laying out your level and making sure it can be beaten.</p>');
-    setTimeout(() => {
-      let res = { ok: false };
-      try { res = make(st, seed); } catch (e) { res = { ok: false }; }
-      ui.idle();
-      if (res.ok) ok(res);
-      else { ui.show('<div class="ltlogo">HMM…</div><p>We couldn\'t build a level we\'re sure can be beaten with those picks. Try fewer pits or obstacles.</p><button class="ltbtn" id="lbBk">BACK</button>'); ui.card().querySelector("#lbBk").onclick = back; }
-    }, 60);
-  }
-  function playSaved(v) {
-    if (!v) return list();
-    const i = load(v.st, v.seed); window.LT_LEVELS[i].name = nameOf(v);
-    lastPlayed = v; U().say("grab"); U().play(i);
-  }
-  function cleared(c) {
-    const v = lastPlayed || { name: "MY LEVEL" }, ui = U();
-    let h = '<div class="ltlogo">LEVEL CLEAR!</div><img class="ltclr" src="lt/drawer3.webp" alt=""><p><b>' + esc(nameOf(v)) + "</b> · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p><p>" + c.coins + (c.coins === 1 ? " coin" : " coins") + ' grabbed. <span class="ltbnote">Custom level coins are just for fun and don\'t go to your wallet.</span></p>';
-    h += '<button class="ltbtn" id="lbAgain">PLAY AGAIN</button>' + (v.id ? '<button class="ltbtn sub" id="lbEd">EDIT LEVEL</button><button class="ltbtn sub" id="lbSh">SHARE CODE</button>' : '<button class="ltbtn sub" id="lbSave">SAVE TO MY LEVELS</button>') + '<button class="ltbtn sub" id="lbList">MY LEVELS</button>';
-    ui.show(h);
-    const q = (s) => ui.card().querySelector(s);
-    q("#lbAgain").onclick = () => playSaved(v);
-    q("#lbList").onclick = () => list();
-    if (q("#lbEd")) q("#lbEd").onclick = () => edit(JSON.parse(JSON.stringify(v)));
-    if (q("#lbSh")) q("#lbSh").onclick = () => share(v);
-    if (q("#lbSave")) q("#lbSave").onclick = () => { const lv = Object.assign({}, v, { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6) }); const a = mine(); a.unshift(lv); keep(a); lastPlayed = lv; list("Saved to My Levels."); };
-  }
-  function share(v) {
-    if (!v) return list();
-    const code = pack(v.st, v.seed), ui = U();
-    ui.show('<div class="ltlogo">SHARE CODE</div><p>Give this code to a friend. They tap <b>PLAY A FRIEND\'S CODE</b> in the Level Builder to play <b>' + esc(nameOf(v)) + '</b>.</p><div class="lbcode">' + code + '</div><button class="ltbtn" id="lbCopy">COPY CODE</button><button class="ltbtn sub" id="lbBk">BACK</button>');
-    const c = ui.card();
-    c.querySelector("#lbCopy").onclick = async (e) => {
-      const txt = "Play my Lost Toolbox level in Where's My 10MM?! Code: " + code;
-      let done = false;
-      try { if (navigator.share) { await navigator.share({ text: txt }); done = true; } } catch (x) { if (x && x.name === "AbortError") return; }
-      if (!done) try { await navigator.clipboard.writeText(code); done = true; } catch (x) {}
-      e.target.textContent = done ? "COPIED!" : "COPY IT BY HAND";
-    };
-    c.querySelector("#lbBk").onclick = () => list();
-  }
-  function enterCode(note) {
-    const ui = U();
-    ui.show('<div class="ltlogo">FRIEND\'S CODE</div><p>Type the level code your friend shared.</p>' + (typeof note === "string" ? '<p class="ltbnote bad">' + esc(note) + "</p>" : "") + '<input class="lbname lbcodein" id="lbIn" maxlength="20" placeholder="XXXXX-XXXXX-XXXXX" autocomplete="off" autocapitalize="characters"><button class="ltbtn" id="lbPlay">PLAY IT</button><button class="ltbtn sub" id="lbBk">BACK</button>');
-    const c = ui.card();
-    c.querySelector("#lbBk").onclick = () => list();
-    c.querySelector("#lbPlay").onclick = () => {
-      const d = unpack(c.querySelector("#lbIn").value);
-      if (!d) return enterCode("That code doesn't look right. Check it and try again.");
-      check(d.settings, d.seed, (res) => playSaved({ name: "FRIEND'S LEVEL", st: d.settings, seed: res.seed }), () => list());
-    };
-  }
+
   const DEFAULT = { bg: 0, len: 2, pits: 1, obstacles: ["platforms", "belts"], obsAmt: 1, enemies: ["r", "m", "T", "b"], enAmt: 1, boss: 1, bossHard: 0, diff: 1, hp: 3, coins: 1, powerups: 1 };
 
-  window.LTBuild = { list, cleared, build, make, load, pack, unpack, slot, BGS, OBST, ENEMIES, BOSSES, BOSS_NAMES, BG_NAMES, DEFAULT, _reach: reach };
+  window.LTBuild = { auto, chips, wire, EN_INFO, BOSS_ART, MUSIC, PUS, build, make, load, slot, BGS, OBST, ENEMIES, BOSSES, BOSS_NAMES, BG_NAMES, DEFAULT, _reach: reach };
 })();

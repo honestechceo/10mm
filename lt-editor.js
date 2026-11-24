@@ -135,7 +135,8 @@
     if (dom) return dom;
     const root = E().root();
     const top = document.createElement("div"); top.id = "lteTop"; top.className = "hidden";
-    top.innerHTML = '<button id="lteDone">✕</button><b id="lteName"></b><button id="lteUndo" aria-label="Undo">↶</button><button id="lteZoom" aria-label="Zoom">🔍</button><button id="lteSet" aria-label="Level settings">⚙</button><button id="lteTest" class="go">▶ TEST</button>';
+    const I = window.GICON;
+    top.innerHTML = '<button id="lteDone" aria-label="Done">' + I.close(20) + '</button><b id="lteName"></b><button id="lteUndo" aria-label="Undo">' + I.undo(22) + '</button><button id="lteZoom" aria-label="Zoom">' + I.zoom(22) + '</button><button id="lteSet" aria-label="Level settings">' + I.gear(22) + '</button><button id="lteTest" class="go">' + I.play(18) + "TEST</button>";
     const panel = document.createElement("div"); panel.id = "ltePanel"; panel.className = "hidden";
     panel.innerHTML = '<input type="range" id="lteScroll" min="0" max="100" value="0" aria-label="Scroll the level"><div class="ltestat" id="lteStat"></div><div class="ltetabs" id="lteTabs"></div><div class="lteopts" id="lteOpts"></div><div class="ltetools" id="lteTools"></div>';
     root.append(top, panel);
@@ -232,7 +233,7 @@
     tb.innerHTML = TABS.map(([k, l]) => '<button data-t="' + k + '" class="' + (k === tab ? "on" : "") + '">' + l + "</button>").join("");
     tb.querySelectorAll("button").forEach((b) => (b.onclick = () => { tab = b.dataset.t; const first = TOOLS.find((t) => t[0] === tab); tool = first[1]; renderTabs(); }));
     const tl = dom.panel.querySelector("#lteTools");
-    let h = '<button data-k="draw" class="drawbtn' + (draw ? " on" : "") + '"><span class="ic">✏️</span>DRAW ' + (draw ? "ON" : "OFF") + '</button><button data-k="erase" class="' + (tool === "erase" ? "on" : "") + '"><span class="ic">⌫</span>ERASE</button>';
+    let h = '<button data-k="draw" class="drawbtn' + (draw ? " on" : "") + '"><span class="ic">' + window.GICON.pencil(30) + '</span>DRAW ' + (draw ? "ON" : "OFF") + '</button><button data-k="erase" class="' + (tool === "erase" ? "on" : "") + '"><span class="ic">' + window.GICON.erase(30) + '</span>ERASE</button>';
     for (const t of TOOLS) if (t[0] === tab) {
       const isBoss = t[1].startsWith("B:"), kind = isBoss && t[1].slice(2);
       const icon = isBoss ? B().BOSS_ART[kind] : t[3], label = isBoss ? B().BOSS_NAMES[kind].replace(/^THE /, "") : t[2];

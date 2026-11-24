@@ -59,7 +59,7 @@
     el.className = "hidden";
     el.innerHTML =
       '<div class="rdo"><div class="rdo-top"><span class="rdo-eq"></span><b>MY RADIO</b><span class="rdo-eq"></span></div>' +
-      '<div class="rdo-modes">' + Object.entries(MODES).map(([k, v]) => '<button data-m="' + k + '"><i>' + (k === "off" ? "✕" : k === "game" ? "♫" : "🎧") + "</i>" + v + "</button>").join("") + "</div>" +
+      '<div class="rdo-modes">' + Object.entries(MODES).map(([k, v]) => '<button data-m="' + k + '"><i>' + (window.GICON ? (k === "off" ? GICON.off(22) : k === "game" ? GICON.music(22) : GICON.phones(22)) : "") + "</i>" + v + "</button>").join("") + "</div>" +
       '<div class="rdo-apps">' + APPS.map((a) => '<button data-a="' + a.id + '"><i style="background:' + a.color + '">' + a.icon + "</i>" + a.name + "</button>").join("") + "</div>" +
       '<div class="rdo-hint" id="radioHint">Pick MY MUSIC, open your music app, press play, then come back to the game.</div>' +
       '<button class="rdo-sfx" id="radioSfx"></button>' +

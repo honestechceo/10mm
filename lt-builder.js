@@ -45,69 +45,100 @@
     text() { return this.g.map((r) => r.join("")); }
   }
 
-  // ---------- sections (same shapes as levels.py) ----------
+  // ---------- sections (same shapes as levels.py, pushed harder by the DIFFICULTY pick) ----------
+  // D: 0 easy, 1 normal, 2 hard, 3 extreme. Harder = more bad guys packed closer, wider pits, hazards stacked
+  // on top of bad guys and pits, faster platforms, fewer checkpoints.
   function makeSections(st, r) {
     const walk = st.enemies.filter((c) => !"bhv".includes(c)), fly = st.enemies.filter((c) => "bh".includes(c)), diver = st.enemies.includes("v");
     const has = (o) => st.obstacles.includes(o);
-    const en = st.enAmt, ob = st.obsAmt, d = 0.35 + 0.2 * Math.max(en, ob);
+    const D = st.diff == null ? 1 : st.diff;
+    const en = st.enAmt + Math.max(0, D - 1), ob = st.obsAmt + Math.max(0, D - 1), d = 0.25 + 0.15 * Math.max(en, ob) + 0.1 * D;
+    const gap = D >= 2 ? 3 : 4; // tiles between bad guys in a gang
+    const msp = (base) => Math.round(base + d * 40 + D * 15);
+    // one extra hazard dropped into a stretch, from whatever obstacles were picked
+    const extra = (l, x0, x1) => {
+      const opts = [];
+      if (has("falling")) opts.push(() => l.put(x0 + r.int(Math.max(1, x1 - x0)), 2, "f"));
+      if (has("zappers")) opts.push(() => { const x = x0 + r.int(Math.max(1, x1 - x0)); if (l.g[11][x] === "#" && l.g[10][x] === ".") l.put(x, 10, "e"); });
+      if (has("chains")) opts.push(() => l.mover(x0 + Math.floor((x1 - x0) / 2), 3, "c", { len: 4, phase: Math.round(r() * 100) / 100 }));
+      if (fly.length) opts.push(() => l.put(x0 + r.int(Math.max(1, x1 - x0)), 5 + r.int(2), r.pick(fly)));
+      if (opts.length) r.pick(opts)();
+    };
+    const stack = () => D >= 2 && r() < (D === 2 ? 0.45 : 0.8);
     const S = [];
     if (walk.length || fly.length) S.push([(l, x) => { // gang: a stretch of bad guys
-      const n = Math.max(1, en + (r() < 0.4 ? 1 : 0) - (en === 0 ? 0 : 0)), w = 6 + n * 4;
-      for (let k = 0; k < n; k++) { if (walk.length) l.put(x + 3 + k * 4, 10, r.pick(walk)); else l.put(x + 3 + k * 4, 6, r.pick(fly)); }
+      const n = Math.max(1, 1 + en + (r() < 0.4 ? 1 : 0) - (D === 0 ? 1 : 0)), w = 6 + n * gap;
+      for (let k = 0; k < n; k++) { if (walk.length) l.put(x + 3 + k * gap, 10, r.pick(walk)); else l.put(x + 3 + k * gap, 6, r.pick(fly)); }
       if (fly.length && walk.length && r() < 0.3 + en * 0.2) l.put(x + 2 + r.int(w - 4), 6, r.pick(fly));
+      if (stack()) extra(l, x + 2, x + w - 2);
+      if (D >= 3 && fly.length && walk.length) l.put(x + 2 + r.int(w - 4), 5, r.pick(fly));
       l.arc(x + 1, Math.min(w - 2, 6), 7);
       return x + w;
     }, 1 + en * 2]);
-    if (st.pits > 0) S.push([(l, x) => { // pits: small hop, moving platform, or crumbling ledges
+    if (st.pits > 0) S.push([(l, x) => { // pits: hop, moving platform, or crumbling ledges
       const k = r();
-      if (k < 0.45 || (!has("platforms") && k < 0.7)) { const w = r.pick([3, 4]); l.pit(x + 1, x + 1 + w); l.arc(x, w + 2, 8); return x + w + 3; }
-      if (k < 0.75 && has("platforms")) { const w = r.pick([6, 7, 8]); l.pit(x + 1, x + 1 + w); l.mover(x + 2, 10, "M", { dx: w - 4, speed: Math.round(65 + d * 40), phase: Math.round(r() * 100) / 100 }); l.coins(x + 3, x + w - 1, 7); return x + w + 3; }
-      const w = r.pick([6, 7]); l.pit(x + 1, x + 1 + w); l.row(x + 3, x + 5, 9, "q"); l.row(x + w - 2, x + w, 8, "q");
+      if (k < 0.45 || (!has("platforms") && k < 0.7)) {
+        const w = r.pick([3, 4]) + Math.min(2, D); l.pit(x + 1, x + 1 + w); l.arc(x, w + 2, 8);
+        if (stack() && fly.length) l.put(x + 1 + Math.floor(w / 2), 7, r.pick(fly));
+        if (D >= 2 && walk.length && r() < 0.5) l.put(x + w + 2, 10, r.pick(walk)); // someone waiting on the landing
+        return x + w + 3;
+      }
+      if (k < 0.75 && has("platforms")) {
+        const w = r.pick([6, 7, 8]) + (D >= 2 ? 2 : 0); l.pit(x + 1, x + 1 + w); l.mover(x + 2, 10, "M", { dx: w - 4, speed: msp(65), phase: Math.round(r() * 100) / 100 }); l.coins(x + 3, x + w - 1, 7);
+        if (stack()) extra(l, x + 3, x + w - 1);
+        return x + w + 3;
+      }
+      const w = r.pick([6, 7]) + (D >= 2 ? 1 : 0); l.pit(x + 1, x + 1 + w); l.row(x + 3, x + 5, 9, "q"); l.row(x + w - 2, x + w, 8, "q");
       if (fly.length && r() < d) l.put(x + 1 + Math.floor(w / 2), 6, r.pick(fly));
       return x + w + 3;
-    }, st.pits * 2.5]);
+    }, st.pits * 2.5 + (st.pits ? D : 0)]);
     if (has("platforms")) S.push([(l, x) => { // lift up to a ledge
-      const w = 8; if (st.pits > 0) l.pit(x + 1, x + 1 + w);
-      l.mover(x + 2, 9, "L", { dy: 4, speed: Math.round(70 + d * 30) });
+      const w = 8; if (st.pits > 0 || D >= 2) l.pit(x + 1, x + 1 + w);
+      l.mover(x + 2, 9, "L", { dy: 4, speed: msp(70) });
       l.floor(x + 5, x + 7, 7); l.coins(x + 5, x + 7, 6);
-      l.mover(x + 7, 7, "M", { dx: 1, speed: Math.round(70 + d * 30), phase: 0.5 });
+      l.mover(x + 7, 7, "M", { dx: 1, speed: msp(70), phase: 0.5 });
+      if (D >= 2 && walk.length) l.put(x + 6, 6, r.pick(walk));
       return x + w + 3;
     }, ob * 1.1]);
     S.push([(l, x) => { // raised ground
       const top = r.pick([8, 9]), w = r.pick([6, 7, 8]);
       l.floor(x + 1, x + 1 + w, top); l.coins(x + 2, x + w, top - 1);
       if (walk.length && r() < 0.3 + en * 0.25) l.put(x + 1 + Math.floor(w / 2), top - 1, r.pick(walk));
+      if (stack()) extra(l, x + 2, x + w);
       return x + w + 3;
-    }, 2]);
+    }, Math.max(0.4, 2 - D * 0.5)]);
     if (st.powerups > 0) S.push([(l, x) => { // ? blocks with a power-up
       l.row(x + 2, x + 6, 7, "?"); l.put(x + 4, 7, "U"); l.ext.push([x + 4, 7, { pu: r.pick(PUS) }]);
-      if (walk.length && r() < 0.6) l.put(x + 8, 10, r.pick(walk));
+      if (walk.length && r() < 0.6 + D * 0.15) l.put(x + 8, 10, r.pick(walk));
       return x + 11;
     }, st.powerups * 1.2]);
     if (has("belts")) S.push([(l, x) => {
       const w = 10; l.row(x + 1, x + 1 + w, 10, r.pick(["<", ">"]));
-      if (walk.length && r() < 0.5) l.put(x + 4, 9, r.pick(walk)); else if (fly.length) l.put(x + 5, 6, r.pick(fly));
+      if (walk.length && r() < 0.5 + D * 0.15) l.put(x + 4, 9, r.pick(walk)); else if (fly.length) l.put(x + 5, 6, r.pick(fly));
       if (has("pistons") && r() < d) l.put(x + 8, 9, "g");
+      if (stack()) extra(l, x + 2, x + w);
       return x + w + 3;
     }, ob * 1.2]);
     if (has("ice")) S.push([(l, x) => {
       const w = 12; l.row(x + 1, x + 1 + w, 11, "i"); l.row(x + 1, x + 1 + w, 12, "i");
       if (walk.length) { l.put(x + 4, 10, r.pick(walk)); if (en > 1) l.put(x + 9, 10, r.pick(walk)); }
       if (diver && r() < 0.5 + en * 0.15) l.put(x + 7, 4, "v");
+      if (D >= 2 && has("zappers")) l.put(x + 6, 10, "e");
+      if (D >= 3 && st.pits > 0) l.pit(x + w - 1, x + w + 2);
       return x + w + 3;
     }, ob * 1.0]);
-    if (has("falling")) S.push([(l, x) => { for (let i = 0; i < 2 + (ob > 1 ? 1 : 0); i++) l.put(x + 2 + i * 3, 2, "f"); return x + 11; }, ob * 1.0]);
-    if (has("zappers")) S.push([(l, x) => { l.put(x + 3, 10, "e"); l.put(x + 4, 10, "e"); if (ob > 1) { l.put(x + 8, 10, "e"); } return x + 11; }, ob * 1.0]);
-    if (has("pistons")) S.push([(l, x) => { l.put(x + 3, 10, "p"); l.put(x + 7, 9, "g"); if (walk.length && r() < 0.5) l.put(x + 10, 10, r.pick(walk)); return x + 13; }, ob * 1.0]);
-    if (has("chains")) S.push([(l, x) => { l.mover(x + 4, 3, "c", { len: 4 }); if (walk.length && r() < 0.5) l.put(x + 9, 10, r.pick(walk)); return x + 13; }, ob * 0.9]);
-    if (diver && !has("ice")) S.push([(l, x) => { l.put(x + 5, 4, "v"); l.coins(x + 3, x + 8, 10); return x + 11; }, en * 0.8]);
+    if (has("falling")) S.push([(l, x) => { const n = 2 + (ob > 1 ? 1 : 0) + (D >= 2 ? 1 : 0), sp = D >= 2 ? 2 : 3; for (let i = 0; i < n; i++) l.put(x + 2 + i * sp, 2, "f"); if (D >= 2 && walk.length) l.put(x + 4, 10, r.pick(walk)); return x + 4 + n * sp; }, ob * 1.0]);
+    if (has("zappers")) S.push([(l, x) => { l.put(x + 3, 10, "e"); l.put(x + 4, 10, "e"); if (ob > 1) l.put(x + 8, 10, "e"); if (D >= 2) { l.put(x + 9, 10, "e"); if (fly.length) l.put(x + 6, 6, r.pick(fly)); } return x + 12; }, ob * 1.0]);
+    if (has("pistons")) S.push([(l, x) => { l.put(x + 3, 10, "p"); l.put(x + 7, 9, "g"); if (D >= 2) l.put(x + 10, 10, "p"); if (walk.length && r() < 0.5 + D * 0.15) l.put(x + 12, 10, r.pick(walk)); return x + 15; }, ob * 1.0]);
+    if (has("chains")) S.push([(l, x) => { l.mover(x + 4, 3, "c", { len: 4 }); if (D >= 2) l.mover(x + 9, 3, "c", { len: 4, phase: 0.5 }); if (walk.length && r() < 0.5 + D * 0.15) l.put(x + 12, 10, r.pick(walk)); return x + 15; }, ob * 0.9]);
+    if (diver && !has("ice")) S.push([(l, x) => { l.put(x + 5, 4, "v"); if (D >= 2) l.put(x + 8, 4, "v"); l.coins(x + 3, x + 8, 10); return x + 11; }, en * 0.8]);
     S.push([(l, x) => { // stairs up and back down
       for (let i = 0; i < 3; i++) l.floor(x + 1 + i, x + 2 + i, 10 - i);
       l.floor(x + 4, x + 9, 8); l.coins(x + 4, x + 9, 7);
       if (walk.length && r() < 0.3 + en * 0.25) l.put(x + 7, 7, r.pick(walk));
-      if (st.pits > 0) l.pit(x + 9, x + 12);
-      return x + 13;
-    }, 1.2]);
+      if (st.pits > 0) l.pit(x + 9, x + 12 + (D >= 2 ? 1 : 0));
+      return x + 13 + (D >= 2 ? 1 : 0);
+    }, Math.max(0.4, 1.2 - D * 0.3)]);
     return S;
   }
 
@@ -134,24 +165,24 @@
     const S = makeSections(st, r), fns = S.map((s) => s[0]), wts = S.map((s) => s[1]);
     let x = 7, lastCp = 0, prev = null, guard = 0;
     while (x < end - 14 && guard++ < 400) {
-      if (x - lastCp > 42) { l.put(x + 1, 10, "!"); lastCp = x; x += 4; continue; }
+      if (x - lastCp > [42, 42, 64, 96][st.diff == null ? 1 : st.diff]) { l.put(x + 1, 10, "!"); lastCp = x; x += 4; continue; }
       const f = r.weighted(fns, wts);
       if (f === prev && S.length > 2) continue;
       prev = f; x = f(l, x);
     }
-    if (st.obstacles.includes("crushers")) crushers(l, 1 + st.obsAmt * 2, r);
+    if (st.obstacles.includes("crushers")) crushers(l, 1 + st.obsAmt * 2 + (st.diff || 0), r);
     if (boss) {
       l.coins(x + 1, Math.min(x + 6, W - 26), 10);
-      const hard = st.bossHard ? 1 : 0;
-      const hp = { walker: 3, charger: 3, flyer: 3, roller: 3, magnet: 4, gunner: 4, stomper: 5, serpent: 5, vac: 5, kraken: 5, king: 6, captain: 6 }[boss] + hard * 2;
-      l.arena(Math.max(x + 8, W - 22), boss, hp, Math.round((1 + hard * 0.3) * 100) / 100, BOSS_NAMES[boss]);
+      const hard = +st.bossHard || 0; // 0 normal, 1 tough, 2 brutal
+      const hp = { walker: 3, charger: 3, flyer: 3, roller: 3, magnet: 4, gunner: 4, stomper: 5, serpent: 5, vac: 5, kraken: 5, king: 6, captain: 6 }[boss] + hard * 2 + (hard > 1 ? 1 : 0);
+      l.arena(Math.max(x + 8, W - 22), boss, hp, Math.round((1 + hard * 0.25) * 100) / 100, BOSS_NAMES[boss]);
     } else {
       l.coins(x + 1, x + 5, 10); l.put(Math.min(x + 7, l.cols - 4), 10, "X");
     }
     // coins: none, normal, or extra arcs over open floor
     if (st.coins === 0) for (const row of l.g) for (let i = 0; i < row.length; i++) if (row[i] === "o") row[i] = ".";
     if (st.coins === 2) for (let cx = 12; cx < l.cols - 30; cx += 9) { let ok = true; for (let i = 0; i < 5; i++) { if (l.g[11][cx + i] !== "#" || l.g[8][cx + i] !== "." || l.g[9][cx + i] !== "." || l.g[10][cx + i] !== ".") ok = false; } if (ok) l.arc(cx, 5, 8); }
-    return { name: "", bg: BGS[st.bg] || "garage", music: MUSIC[BGS[st.bg]] || "garage", rows: l.text(), ext: l.ext, room: null, custom: true };
+    return { name: "", bg: BGS[st.bg] || "garage", music: MUSIC[BGS[st.bg]] || "garage", rows: l.text(), ext: l.ext, room: null, custom: true, hp: st.hp || 3, espd: [0.85, 1, 1.25, 1.5][st.diff == null ? 1 : st.diff] };
   }
 
   // ---------- beatable check: the game's real physics, same as test/lostbox-reach.js ----------
@@ -228,19 +259,19 @@
 
   // ---------- share codes: settings + seed in 13 characters ----------
   const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  const FIELDS = [["ver", 2], ["bg", 5], ["len", 2], ["pits", 2], ["obstacles", 8], ["obsAmt", 2], ["enemies", 11], ["enAmt", 2], ["boss", 4], ["bossHard", 1], ["coins", 2], ["powerups", 2], ["seed", 20]];
+  const FIELDS = [["ver", 2], ["bg", 5], ["len", 2], ["pits", 2], ["obstacles", 8], ["obsAmt", 2], ["enemies", 11], ["enAmt", 2], ["boss", 4], ["bossHard", 2], ["diff", 2], ["hp", 2], ["coins", 2], ["powerups", 2], ["seed", 20]];
   function pack(st, seed) {
-    const v = { ...st, ver: VER, seed, obstacles: OBST.reduce((m, o, i) => m | (st.obstacles.includes(o) ? 1 << i : 0), 0), enemies: ENEMIES.reduce((m, c, i) => m | (st.enemies.includes(c) ? 1 << i : 0), 0), bossHard: st.bossHard ? 1 : 0, len: st.len - 1 };
+    const v = { ...st, ver: VER, seed, obstacles: OBST.reduce((m, o, i) => m | (st.obstacles.includes(o) ? 1 << i : 0), 0), enemies: ENEMIES.reduce((m, c, i) => m | (st.enemies.includes(c) ? 1 << i : 0), 0), bossHard: +st.bossHard || 0, diff: st.diff == null ? 1 : st.diff, hp: (st.hp || 3) - 1, len: st.len - 1 };
     let n = 0n;
     for (const [k, b] of FIELDS) n = (n << BigInt(b)) | BigInt((v[k] >>> 0) & ((1 << b) - 1));
     let sum = 0; for (let t = n; t > 0n; t >>= 5n) sum = (sum * 7 + Number(t & 31n)) % 32;
     n = (n << 5n) | BigInt(sum);
-    let s = ""; for (let i = 0; i < 14; i++) { s = A[Number(n & 31n)] + s; n >>= 5n; }
-    return s.slice(0, 4) + "-" + s.slice(4, 9) + "-" + s.slice(9);
+    let s = ""; for (let i = 0; i < 15; i++) { s = A[Number(n & 31n)] + s; n >>= 5n; }
+    return s.slice(0, 5) + "-" + s.slice(5, 10) + "-" + s.slice(10);
   }
   function unpack(code) {
     const s = String(code || "").toUpperCase().replace(/[^A-Z0-9]/g, "").replace(/O/g, "0").replace(/I/g, "1");
-    if (s.length !== 14) return null;
+    if (s.length !== 15) return null;
     let n = 0n;
     for (const ch of s) { const i = A.indexOf(ch); if (i < 0) return null; n = (n << 5n) | BigInt(i); }
     const sum = Number(n & 31n); n >>= 5n;
@@ -249,7 +280,7 @@
     const v = {};
     for (const [k, b] of [...FIELDS].reverse()) { v[k] = Number(n & BigInt((1 << b) - 1)); n >>= BigInt(b); }
     if (v.ver !== VER || v.bg >= BGS.length || v.boss >= BOSSES.length) return null;
-    return { settings: { bg: v.bg, len: v.len + 1, pits: Math.min(2, v.pits), obstacles: OBST.filter((_, i) => v.obstacles & (1 << i)), obsAmt: Math.min(2, v.obsAmt), enemies: ENEMIES.filter((_, i) => v.enemies & (1 << i)), enAmt: Math.min(3, v.enAmt), boss: v.boss, bossHard: !!v.bossHard, coins: Math.min(2, v.coins), powerups: Math.min(2, v.powerups) }, seed: v.seed };
+    return { settings: { bg: v.bg, len: v.len + 1, pits: Math.min(2, v.pits), obstacles: OBST.filter((_, i) => v.obstacles & (1 << i)), obsAmt: Math.min(2, v.obsAmt), enemies: ENEMIES.filter((_, i) => v.enemies & (1 << i)), enAmt: Math.min(3, v.enAmt), boss: v.boss, bossHard: Math.min(2, v.bossHard), diff: v.diff, hp: Math.min(3, v.hp + 1), coins: Math.min(2, v.coins), powerups: Math.min(2, v.powerups) }, seed: v.seed };
   }
 
   // ---------- builder screens (shown in the Lost Toolbox card) ----------
@@ -276,7 +307,7 @@
       h += '<div class="lblist">';
       a.forEach((v, i) => {
         const bs = BOSSES[v.st.boss];
-        h += '<div class="lbrow"><img src="lt/' + (bs ? BOSS_ART[bs] : "drawer3") + '.webp" alt=""><div class="lbinfo"><b>' + esc(nameOf(v)) + "</b><span>" + BG_NAMES[v.st.bg] + " · " + LEN[v.st.len] + " · " + (bs ? BOSS_NAMES[bs] : "no boss") + '</span></div><div class="lbacts"><button class="lbplay" data-p="' + i + '">PLAY</button><button data-e="' + i + '">EDIT</button><button data-s="' + i + '">SHARE</button><button class="lbdel" data-d="' + i + '">✕</button></div></div>';
+        h += '<div class="lbrow"><img src="lt/' + (bs ? BOSS_ART[bs] : "drawer3") + '.webp" alt=""><div class="lbinfo"><b>' + esc(nameOf(v)) + "</b><span>" + BG_NAMES[v.st.bg] + " · " + ["EASY", "NORMAL", "HARD", "EXTREME"][v.st.diff == null ? 1 : v.st.diff] + " · " + (bs ? BOSS_NAMES[bs] : "no boss") + '</span></div><div class="lbacts"><button class="lbplay" data-p="' + i + '">PLAY</button><button data-e="' + i + '">EDIT</button><button data-s="' + i + '">SHARE</button><button class="lbdel" data-d="' + i + '">✕</button></div></div>';
       });
       h += "</div>";
     } else h += '<p class="ltbnote">No levels yet. Tap NEW LEVEL to make your first one.</p>';
@@ -305,11 +336,12 @@
     let h = '<div class="ltlogo">' + (v.id ? "EDIT LEVEL" : "NEW LEVEL") + "</div>";
     h += '<label class="lbl">NAME</label><input class="lbname" id="lbName" maxlength="18" placeholder="MY LEVEL" value="' + esc(v.name || "") + '" autocomplete="off" autocapitalize="characters">';
     h += '<label class="lbl">PLACE</label><div class="lbprev" id="lbPrev" style="background-image:url(bg-' + BGS[st.bg] + '.jpg)"><span>' + BG_NAMES[st.bg] + "</span></div>" + chips("bg", BGS.map((_, i) => [i, BG_NAMES[i]]), st.bg);
+    h += '<label class="lbl">DIFFICULTY</label>' + chips("diff", [[0, "EASY"], [1, "NORMAL"], [2, "HARD"], [3, "EXTREME"]], st.diff == null ? 1 : st.diff) + '<span class="lbsub">HEARTS</span>' + chips("hp", [[3, "3 HEARTS"], [2, "2 HEARTS"], [1, "1 HIT = OUT"]], st.hp || 3);
     h += '<label class="lbl">LENGTH</label>' + chips("len", [[1, "SHORT"], [2, "MEDIUM"], [3, "LONG"]], st.len);
     h += '<label class="lbl">PITS</label>' + chips("pits", [[0, "NONE"], [1, "SOME"], [2, "LOTS"]], st.pits);
     h += '<label class="lbl">OBSTACLES</label>' + chips("obstacles", OBST.map((o) => [o, OB_NAMES[o]]), st.obstacles, true) + '<span class="lbsub">HOW MANY</span>' + chips("obsAmt", OAMT.map((l, i) => [i, l]), st.obsAmt);
     h += '<label class="lbl">BAD GUYS</label>' + chips("enemies", ENEMIES.map((e) => [e, EN_INFO[e][0], EN_INFO[e][1]]), st.enemies, true) + '<span class="lbsub">HOW MANY</span>' + chips("enAmt", EAMT.map((l, i) => [i, l]), st.enAmt);
-    h += '<label class="lbl">BOSS</label>' + chips("boss", BOSSES.map((b, i) => [i, b ? BOSS_NAMES[b].replace(/^THE /, "") : "NO BOSS", b ? BOSS_ART[b] : ""]), st.boss) + '<span class="lbsub">BOSS STRENGTH</span>' + chips("bossHard", [[0, "NORMAL"], [1, "TOUGH"]], st.bossHard ? 1 : 0);
+    h += '<label class="lbl">BOSS</label>' + chips("boss", BOSSES.map((b, i) => [i, b ? BOSS_NAMES[b].replace(/^THE /, "") : "NO BOSS", b ? BOSS_ART[b] : ""]), st.boss) + '<span class="lbsub">BOSS STRENGTH</span>' + chips("bossHard", [[0, "NORMAL"], [1, "TOUGH"], [2, "BRUTAL"]], +st.bossHard || 0);
     h += '<label class="lbl">COINS</label>' + chips("coins", AMT3.map((l, i) => [i, i === 1 ? "NORMAL" : i === 2 ? "EXTRA" : l]), st.coins);
     h += '<label class="lbl">POWER-UPS</label>' + chips("powerups", AMT3.map((l, i) => [i, l]), st.powerups);
     h += '<button class="ltbtn" id="lbGo">SAVE &amp; PLAY</button><button class="ltbtn sub" id="lbRand">SURPRISE ME</button><button class="ltbtn sub" id="lbCancel">CANCEL</button>';
@@ -318,7 +350,7 @@
     c.querySelectorAll(".lbchips").forEach((g) => g.querySelectorAll("button").forEach((b) => (b.onclick = () => {
       const k = g.dataset.g, raw = b.dataset.v, val = /^\d+$/.test(raw) && k !== "enemies" ? +raw : raw;
       if (g.dataset.multi) { const a = st[k]; const i = a.indexOf(val); if (i >= 0) a.splice(i, 1); else a.push(val); b.classList.toggle("on"); }
-      else { st[k] = k === "bossHard" ? !!val : val; g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }
+      else { st[k] = val; g.querySelectorAll("button").forEach((x) => x.classList.toggle("on", x === b)); }
       if (k === "bg") { const p = c.querySelector("#lbPrev"); p.style.backgroundImage = "url(bg-" + BGS[val] + ".jpg)"; p.firstChild.textContent = BG_NAMES[val]; }
       ui.haptic("light");
     })));
@@ -341,7 +373,7 @@
   }
   function surprise() {
     const r = Math.random, pickSome = (arr, n) => arr.slice().sort(() => r() - 0.5).slice(0, n);
-    return { bg: Math.floor(r() * BGS.length), len: 1 + Math.floor(r() * 3), pits: Math.floor(r() * 3), obstacles: pickSome(OBST, 2 + Math.floor(r() * 3)), obsAmt: Math.floor(r() * 3), enemies: pickSome(ENEMIES, 2 + Math.floor(r() * 4)), enAmt: Math.floor(r() * 4), boss: 1 + Math.floor(r() * 12), bossHard: r() < 0.3, coins: 1 + Math.floor(r() * 2), powerups: 1 + Math.floor(r() * 2) };
+    return { bg: Math.floor(r() * BGS.length), len: 1 + Math.floor(r() * 3), pits: Math.floor(r() * 3), obstacles: pickSome(OBST, 2 + Math.floor(r() * 3)), obsAmt: Math.floor(r() * 3), enemies: pickSome(ENEMIES, 2 + Math.floor(r() * 4)), enAmt: Math.floor(r() * 4), boss: 1 + Math.floor(r() * 12), bossHard: Math.floor(r() * 3), diff: Math.floor(r() * 4), hp: 3 - Math.floor(r() * 3), coins: 1 + Math.floor(r() * 2), powerups: 1 + Math.floor(r() * 2) };
   }
   // run the beatable check behind a "checking" card, so the screen updates first
   function check(st, seed, ok, back) {
@@ -388,7 +420,7 @@
   }
   function enterCode(note) {
     const ui = U();
-    ui.show('<div class="ltlogo">FRIEND\'S CODE</div><p>Type the level code your friend shared.</p>' + (typeof note === "string" ? '<p class="ltbnote bad">' + esc(note) + "</p>" : "") + '<input class="lbname lbcodein" id="lbIn" maxlength="20" placeholder="XXXX-XXXXX-XXXXX" autocomplete="off" autocapitalize="characters"><button class="ltbtn" id="lbPlay">PLAY IT</button><button class="ltbtn sub" id="lbBk">BACK</button>');
+    ui.show('<div class="ltlogo">FRIEND\'S CODE</div><p>Type the level code your friend shared.</p>' + (typeof note === "string" ? '<p class="ltbnote bad">' + esc(note) + "</p>" : "") + '<input class="lbname lbcodein" id="lbIn" maxlength="20" placeholder="XXXXX-XXXXX-XXXXX" autocomplete="off" autocapitalize="characters"><button class="ltbtn" id="lbPlay">PLAY IT</button><button class="ltbtn sub" id="lbBk">BACK</button>');
     const c = ui.card();
     c.querySelector("#lbBk").onclick = () => list();
     c.querySelector("#lbPlay").onclick = () => {
@@ -397,7 +429,7 @@
       check(d.settings, d.seed, (res) => playSaved({ name: "FRIEND'S LEVEL", st: d.settings, seed: res.seed }), () => list());
     };
   }
-  const DEFAULT = { bg: 0, len: 2, pits: 1, obstacles: ["platforms", "belts"], obsAmt: 1, enemies: ["r", "m", "T", "b"], enAmt: 1, boss: 1, bossHard: false, coins: 1, powerups: 1 };
+  const DEFAULT = { bg: 0, len: 2, pits: 1, obstacles: ["platforms", "belts"], obsAmt: 1, enemies: ["r", "m", "T", "b"], enAmt: 1, boss: 1, bossHard: 0, diff: 1, hp: 3, coins: 1, powerups: 1 };
 
   window.LTBuild = { list, cleared, build, make, load, pack, unpack, slot, BGS, OBST, ENEMIES, BOSSES, BOSS_NAMES, BG_NAMES, DEFAULT, _reach: reach };
 })();

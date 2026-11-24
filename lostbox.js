@@ -141,7 +141,7 @@
   function startLevel(i, fromCheckpoint, roomRows) {
     const L = window.LT_LEVELS[i];
     lvI = i;
-    if (!roomRows) maxHp = 3;
+    if (!roomRows) maxHp = L.hp || 3; // custom levels can set 1-3 hearts
     grid = (roomRows || L.rows).map((r) => r.split(""));
     W = grid[0].length;
     ents = []; movers = []; fx = [];
@@ -198,6 +198,7 @@
       if (gy > 0) ents.push({ k: "mechpu", x: mx, y: gy * T, x0: mx, y0: gy * T, w: 60, h: 80, alive: true });
     }
     const tag = roomRows ? "r" : "";
+    if (L.espd && !roomRows) for (const e of ents) if (e.vx && e.k !== "boss") e.vx *= L.espd; // faster bad guys on hard custom levels
     for (const e of ents) if (e.k === "coin" && collected.has(tag + i + ":" + Math.round(e.x0) + ":" + Math.round(e.y0))) e.alive = false;
     const sv = load(), got = (sv.stars && sv.stars[i]) || [];
     for (const e of ents) if (e.k === "star" && got.includes(e.sid)) e.ghost = 1;   // already found: shows faded, still worth nothing
@@ -754,7 +755,7 @@
     if (hasPower(k)) { toast("You already have that one on"); return; }
     b.splice(i, 1); s.bag = b; store(s); bagHud(); givePower(k, true);
   }
-  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp >= 4 : pow[k] > 0; }
+  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp > (window.LT_LEVELS[lvI].hp || 3) : pow[k] > 0; }
   function givePower(k, fromBag) {
     if (!fromBag && k !== "torque" && hasPower(k)) {
       const s = load(), b = (s.bag = s.bag || []);
@@ -763,7 +764,7 @@
     }
     say("power"); haptic("success");
     if (k === "shield") pow.shield = 1;
-    else if (k === "heart") { maxHp = 4; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
+    else if (k === "heart") { maxHp = (window.LT_LEVELS[lvI].hp || 3) + 1; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
     else {
       // only one action power at a time: the button does one thing
       if (k === "wrench") pow.pound = 0; if (k === "pound") pow.wrench = 0;

@@ -128,7 +128,7 @@
   const cleanName = (s) => String(s || "").toUpperCase().replace(/[^A-Z0-9 '!?.&-]/g, "").slice(0, 18).trim();
 
   // ---------- the editor ----------
-  let lv = null, tab = "ground", tool = "#", opts = { pu: "shield", len: 4, dx: 3, dy: 3, spd: 75, bossHard: 0 }, undo = [], zoomI = 0, camX = 0, testing = false, dom = null, dirty = false, lastPlayed = null;
+  let draw = false, lv = null, tab = "ground", tool = "#", opts = { pu: "shield", len: 4, dx: 3, dy: 3, spd: 75, bossHard: 0 }, undo = [], zoomI = 0, camX = 0, testing = false, dom = null, dirty = false, lastPlayed = null;
   const ZOOMS = [1, 0.75];
 
   function buildDom() {
@@ -146,30 +146,35 @@
     top.querySelector("#lteSet").onclick = settings; top.querySelector("#lteName").onclick = settings;
     top.querySelector("#lteTest").onclick = test;
     panel.querySelector("#lteScroll").oninput = (e) => { camX = E().setCam(+e.target.value); };
-    // painting and scrolling on the level view
-    const pts = new Map(); let pan = null, stroke = null;
+    // tap = place one thing, drag = scroll. With DRAW on, dragging paints ground, coins or erases.
+    const pts = new Map(); let pan = null, stroke = null, down = null;
     const cvx = dom.cv;
+    const dragPaints = () => draw && (tool === "erase" || tab === "ground" || tool === "o");
     cvx.addEventListener("pointerdown", (e) => {
       if (!editing()) return;
       e.preventDefault(); cvx.setPointerCapture && cvx.setPointerCapture(e.pointerId);
       pts.set(e.pointerId, e.clientX);
-      if (pts.size > 1 || tool === "move") { pan = { x: avgX(pts), cam: E().cam() }; stroke = null; return; }
-      stroke = { last: null }; snap();
-      paintAt(e.clientX, e.clientY, true);
+      if (pts.size > 1) { pan = { x: avgX(pts), cam: E().cam() }; down = null; stroke = null; return; }
+      down = { x: e.clientX, y: e.clientY, moved: false };
+      if (dragPaints()) { stroke = { last: null }; snap(); paintAt(e.clientX, e.clientY); down = null; }
     });
     cvx.addEventListener("pointermove", (e) => {
       if (!editing() || !pts.has(e.pointerId)) return;
       pts.set(e.pointerId, e.clientX);
-      if (pan) { camX = E().setCam(pan.cam - (avgX(pts) - pan.x) * E().px()); syncScroll(); return; }
-      if (stroke) paintAt(e.clientX, e.clientY, false);
+      if (stroke) { paintAt(e.clientX, e.clientY); return; }
+      if (down && !down.moved && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) { down.moved = true; pan = { x: avgX(pts), cam: E().cam() }; }
+      if (pan) { camX = E().setCam(pan.cam - (avgX(pts) - pan.x) * E().px()); syncScroll(); }
     });
-    const up = (e) => { pts.delete(e.pointerId); if (!pts.size) { pan = null; stroke = null; } else if (pan) pan = { x: avgX(pts), cam: E().cam() }; };
+    const up = (e) => {
+      if (!pts.has(e.pointerId)) return;
+      if (down && !down.moved && pts.size === 1 && e.type === "pointerup") { snap(); stroke = { last: null }; paintAt(down.x, down.y); }
+      pts.delete(e.pointerId);
+      if (!pts.size) { pan = null; stroke = null; down = null; } else if (pan) pan = { x: avgX(pts), cam: E().cam() };
+    };
     cvx.addEventListener("pointerup", up); cvx.addEventListener("pointercancel", up);
     function avgX(m) { let s = 0; for (const v of m.values()) s += v; return s / m.size; }
-    function paintAt(cx, cy, first) {
+    function paintAt(cx, cy) {
       const c = E().cell(cx, cy);
-      const toolCh = tool.split(":")[0];
-      if (!first && (ONE.includes(toolCh) || tool === "move")) return;
       const last = stroke && stroke.last;
       if (last && last.x === c.x && last.y === c.y) return;
       // fill the gap when a fast drag skips cells
@@ -185,7 +190,7 @@
   const editing = () => dom && dom.root.classList.contains("editing");
   function snap() { undo.push(JSON.stringify({ rows: lv.rows.map((r) => r.join("")), ext: lv.ext })); if (undo.length > 40) undo.shift(); }
   function flash(t) { const s = dom.panel.querySelector("#lteStat"); s.textContent = t; s.classList.add("warn"); clearTimeout(flash.t); flash.t = setTimeout(() => { s.classList.remove("warn"); status(); }, 2600); }
-  function status() { if (!dom) return; const s = dom.panel.querySelector("#lteStat"); if (s.classList.contains("warn")) return; s.innerHTML = lv.ok ? "✓ Beaten. You can share this level." : "Tap or drag to place. ✋ or two fingers to scroll. <b>Beat it to share it.</b>"; }
+  function status() { if (!dom) return; const s = dom.panel.querySelector("#lteStat"); if (s.classList.contains("warn")) return; s.innerHTML = (lv.ok ? "✓ Beaten. You can share it. · " : "<b>Beat it to share it.</b> · ") + (draw ? "Drag paints. Two fingers scroll." : "Tap to place. Drag to scroll."); }
 
   function kwFor(t) {
     const [ch, kind] = t.split(":");
@@ -227,15 +232,15 @@
     tb.innerHTML = TABS.map(([k, l]) => '<button data-t="' + k + '" class="' + (k === tab ? "on" : "") + '">' + l + "</button>").join("");
     tb.querySelectorAll("button").forEach((b) => (b.onclick = () => { tab = b.dataset.t; const first = TOOLS.find((t) => t[0] === tab); tool = first[1]; renderTabs(); }));
     const tl = dom.panel.querySelector("#lteTools");
-    let h = '<button data-k="move" class="' + (tool === "move" ? "on" : "") + '"><span class="ic">✋</span>MOVE</button><button data-k="erase" class="' + (tool === "erase" ? "on" : "") + '"><span class="ic">⌫</span>ERASE</button>';
+    let h = '<button data-k="draw" class="drawbtn' + (draw ? " on" : "") + '"><span class="ic">✏️</span>DRAW ' + (draw ? "ON" : "OFF") + '</button><button data-k="erase" class="' + (tool === "erase" ? "on" : "") + '"><span class="ic">⌫</span>ERASE</button>';
     for (const t of TOOLS) if (t[0] === tab) {
       const isBoss = t[1].startsWith("B:"), kind = isBoss && t[1].slice(2);
       const icon = isBoss ? B().BOSS_ART[kind] : t[3], label = isBoss ? B().BOSS_NAMES[kind].replace(/^THE /, "") : t[2];
       h += '<button data-k="' + t[1] + '" class="' + (tool === t[1] ? "on" : "") + (t[4] ? " " + t[4] : "") + '"><img src="' + src(icon) + '" alt="">' + esc(label) + "</button>";
     }
     tl.innerHTML = h;
-    tl.querySelectorAll("button").forEach((b) => (b.onclick = () => { tool = b.dataset.k; U().haptic("light"); renderTabs(); }));
-    const sel = tl.querySelector("button.on"); if (sel && sel.scrollIntoView) sel.scrollIntoView({ inline: "nearest", block: "nearest" });
+    tl.querySelectorAll("button").forEach((b) => (b.onclick = () => { if (b.dataset.k === "draw") { draw = !draw; flash(draw ? "DRAW is on: drag to paint ground, coins or erase. Scroll with two fingers or the bar." : "DRAW is off: tap to place, drag to scroll."); } else tool = b.dataset.k; U().haptic("light"); renderTabs(); }));
+    const sel = tl.querySelector("button.on:not(.drawbtn)"); if (sel && sel.scrollIntoView) sel.scrollIntoView({ inline: "nearest", block: "nearest" });
     renderOpts();
   }
   function renderOpts() {

@@ -113,7 +113,7 @@
     dpr = Math.min(3, window.devicePixelRatio || 1);
     // a wide-ish window onto the level: never taller than 1.15x its width, so you can see what's coming
     const wrap = cv.parentElement.getBoundingClientRect(), edp = root.classList.contains("editing") && document.getElementById("ltePanel"), pad = (edp || root.querySelector(".ltpad")).getBoundingClientRect().height;
-    const avail = wrap.height - pad - 56;
+    const avail = wrap.height - pad - (edp ? cv.getBoundingClientRect().top - wrap.top + 8 : 56); // the editor counts the notch too
     cv.style.height = Math.max(200, Math.min(avail, wrap.width * 1.6)) + "px";
     const r = cv.getBoundingClientRect();
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);

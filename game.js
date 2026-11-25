@@ -551,8 +551,8 @@ function audioReady() {
       audioCtx
         .resume()
         .then(() => {
-          // WebKit can reset the phone's audio session when sound starts: put ours back
-          if (window.applyAudioSession) applyAudioSession();
+          // WebKit can reset the phone's audio session when sound first starts: put ours back once
+          if (window.applyAudioSession && !audioReady.applied) { audioReady.applied = true; applyAudioSession(true); }
           if (state === "running") sfx("power");
         })
         .catch(() => {});

@@ -16,6 +16,8 @@ The iPhone app can update the game's **web files** (game code, levels, art, soun
 Anything native: new or updated Capacitor plugins (`package.json`), Swift code in `ci/native/`, or
 `capacitor.config.json`. Those change the app's *native fingerprint* (`scripts/live-version.mjs`), and phones only
 take live updates with their own fingerprint, so older App Store builds keep running safely until players update.
+The App Store version (`APP_VERSION` in `ios.yml`) is part of the fingerprint from 1.5 on, so bumping it for a
+new release also stops that release's web code from reaching phones still on the older version.
 Also send big new features and new in-app purchases through review (Apple's rule: live updates can't change what the app is).
 
 When installing a new App Store version, the phone starts fresh from that version (`resetWhenUpdate`).

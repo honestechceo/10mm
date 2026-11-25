@@ -48,3 +48,32 @@ Each needs a review screenshot (use a screenshot of the Socket Shop) and must be
 - Tell Claude to switch ads back to live (`testMode: false`).
 - Update the App Privacy answers only if asked (no new data types).
 - New screenshots are optional.
+
+## Version 1.5: Lost Toolbox achievements and leaderboards
+
+Add these in App Store Connect → Services → Game Center, then add them to the **1.5 version page** (Game Center section) when you submit. For every achievement: Hidden = No, Achievable more than once = No. All 22 achievements together add up to 690 points (Apple's cap is 1,000).
+
+### Leaderboards (Classic)
+
+| Reference name | Leaderboard ID | Display name | Score format | Sort |
+|---|---|---|---|---|
+| LT Stars | `wm10_lt_stars` | Lost Toolbox Stars | Integer, suffix "star / stars" | High to low |
+| LT Drawers | `wm10_lt_drawers` | Drawers Cleared | Integer, suffix "drawer / drawers" | High to low |
+| LT Golden Run | `wm10_lt_golden_time` | Fastest Golden Drawer | Elapsed time, to the hundredth of a second | Low to high |
+
+### Achievements (images in `store/gamecenter/`, made by `scripts/lt_badges.py`)
+
+| Achievement ID | Title | Points | Pre-earned | Earned | Image |
+|---|---|---|---|---|---|
+| `wm10_lt_first_drawer` | Out of the Toolbox | 10 | Clear your first Lost Toolbox drawer. | You cleared your first Lost Toolbox drawer. | ach_lt_first_drawer.png |
+| `wm10_lt_golden` | Golden Socket | 25 | Clear the first 5 drawers to win the Golden 10MM. | You won the Golden 10MM. | ach_lt_golden.png |
+| `wm10_lt_drawers_25` | Deep Drawers | 25 | Clear 25 Lost Toolbox drawers. | You cleared 25 Lost Toolbox drawers. | ach_lt_drawers_25.png |
+| `wm10_lt_drawers_50` | The Grand Chest | 50 | Clear all 50 Lost Toolbox drawers. | You cleared every drawer in the Lost Toolbox. | ach_lt_drawers_50.png |
+| `wm10_lt_hideout_1` | Gang Buster | 15 | Find and clear a hidden hideout. | You cleared a hidden hideout. | ach_lt_hideout_1.png |
+| `wm10_lt_hideouts_all` | Crew Disbanded | 40 | Clear all 5 hideouts. | You took down the whole bad-guy crew. | ach_lt_hideouts_all.png |
+| `wm10_lt_stars_50` | Star Collector | 20 | Find 50 stars in the Lost Toolbox. | You found 50 stars. | ach_lt_stars_50.png |
+| `wm10_lt_stars_250` | Every Last Star | 50 | Find all 250 stars in the Lost Toolbox. | You found every star. | ach_lt_stars_250.png |
+| `wm10_lt_secret_room` | Secret Stash | 10 | Find a secret room behind a blue toolbox. | You found a secret room. | ach_lt_secret_room.png |
+| `wm10_lt_mech` | Mech Mode | 20 | Beat a boss while riding the Ratchet Mech. | You beat a boss in the Ratchet Mech. | ach_lt_mech.png |
+| `wm10_lt_maker` | Level Maker | 15 | Make your own level and beat it. | You made a level and beat it. | ach_lt_maker.png |
+| `wm10_lt_friend` | Friend's Challenge | 15 | Beat a level a friend shared with you. | You beat a friend's level. | ach_lt_friend.png |

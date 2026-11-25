@@ -5,7 +5,7 @@
 (function () {
   "use strict";
   const T = 48, ROWS = 13;
-  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden).length; // hidden hideout levels sit after the main drawers
+  const NLV = () => window.LT_LEVELS.filter((l) => !l.hidden && !l.custom && !l.train).length; // hidden hideout levels sit after the main drawers
   // keep in sync with lt-tools/validate.py
   const P = { MAXV: 260, ACC: 1900, ACC_AIR: 1300, FRIC: 2400, G_HOLD: 1500, G: 2600, JUMP: 640, DJUMP: 560, MAXFALL: 1000, SPRING: 1050 };
   const PW = 30, PH = 44, STEP = 1 / 120;
@@ -51,6 +51,21 @@
   const starTotal = (s) => Object.values(s.stars || {}).reduce((n, a) => n + a.length, 0);
   const store = (s) => { try { localStorage.setItem(SAVE, JSON.stringify(s)); } catch (e) {} };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
+  // Game Center: Lost Toolbox achievements and leaderboards, worked out from the save so a new phone catches up
+  function gcSync() {
+    const G = window.GC; if (!G || !G.on || tester()) return;
+    const s = load(), n = NLV(), done = s.done.filter((i) => i < n).length, stars = starTotal(s);
+    const hides = window.LT_LEVELS.filter((l) => l.hidden).length, hd = (s.hideDone || []).length;
+    let ex = {}; try { ex = JSON.parse(localStorage.getItem("tenmm-lt-ach") || "{}"); } catch (e) {}
+    if (done >= 1) G.achieve("lt_first_drawer"); if (done >= 25) G.achieve("lt_drawers_25"); if (done >= n && n) G.achieve("lt_drawers_50");
+    if (s.golden) G.achieve("lt_golden");
+    if (hd >= 1) G.achieve("lt_hideout_1"); if (hides && hd >= hides) G.achieve("lt_hideouts_all");
+    if (stars >= 50) G.achieve("lt_stars_50"); if (stars >= n * 5 && n) G.achieve("lt_stars_250");
+    if ((s.rooms || []).length) G.achieve("lt_secret_room");
+    if (s.mechWin) G.achieve("lt_mech");
+    if (ex.maker) G.achieve("lt_maker"); if (ex.friend) G.achieve("lt_friend");
+    G.score("lt_stars", stars); G.score("lt_drawers", done);
+  }
   const say = (n) => { try { window.sfx && sfx(n); } catch (e) {} };
   const haptic = (n) => { try { window.buzz && buzz(n); } catch (e) {} };
 
@@ -112,8 +127,8 @@
     if (!cv) return;
     dpr = Math.min(3, window.devicePixelRatio || 1);
     // a wide-ish window onto the level: never taller than 1.15x its width, so you can see what's coming
-    const wrap = cv.parentElement.getBoundingClientRect(), pad = root.querySelector(".ltpad").getBoundingClientRect().height;
-    const avail = wrap.height - pad - 56;
+    const wrap = cv.parentElement.getBoundingClientRect(), edp = root.classList.contains("editing") && document.getElementById("ltePanel"), pad = (edp || root.querySelector(".ltpad")).getBoundingClientRect().height;
+    const avail = wrap.height - pad - (edp ? cv.getBoundingClientRect().top - wrap.top + 8 : 56); // the editor counts the notch too
     cv.style.height = Math.max(200, Math.min(avail, wrap.width * 1.6)) + "px";
     const r = cv.getBoundingClientRect();
     cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
@@ -141,7 +156,7 @@
   function startLevel(i, fromCheckpoint, roomRows) {
     const L = window.LT_LEVELS[i];
     lvI = i;
-    if (!roomRows) maxHp = 3;
+    if (!roomRows) maxHp = L.hp || 3; // custom levels can set 1-3 hearts
     grid = (roomRows || L.rows).map((r) => r.split(""));
     W = grid[0].length;
     ents = []; movers = []; fx = [];
@@ -198,6 +213,7 @@
       if (gy > 0) ents.push({ k: "mechpu", x: mx, y: gy * T, x0: mx, y0: gy * T, w: 60, h: 80, alive: true });
     }
     const tag = roomRows ? "r" : "";
+    if (L.espd && !roomRows) for (const e of ents) if (e.vx && e.k !== "boss") e.vx *= L.espd; // faster bad guys on hard custom levels
     for (const e of ents) if (e.k === "coin" && collected.has(tag + i + ":" + Math.round(e.x0) + ":" + Math.round(e.y0))) e.alive = false;
     const sv = load(), got = (sv.stars && sv.stars[i]) || [];
     for (const e of ents) if (e.k === "star" && got.includes(e.sid)) e.ghost = 1;   // already found: shows faded, still worth nothing
@@ -206,7 +222,8 @@
     startPos = { x: start.x * T + T / 2, y: (start.y + 1) * T };
     if (!fromCheckpoint) cp = Object.assign({}, startPos);
     spawnPlayer();
-    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
+    tipsSeen = new Set();
+    hud.Name.textContent = roomRows ? "SECRET ROOM" : L.train ? "TRAINING DRAWER" : L.custom ? "CUSTOM · " + (L.name || "MY LEVEL") : L.hidden ? "HIDEOUT · " + L.name : "DRAWER " + (i + 1) + " · " + L.name;
     bgImg = img(roomRows ? "room-bg" : BG[L.bg] || "bg-garage.jpg");
     BL = L.bg === "backlot" && !roomRows;
     inRoom = !!roomRows; starHud(); bagHud();
@@ -215,6 +232,7 @@
   let zoom = 1, inRoom = false, stash = null, BL = false; // BL: Back Lot art set
   function starHud() {
     if (!hud.Stars) return;
+    const sp = hud.Stars.parentNode; if (sp) sp.style.display = window.LT_LEVELS[lvI] && (window.LT_LEVELS[lvI].custom || window.LT_LEVELS[lvI].train) ? "none" : ""; // custom levels have no stars
     const s = load(), n = ((s.stars && s.stars[lvI]) || []).length;
     hud.Stars.textContent = n + "/5";
   }
@@ -226,7 +244,7 @@
     const tot = starTotal(s), due = Math.floor(tot / STAR_STEP);
     let paid = 0;
     if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY; s.starPaid = due; }
-    store(s);
+    store(s); gcSync();
     say("star"); haptic("success"); starHud();
     if (paid) {
       try { totalCoins += paid; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (x) {}
@@ -240,7 +258,7 @@
     startLevel(lvI, false, L.room);
     hp = keep.hp; pow = keep.pow;
     mode = "intro"; drawerT = 0; say("power"); haptic("success"); toast("SECRET ROOM!");
-    const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); }
+    const s = load(); if (!s.rooms.includes(lvI)) { s.rooms.push(lvI); store(s); gcSync(); }
   }
   // red toolbox: a hidden hideout level full of bad guys. Finding it unlocks it on the map for good.
   let hideFrom = null;
@@ -262,6 +280,8 @@
     if (pow.torqueBank) { pow.torqueBank = 0; givePower("torque"); }
   }
   const VW = () => viewW / zoom;
+  let tipsSeen = new Set(); // training drawer tips already shown this run
+  let hitStop = 0; // a split-second freeze on big hits, so they land with weight
   let blockKw = {}, collected = new Set(), startPos = { x: 0, y: 0 }, crumbles = [], arena = null, boss = null;
   function crumble(cx, cy) {
     if (crumbles.some((c) => c.cx === cx && c.cy === cy)) return;
@@ -318,7 +338,7 @@
     jumpBuf -= dt; pl.coyote -= dt;
     const jm = pow.spring > 0 ? 1.22 : 1;
     if (jumpBuf > 0) {
-      if (pl.ground || pl.coyote > 0) { pl.vy = -P.JUMP * jm; pl.ground = false; pl.coyote = 0; pl.jumps = 1; pl.held = true; jumpBuf = 0; say("jump"); pl.on = null; }
+      if (pl.ground || pl.coyote > 0) { pl.vy = -P.JUMP * jm; pl.ground = false; pl.coyote = 0; pl.jumps = 1; pl.held = true; jumpBuf = 0; say("jump"); pl.on = null; pl.sq = -0.7; dust(pl.x, pl.y, 2); }
       else if (pl.jumps < 2) { pl.vy = -P.DJUMP * jm; pl.jumps = 2; pl.held = true; jumpBuf = 0; pl.djT = 0.4; say("flap"); puff(pl.x, pl.y, 6, "#ffffff"); }
     }
     if (!key.J) pl.held = false;
@@ -367,8 +387,8 @@
           if (pl.x + PW / 2 > m.x + 4 && pl.x - PW / 2 < m.x + m.w - 4 && m.y >= oldY - 1 - Math.max(0, -m.vy * dt) && m.y <= ny + Math.max(0, -m.vy * dt) + 1 && (top === null || m.y < top)) { top = m.y; pl.on = m; }
         }
         if (top !== null) {
-          ny = top; pl.vy = 0; pl.ground = true;
-          if (!wasGround) { pl.landT = 0.14; if (pl.jumps) puff(pl.x, ny, 4, "#d8dde4"); if (pl.pounding) { pl.y = ny; poundImpact(); } }
+          ny = top; const fallV = pl.vy; pl.vy = 0; pl.ground = true;
+          if (!wasGround) { pl.landT = 0.14; pl.sq = Math.min(1, Math.max(0, fallV) / 850); if (fallV > 380) dust(pl.x, ny, 2 + Math.round(fallV / 300)); else if (pl.jumps) puff(pl.x, ny, 4, "#d8dde4"); if (pl.pounding) { pl.y = ny; poundImpact(); } }
           pl.jumps = 0;
         }
       }
@@ -569,7 +589,7 @@
     }
     // torque star: plow through anything that walks, flies or rolls (bosses just can't hurt you)
     if (pow.torque > 0) {
-      if (e.k !== "boss" && (e.stomp || e.walker || e.fly || e.bounce) && !e.dead) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); return; }
+      if (e.k !== "boss" && (e.stomp || e.walker || e.fly || e.bounce) && !e.dead) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); impact(e.x, b.y0, 0.05); return; }
       if (e.k === "boss" && pl.vy > 60 && py1 - b.y0 < 30 && e.inv <= 0 && bossStompable(e)) { bossHit(e); return; }
       return;
     }
@@ -583,7 +603,7 @@
     }
     if ((e.stomp || e.bounce) && fromAbove) {
       pl.vy = -P.JUMP * (key.J ? 0.95 : 0.7); pl.jumps = 1; pl.held = key.J;
-      if (e.stomp) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); haptic("medium"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); }
+      if (e.stomp) { e.dead = 0.6; e.vx = 0; gain(1); say("stomp"); haptic("medium"); fx.push({ k: "spark", x: e.x, y: b.y0, t: 0.35 }); impact(e.x, b.y0, 0.05); }
       else say("land");
       return;
     }
@@ -592,7 +612,7 @@
   // ---------- bosses ----------
   function bossStompable(e) { return e.kind === "roller" ? e.st === "hot" : true; }
   function bossHit(e, ranged) {
-    e.hp--; e.inv = 0.9; if (e.hp === 1) music("bossfast"); if (!ranged) { pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; } say("bosshit"); haptic("heavy");
+    e.hp--; e.inv = 0.9; if (e.hp === 1) music("bossfast"); impact(e.x, e.y - (e.h || 78) / 2, e.hp <= 0 ? 0.22 : 0.12); shakeT = Math.max(shakeT, e.hp <= 0 ? 0.45 : 0.28); if (!ranged) { pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; } say("bosshit"); haptic("heavy");
     for (let i = 0; i < 6; i++) fx.push({ k: "chip", x: e.x, y: e.y - e.h / 2, vx: (Math.random() - 0.5) * 400, vy: -200 - Math.random() * 300, t: 0.6, c: i % 2 ? "#ffd23f" : "#fff", s: 7 });
     if (e.hp <= 0) {
       if (pow && pow.mech > 0) setTimeout(() => { gain(50); toast("MECH FINISH! +50 coins"); }, 900);
@@ -603,11 +623,21 @@
   }
   function startBoss() {
     arena.on = true; boss.st = "intro"; boss.tt = 1.1; boss.inv = 0;
-    toast(boss.name + "!"); say("roar"); music("boss"); haptic("medium");
+    bossCard(boss); say("roar"); music("boss"); haptic("medium");
     const tip = { walker: "Stomp it on the head!", charger: "Jump over its charge, stomp it when it stops!", flyer: "Dodge the sparks. Stomp it when it swoops down!", roller: "Stay away until it overheats, then stomp!", magnet: "Don't get pulled in! Stomp it when it swoops!", king: "Jump the shockwaves, then stomp his crown!", captain: "He lunges at you! Dodge, then stomp him while he's dazed!", stomper: "Jump the shockwaves, then stomp it!", serpent: "Dodge the leap, stomp it while it's dazed!", gunner: "Jump the lug nuts, stomp the crown!", kraken: "Dodge the coolant, stomp it!", vac: "Walk away from the suction, stomp it when it clogs!" }[boss.kind];
-    setTimeout(() => mode === "play" && arena && arena.on && toast(tip), 1300);
+    setTimeout(() => mode === "play" && arena && arena.on && toast(tip), 2000);
   }
   const BEH = { king: "stomper", captain: "serpent" };
+  // big name card that slides in when a boss fight starts
+  const CARD_ART = { walker: "bossa-filter", charger: "bossa-jack", flyer: "bossa-meter", roller: "bossa-gear", magnet: "bossa-magnet", gunner: "gk-idle", stomper: "js-idle", serpent: "tb-idle", vac: "sv-idle", kraken: "ck-idle", king: "wk-idle", captain: "pc-idle" };
+  function bossCard(b) {
+    let el = root.querySelector(".ltbcard");
+    if (!el) { el = document.createElement("div"); el.className = "ltbcard"; root.append(el); }
+    el.innerHTML = '<img src="lt/' + (CARD_ART[b.kind] || "bossa-filter") + '.webp" alt=""><div><i>BOSS FIGHT</i><b></b></div>';
+    el.querySelector("b").textContent = b.name;
+    el.classList.remove("on"); void el.offsetWidth; el.classList.add("on");
+    clearTimeout(bossCard.t); bossCard.t = setTimeout(() => el.classList.remove("on"), 1900);
+  }
   function stepBoss(e, hd, dt) {
     if (arena && !arena.on && !arena.done && e.st === "wait" && pl.x > arena.l + 2 * T && mode === "play") startBoss();
     if (e.st === "wait") { e.y = (e.hy || e.home.y) + Math.sin(t * 2) * (e.hy ? 6 : 0); return; }
@@ -753,7 +783,7 @@
     if (hasPower(k)) { toast("You already have that one on"); return; }
     b.splice(i, 1); s.bag = b; store(s); bagHud(); givePower(k, true);
   }
-  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp >= 4 : pow[k] > 0; }
+  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp > (window.LT_LEVELS[lvI].hp || 3) : pow[k] > 0; }
   function givePower(k, fromBag) {
     if (!fromBag && k !== "torque" && hasPower(k)) {
       const s = load(), b = (s.bag = s.bag || []);
@@ -762,7 +792,7 @@
     }
     say("power"); haptic("success");
     if (k === "shield") pow.shield = 1;
-    else if (k === "heart") { maxHp = 4; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
+    else if (k === "heart") { maxHp = (window.LT_LEVELS[lvI].hp || 3) + 1; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
     else {
       // only one action power at a time: the button does one thing
       if (k === "wrench") pow.pound = 0; if (k === "pound") pow.wrench = 0;
@@ -829,6 +859,9 @@
     const cy = Math.floor(pl.y / T), cx = Math.floor(pl.x / T);
     for (let x = cx - 1; x <= cx + 1; x++) for (const y of [cy, cy - 1]) { const ch = cell(x, y); if (ch === "C") bonk(x, y, ch); }
   }
+  // soft dust clouds (landing, take-off, running) and a ring + freeze for hits
+  function dust(x, y, n) { if (fx.length > 260) return; for (let i = 0; i < n; i++) fx.push({ k: "dust", x: x + (Math.random() - 0.5) * 22, y: y - 6, dx: (i % 2 ? 1 : -1) * (50 + Math.random() * 70), t: 0.4, t0: 0.4, r: 7 + Math.random() * 6 }); }
+  function impact(x, y, stop) { hitStop = Math.max(hitStop, stop); shakeT = Math.max(shakeT, 0.08); if (fx.length < 260) fx.push({ k: "ring", x, y, t: 0.28, t0: 0.28 }); }
   function puff(x, y, n, c) { for (let i = 0; i < n; i++) fx.push({ k: "chip", x, y: y - 4, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 90, t: 0.35, c, s: 5 }); }
 
   // ---------- drawer sequence ----------
@@ -838,6 +871,9 @@
     chase = null;
   }
   function finishLevel() {
+    // custom levels are just for fun: nothing is saved and their coins never reach the wallet
+    if (window.LT_LEVELS[lvI].custom) { clearInfo = { first: false, golden: false, coins: coinsRun, time: t }; showClear(); return; }
+    if (window.LT_LEVELS[lvI].train) { const s = load(); s.trained = true; store(s); clearInfo = { first: false, golden: false, coins: 0, time: t }; showClear(); return; }
     const s = load(), hid = !!window.LT_LEVELS[lvI].hidden;
     s.hideDone = s.hideDone || [];
     const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
@@ -853,7 +889,10 @@
         localStorage.setItem("tenmm-skins", JSON.stringify(own));
       } catch (e) {}
     }
+    if (boss && arena && arena.done && pow && pow.mech > 0) s.mechWin = true; // beat the boss while riding the Ratchet Mech
     store(s);
+    gcSync();
+    if (lvI === 4 && !hid && !tester() && window.GC) GC.score("lt_golden", Math.round(t * 100)); // hundredths of a second
     // coins go into the main wallet
     try { totalCoins += coinsRun; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
     clearInfo = { first, golden, coins: coinsRun, time: t };
@@ -864,6 +903,7 @@
   function frame(now) {
     raf = requestAnimationFrame(frame);
     const dt = Math.min(0.05, (now - last) / 1000 || 0); last = now;
+    if (hitStop > 0 && mode === "play") { hitStop -= dt; draw(); return; }
     if (mode === "play" || mode === "respawn" || mode === "drawer" || mode === "intro" || mode === "warp") {
       acc += dt;
       while (acc >= STEP) { tick(STEP); acc -= STEP; }
@@ -878,7 +918,7 @@
     if (punchT > 0) { punchT -= dt; if (!punchHit && punchT < 0.2) { punchHit = true; if (pow.mech > 0) mechPunch(); } }
     actBtn();
     timeScale = pow.slow > 0 ? 0.5 : 1;
-    for (const f of fx) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 900 * dt; } if (f.k === "coinpop") f.y -= 120 * dt; }
+    for (const f of fx) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 900 * dt; } if (f.k === "coinpop") f.y -= 120 * dt; if (f.k === "dust") { f.x += f.dx * dt; f.dx *= 0.9; f.y -= 18 * dt; } }
     fx = fx.filter((f) => f.t > 0);
     if (mode === "intro") { drawerT += dt; stepEnts(dt); if (drawerT > 1.1) { mode = "play"; pl.inv = 0.6; } updHud(); return; }
     if (mode === "respawn") { drawerT -= dt; if (drawerT <= 0) { mode = "play"; const s = pow.shield; spawnPlayer(); pow.shield = s; resetHazards(); } updHud(); return; }
@@ -897,6 +937,9 @@
       updHud(); return;
     }
     pl.inv -= dt; pl.hitT -= dt; pl.landT -= dt; pl.djT -= dt;
+    { const TL = window.LT_LEVELS[lvI]; if (TL && TL.tips && !inRoom && mode === "play") for (const [tx, tt] of TL.tips) if (!tipsSeen.has(tx) && pl.x > tx * T) { tipsSeen.add(tx); toast(tt, 3.2); } }
+    if (pl.sq) { pl.sq -= pl.sq * Math.min(1, dt * 13); if (Math.abs(pl.sq) < 0.01) pl.sq = 0; }
+    if (pl.ground && Math.abs(pl.vx) > P.MAXV * 0.85 && mode === "play") { pl.dustT = (pl.dustT || 0) - dt; if (pl.dustT <= 0) { pl.dustT = 0.13; dust(pl.x - Math.sign(pl.vx) * 12, pl.y, 1); } }
     stepPlayer(dt);
     stepEnts(dt);
     // camera: follow, but don't drift back unless the player really heads back.
@@ -934,7 +977,7 @@
     bb.classList.toggle("on", !!showB);
     if (showB) { const k2 = boss.name + boss.hp; if (bb._v !== k2) { bb._v = k2; bb.innerHTML = "<b>" + boss.name + "</b><span>" + '<i class="on"></i>'.repeat(boss.hp) + "<i></i>".repeat(boss.max - boss.hp) + "</span>"; } }
   }
-  function toast(m) { hud.Msg.textContent = m; hud.Msg.classList.add("on"); msgT = 1.8; }
+  function toast(m, dur) { hud.Msg.textContent = m; hud.Msg.classList.add("on"); msgT = dur || 1.8; }
 
   // ---------- drawing ----------
   function draw() {
@@ -973,6 +1016,7 @@
       // on wide screens the room is narrower than the view: solid rock past the back wall
       if (cam + vw > W * T) { ctx.fillStyle = "#1b120b"; ctx.fillRect(W * T, 2 * T, cam + vw - W * T + 2, H - 2 * T); ctx.fillStyle = "rgba(0,0,0,.5)"; ctx.fillRect(W * T, 2 * T, 6, H - 2 * T); }
     }
+    if (mode === "edit" && window.LTEdit) window.LTEdit.overlay(ctx, cam, vw, oy, T);
     ctx.restore();
     if (mode === "respawn") { ctx.fillStyle = "rgba(0,0,0," + Math.min(0.85, 1 - drawerT) + ")"; ctx.fillRect(0, -oy, vw, H + oy); }
   }
@@ -1072,7 +1116,9 @@
       case "gchest": {
         if (!e.open) { ctx.save(); ctx.globalAlpha = 0.3 + 0.2 * Math.sin(t * 5); ctx.fillStyle = "#ffd34d"; ctx.beginPath(); ctx.ellipse(e.x, e.y - 26, 44, 34, 0, 0, 7); ctx.fill(); ctx.restore(); }
         ctx.save(); if (e.open) ctx.globalAlpha = 0.55; fitImg("chest-gold", e.x, e.y + 2, 60); ctx.restore(); return; }
-      case "coin": { const s = Math.abs(Math.cos(t * 3 + e.x0 * 0.01)); const im = img("coin"); if (ready(im)) ctx.drawImage(im, e.x - 13 * Math.max(0.25, s), e.y - 26, 26 * Math.max(0.25, s), 26); return; }
+      case "coin": { const s = Math.abs(Math.cos(t * 3 + e.x0 * 0.01)); const im = img("coin"); if (ready(im)) ctx.drawImage(im, e.x - 13 * Math.max(0.25, s), e.y - 26, 26 * Math.max(0.25, s), 26);
+        const g = (t * 0.9 + e.x0 * 0.0173) % 2.4; if (g < 0.3 && s > 0.6) { const a = Math.sin((g / 0.3) * Math.PI), gx = e.x + 6, gy = e.y - 20; ctx.globalAlpha = a; ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.moveTo(gx, gy - 8 * a); ctx.lineTo(gx + 2, gy - 2); ctx.lineTo(gx + 8 * a, gy); ctx.lineTo(gx + 2, gy + 2); ctx.lineTo(gx, gy + 8 * a); ctx.lineTo(gx - 2, gy + 2); ctx.lineTo(gx - 8 * a, gy); ctx.lineTo(gx - 2, gy - 2); ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1; }
+        return; }
       case "pan": fitImg("pan", e.x, e.y + 2, 46); return;
       case "sbolt": case "rwrench": case "ninja": case "igun": {
         const H = { sbolt: 62, rwrench: 74, ninja: 56, igun: 64 }[e.k];
@@ -1201,7 +1247,7 @@
         else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";
         ctx.fillStyle = lvI === 3 ? "#ffd23f" : "#fff"; ctx.strokeStyle = "#000"; ctx.lineWidth = 4;
-        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
+        const lab = arena && !arena.done ? "BEAT THE BOSS" : window.LT_LEVELS[lvI].hidden || window.LT_LEVELS[lvI].custom || window.LT_LEVELS[lvI].train ? "ESCAPE" : lvI === 3 ? "GOLDEN DRAWER" : lvI === NLV() - 1 ? "THE GRAND CHEST" : "DRAWER " + (lvI + 2);
         ctx.strokeText(lab, e.x, e.y - 112); ctx.fillText(lab, e.x, e.y - 112);
         return;
       }
@@ -1322,6 +1368,10 @@
     const w = 94 * s, h = (w * im.naturalHeight) / im.naturalWidth;
     ctx.save(); ctx.translate(pl.x, pl.y + 3);
     if (pl.face < 0) ctx.scale(-1, 1);
+    { // squash on landing, stretch on take-off and while flying up or falling fast
+      let q = pl.sq || 0; if (!pl.ground && mode === "play") q += Math.max(-0.35, Math.min(0.2, pl.vy / -1800)) * -1;
+      if (q) ctx.scale(1 + 0.2 * q, 1 - 0.2 * q);
+    }
     if (pl.gliding) { ctx.save(); ctx.globalAlpha = 0.85; const pw = w * 0.9, iy = img("fx-air"); if (ready(iy)) ctx.drawImage(iy, -pw / 2, -8 + Math.sin(t * 20) * 2, pw, pw * iy.naturalHeight / iy.naturalWidth); ctx.restore(); }
     if (pow.torque > 0) { ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 14); ctx.fillStyle = "hsl(" + ((t * 360) % 360) + ",100%,60%)"; ctx.beginPath(); ctx.ellipse(0, -h * 0.45, w * 0.62, h * 0.55, 0, 0, 7); ctx.fill(); ctx.restore(); }
     if (pow.shield) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 6); ctx.strokeStyle = "#6fd3ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(0, -h * 0.42, 40, 44, 0, 0, 7); ctx.stroke(); ctx.restore(); }
@@ -1333,6 +1383,8 @@
     ctx.restore();
   }
   function drawFx(f) {
+    if (f.k === "dust") { const k = f.t / f.t0; ctx.globalAlpha = 0.45 * k; ctx.fillStyle = "#d9dee5"; ctx.beginPath(); ctx.arc(f.x, f.y, f.r * (1.9 - k), 0, 7); ctx.fill(); ctx.globalAlpha = 1; return; }
+    if (f.k === "ring") { const k = 1 - f.t / f.t0; ctx.globalAlpha = 1 - k; ctx.strokeStyle = "#fff6c2"; ctx.lineWidth = 5 * (1 - k) + 1; ctx.beginPath(); ctx.ellipse(f.x, f.y, 14 + 46 * k, 6 + 20 * k, 0, 0, 7); ctx.stroke(); ctx.globalAlpha = 1; return; }
     if (f.k === "chip") { ctx.fillStyle = f.c; const s = f.s || 9; ctx.fillRect(f.x - s / 2, f.y - s / 2, s, s); }
     if (f.k === "coinpop") { ctx.globalAlpha = Math.min(1, f.t * 3); fitImg("coin", f.x, f.y, 26); ctx.globalAlpha = 1; }
     if (f.k === "pound") { ctx.globalAlpha = Math.min(1, f.t / 0.25); const w = 150 * (1.25 - f.t * 0.6); fitImg("fx-pound", f.x, f.y + 14, w); ctx.globalAlpha = 1; }
@@ -1342,7 +1394,7 @@
   }
 
   // ---------- screens ----------
-  function show(html) { card.innerHTML = html; card.classList.remove("hidden"); }
+  function show(html) { card.innerHTML = html; card.classList.remove("hidden", "pop"); void card.offsetWidth; card.classList.add("pop"); }
   function hideCard() { card.classList.add("hidden"); }
   function menu() {
     mode = "menu"; grid = grid || null;
@@ -1385,13 +1437,24 @@
       }
       h += "</div></div>";
     }
+    if (window.LTEdit) h += '<div class="ltbld"><b>LEVEL MAKER</b><span>Build your own drawer square by square: ground, pits, every bad guy, every trap and the boss. Beat it, then share it with friends.</span><button class="ltbtn" id="ltBuild">MAKE A LEVEL</button></div>';
     h += (s.golden ? '<p class="ltgold">Golden 10MM unlocked! Equip it in the Socket Shop.</p>' : '<p class="ltgold">Clear the first 5 drawers to unlock the exclusive <b>Golden 10MM</b> skin.</p>');
     if (tester()) h += '<p class="lttest">Tester mode is on: every drawer is open, but the Golden 10MM is not awarded.</p>';
-    h += '<button class="ltbtn" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
+    const TI = window.LT_LEVELS.findIndex((l) => l.train);
+    if (TI >= 0) h += '<button class="ltbtn" id="ltTrain">TRAINING DRAWER' + (s.trained ? " ✓" : "") + "</button>";
+    h += '<button class="ltbtn sub" id="ltHow">HOW TO PLAY</button><button class="ltbtn sub" id="ltQuit">BACK TO GARAGE</button>';
     show(h);
-    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return; const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
+    const tb = card.querySelector("#ltTrain"); if (tb) tb.onclick = () => { say("grab"); play(TI); };
+    card.querySelectorAll(".ltnode").forEach((b) => (b.onclick = () => { if (b.disabled) return;
+      if (+b.dataset.i === 0 && TI >= 0 && !s.trained && !s.done.length) {
+        show('<div class="ltlogo">FIRST TIME HERE?</div><img class="ltclr" src="lt/u-idle_01.webp" alt=""><p>Play the 1-minute Training Drawer to learn the moves, or jump straight into Drawer 1.</p><button class="ltbtn" id="ltT1">PLAY TRAINING</button><button class="ltbtn sub" id="ltT2">SKIP TO DRAWER 1</button>');
+        card.querySelector("#ltT1").onclick = () => { say("grab"); play(TI); };
+        card.querySelector("#ltT2").onclick = () => { const s2 = load(); s2.trained = true; store(s2); say("grab"); play(0); };
+        return;
+      } const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
+    const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTEdit.list(); };
     card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
@@ -1406,7 +1469,7 @@
   function play(i) {
     music("lostbox");
     if (!mechSet) pickMech();
-    hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; fit();
+    hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; hitStop = 0; fit();
     startLevel(i); coinsRun = 0; hud.Coins.textContent = 0;
     mode = "intro"; drawerT = 0;
     try { window.stopMusic && stopMusic(); window.startMusic && startMusic("level"); } catch (e) {}
@@ -1414,12 +1477,20 @@
   function pauseMenu() {
     if (mode !== "play") return;
     mode = "pause"; key.L = key.R = key.J = false;
-    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>');
+    show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.pauseLabel() : "ALL DRAWERS") + "</button>");
     card.querySelector("#ltRes").onclick = () => { hideCard(); mode = "play"; last = performance.now(); };
     card.querySelector("#ltRe").onclick = () => play(lvI);
-    card.querySelector("#ltMenu").onclick = menu;
+    card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.fromPause() : menu());
   }
   function showClear() {
+    if (window.LT_LEVELS[lvI].train) {
+      say("win"); haptic("success");
+      show('<div class="ltlogo">TRAINING DONE!</div><img class="ltclr" src="lt/u-victory.webp" alt=""><p>You know the moves: run, jump, double jump, stomp, bonk blocks and beat the boss. Now find the real drawers!</p><p class="ltbnote">Training pays no coins.</p><button class="ltbtn" id="ltNext">PLAY DRAWER 1</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>');
+      card.querySelector("#ltNext").onclick = () => play(0);
+      card.querySelector("#ltMenu").onclick = menu;
+      return;
+    }
+    if (window.LT_LEVELS[lvI].custom && window.LTEdit) { say("win"); haptic("success"); window.LTEdit.cleared(clearInfo); return; }
     if (window.LT_LEVELS[lvI].hidden) {
       const c = clearInfo, back = hideFrom;
       let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +250 hideout bonus)" : "") + " added to your wallet.</p>";
@@ -1446,7 +1517,21 @@
     try { window.hideHome && hideHome(); } catch (e) {}
     fit(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(frame);
     if (!grid) { startLevel(0); mode = "menu"; }
-    menu();
+    loading(menu);
+  }
+  // logo + progress bar until the main art is in (at most a few seconds), so nothing pops in
+  function loading(then) {
+    const keys = [...new Set(Object.values(FR).flat())].concat(["logo", "map-bg", "t-square", "qblock", "coin", "drawer3", "map-node", "map-lock"]);
+    const done = () => keys.filter((k) => ready(img(k))).length;
+    if (done() >= keys.length) return then();
+    show('<img class="ltlogoimg" src="lt/logo.webp" alt="The Lost Toolbox"><div class="ltload"><i></i></div><p class="ltloadp">Opening the toolbox…</p>');
+    const bar = card.querySelector(".ltload i"), t0 = performance.now();
+    const step = () => {
+      if (!open || !bar.isConnected) return;
+      const n = done(); bar.style.width = Math.round((100 * n) / keys.length) + "%";
+      if (n >= keys.length || performance.now() - t0 > 6000) setTimeout(then, 150); else setTimeout(step, 90);
+    };
+    step();
   }
   function close() {
     open = false; cancelAnimationFrame(raf); root.classList.add("hidden"); hideCard(); grid = null;
@@ -1483,5 +1568,17 @@
     }
     return false;
   }
-  window.LostBox = { drawUpright, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  // ---- level maker: show a level frozen with the real art, and turn a tap into a grid cell ----
+  function editShow(i, camX, z) {
+    startLevel(i); mode = "edit"; zoom = z || 1; key.L = key.R = key.J = false;
+    cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), camX || 0));
+    return { cam, W, vw: VW() };
+  }
+  function editCell(clientX, clientY) {
+    const r = cv.getBoundingClientRect(), k = scale * zoom, oy = cv.height / k - ROWS * T;
+    const wx = cam + ((clientX - r.left) * dpr) / k, wy = ((clientY - r.top) * dpr) / k - oy;
+    return { x: Math.floor(wx / T), y: Math.floor(wy / T), wx, wy };
+  }
+  const editPx = () => dpr / (scale * zoom); // world pixels per CSS pixel
+  window.LostBox = { _gcSync: gcSync, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

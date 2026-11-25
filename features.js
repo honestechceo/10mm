@@ -681,7 +681,7 @@
   const native = !!(C && C.isNativePlatform && C.isNativePlatform() && C.registerPlugin);
   const P = native ? C.registerPlugin("GameCenter") : null;
   let on = false;
-  const BOARD = { level: "wm10_best_level", endless: "wm10_endless_distance", stars: "wm10_total_stars" };
+  const BOARD = { level: "wm10_best_level", endless: "wm10_endless_distance", stars: "wm10_total_stars", lt_stars: "wm10_lt_stars", lt_drawers: "wm10_lt_drawers", lt_golden: "wm10_lt_golden_time" };
   const sent = (() => { try { return JSON.parse(localStorage.getItem("tenmm-gc-ach") || "[]"); } catch (e) { return []; } })();
   window.GC = {
     get on() { return on; },
@@ -705,6 +705,7 @@
       let bossN = 0; try { bossN = JSON.parse(localStorage.getItem("tenmm-boss") || "[]").length; } catch (e) {}
       if (bossN) GC.achieve("boss_1");
       try { const d = JSON.parse(localStorage.getItem("tenmm-daily") || "{}"); if (d.streak) GC.achieve("daily_first"); if (d.streak >= 7) GC.achieve("daily_streak_7"); } catch (e) {}
+      try { window.LostBox && LostBox._gcSync(); } catch (e) {}
     },
   };
   if (native) setTimeout(() => GC.signIn(), 2500);

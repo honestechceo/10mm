@@ -27,6 +27,9 @@ public class RadioPlugin: CAPPlugin, CAPBridgedPlugin {
 
     private func apply() {
         let session = AVAudioSession.sharedInstance()
+        let want: AVAudioSession.CategoryOptions = mix ? [.mixWithOthers] : []
+        // already set up this way: leave it alone (re-activating while sound plays makes iOS restart audio)
+        if session.category == .playback && session.categoryOptions == want { return }
         do {
             // .playback: the game is heard even when the ring/silent switch is on silent
             // (.ambient / .soloAmbient are muted by the switch, so players heard nothing)

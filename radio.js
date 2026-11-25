@@ -19,11 +19,20 @@
   // tell the phone whether the game should share the speaker with other apps
   // "playback" so effects and music are heard even with the ring/silent switch on silent.
   // Only MY MUSIC mixes with the player's own music app (WebKit can only mix as "ambient").
-  function applyAudioSession() {
-    const mix = mode() === "mine";
-    try { if (navigator.audioSession) navigator.audioSession.type = mix ? "ambient" : "playback"; } catch (e) {}
-    if (P) P.setMix({ mix }).catch(() => {});
+  // Only touch the phone's audio session when something actually changed. Re-applying it while
+  // sound is playing (it used to happen on every jump sound) restarts iOS audio: the sound cut out
+  // for most of a second and the game stuttered, worst on Weightless Wednesday with all its flaps.
+  let lastMix = null;
+  function applyAudioSession(force) {
+    const mix = mode() === "mine", type = mix ? "ambient" : "playback";
+    try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch (e) {}
+    if (P && (force === true || lastMix !== mix)) { lastMix = mix; P.setMix({ mix }).catch(() => {}); }
   }
+  // Control Center / lock screen show the game's name instead of "localhost"
+  try {
+    if ("mediaSession" in navigator && window.MediaMetadata)
+      navigator.mediaSession.metadata = new MediaMetadata({ title: "Where's My 10MM?!", artist: "Honestech", artwork: [{ src: "socket10.png", type: "image/png" }] });
+  } catch (e) {}
   window.applyAudioSession = applyAudioSession;
 
   function setMode(m) {
@@ -98,5 +107,5 @@
   window.RadioUI = { open, setMode, mode };
   applyAudioSession();
   // the phone resets sound sharing after ads and app switches: put it back
-  document.addEventListener("visibilitychange", () => { if (!document.hidden) applyAudioSession(); });
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) applyAudioSession(true); });
 })();

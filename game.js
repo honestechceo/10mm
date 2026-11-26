@@ -63,6 +63,7 @@ const SLICE = 1024;
 function sliceWide(im) {
   const w = im.naturalWidth, h = im.naturalHeight;
   if (!w || w <= 2048 || im._slices) return;
+  const sliceT = performance.now();
   const out = [];
   for (let x = 0; x < w; x += SLICE) out.push({ x, w: Math.min(SLICE, w - x), c: null });
   im._slices = out;
@@ -74,6 +75,7 @@ function sliceWide(im) {
       c.getContext("2d").drawImage(im, s.x, 0, s.w, h, 0, 0, s.w, h); s.c = c;
     } catch (e) { im._slices = null; return; }
   }
+  if (window.DIAG) DIAG("background cut " + w + "px in " + Math.round(performance.now() - sliceT) + "ms");
 }
 // draws a whole background picture into (dx, dy, dw, dh), strip by strip when it has been cut up.
 // screenX maps a local x to the screen so strips that are off screen are skipped.
@@ -592,10 +594,11 @@ function audioReady() {
     if (audioCtx.state !== "running" && !audioReady.waking && now - (audioReady.tried || -1e9) > 1000) {
       audioReady.waking = true;
       audioReady.tried = now;
+      if (window.DIAG) DIAG("resume try (was " + audioCtx.state + ")");
       audioCtx
         .resume()
-        .then(() => { audioReady.waking = false; audioBack(); })
-        .catch(() => { audioReady.waking = false; });
+        .then(() => { audioReady.waking = false; if (window.DIAG) DIAG("resume done: " + audioCtx.state); audioBack(); })
+        .catch((e) => { audioReady.waking = false; if (window.DIAG) DIAG("resume failed: " + e); });
     }
   } catch (e) {}
 }
@@ -3143,6 +3146,7 @@ function stopMusic() {
 // iPhone can interrupt or silently break the game's sound (full-screen ads, calls, Siri, other apps).
 // Rebuild the sound engine when that happens and pick the music back up.
 function audioReset() {
+  if (window.DIAG) DIAG("audio engine rebuilt");
   const wasSong = musicTimer ? musicSong : null;
   stopMusic();
   try { audioCtx && audioCtx.close(); } catch (e) {}

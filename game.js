@@ -584,15 +584,19 @@ function audioReady() {
   try {
     audioCtx =
       audioCtx || new (window.AudioContext || window.webkitAudioContext)({ latencyHint: "interactive" });
-    if (audioCtx.state !== "running")
+    watchAudio();
+    // Wake the audio engine, but only one try at a time and at most once a second. It used to retry on
+    // every sound, and its "woke up" sound asked again: while iOS held the audio (interrupted), that
+    // looped nonstop and froze the game for seconds at a time.
+    const now = performance.now();
+    if (audioCtx.state !== "running" && !audioReady.waking && now - (audioReady.tried || -1e9) > 1000) {
+      audioReady.waking = true;
+      audioReady.tried = now;
       audioCtx
         .resume()
-        .then(() => {
-          // WebKit can reset the phone's audio session when sound first starts: put ours back once
-          if (window.applyAudioSession && !audioReady.applied) { audioReady.applied = true; applyAudioSession(true); }
-          if (state === "running") sfx("power");
-        })
-        .catch(() => {});
+        .then(() => { audioReady.waking = false; audioBack(); })
+        .catch(() => { audioReady.waking = false; });
+    }
   } catch (e) {}
 }
 function sfx(type) {
@@ -3151,13 +3155,22 @@ function audioReset() {
 }
 window.audioReset = audioReset;
 let watchedCtx = null;
+// when iOS hands the sound back (after a call, Siri, another app...), put our audio session back,
+// at most every few seconds
+function audioBack() {
+  if (!audioCtx || audioCtx.state !== "running" || !window.applyAudioSession) return;
+  if (performance.now() - (audioBack.t || -1e9) < 3000) return;
+  audioBack.t = performance.now();
+  applyAudioSession(true);
+}
 function watchAudio() {
   if (!audioCtx || watchedCtx === audioCtx) return;
   watchedCtx = audioCtx;
   audioCtx.onstatechange = () => {
     if (!audioCtx || document.hidden) return;
-    if (audioCtx.state === "interrupted" || audioCtx.state === "suspended")
-      audioCtx.resume().catch(() => {});
+    if (audioCtx.state === "running") audioBack();
+    // asking again right away looped while iOS held the audio; audioReady() retries at most once a second
+    else audioReady();
   };
 }
 setInterval(() => {
@@ -3165,9 +3178,14 @@ setInterval(() => {
   watchAudio();
   // the clock stops moving when iOS has taken the sound away without saying so
   const t = audioCtx.currentTime;
-  if (audioCtx.state === "running" && t === watchAudio.lastT && (state === "running" || state === "bonus")) audioReset();
+  // rebuilding the audio engine is slow on iPhones (it froze the game when it repeated every 1.5 s),
+  // so do it at most once every 20 s
+  if (audioCtx.state === "running" && t === watchAudio.lastT && (state === "running" || state === "bonus") && performance.now() - (audioReset.t || -1e9) > 20000) {
+    audioReset.t = performance.now();
+    audioReset();
+  }
   watchAudio.lastT = t;
-  if (audioCtx.state !== "running" && (state === "running" || state === "bonus")) audioCtx.resume().catch(() => {});
+  if (audioCtx.state !== "running" && (state === "running" || state === "bonus")) audioReady();
 }, 1500);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {

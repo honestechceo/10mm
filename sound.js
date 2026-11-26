@@ -6,6 +6,8 @@
   const vol = (k, d) => { const v = settings[k]; return typeof v === "number" ? v : d; };
   function ctx() {
     if (!audioCtx || audioCtx.state !== "running") return null;
+    // the audio engine can be rebuilt (audioReset): sounds must go to the new one, not the closed one
+    if (bus && bus.context !== audioCtx) { bus = null; nbuf = null; }
     if (!bus) { bus = audioCtx.createGain(); const lim = audioCtx.createDynamicsCompressor(); lim.threshold.value = -10; lim.ratio.value = 8; lim.attack.value = 0.002; lim.release.value = 0.15; bus.connect(lim).connect(audioCtx.destination); }
     bus.gain.value = 1.1 * vol("sfxVol", 1);
     if (!nbuf) {

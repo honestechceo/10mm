@@ -25,6 +25,7 @@
   let lastMix = null;
   function applyAudioSession(force) {
     const mix = mode() === "mine", type = mix ? "ambient" : "playback";
+    if (window.DIAG) DIAG("audio session apply " + type + (force === true ? " (forced)" : ""));
     try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch (e) {}
     // The native session call (setCategory + setActive) restarts iOS audio under WebKit: the sound
     // dropped, the game froze for most of a second, and the sound engine came back interrupted, so

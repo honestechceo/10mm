@@ -51,9 +51,46 @@ function loadTheme(t) {
   const im = new Image();
   themeArt[t.key] = im;
   im.onload = () => {
+    sliceWide(im);
     if (state !== "running") render();
   };
   im.src = "bg-" + t.key + ".jpg";
+}
+// The location panoramas are up to 8,900 px wide. iPhone graphics chips can't hold a picture wider
+// than 8,192 px (older ones 4,096), so drawing them straight made the phone redraw them the slow way
+// every frame: the game stuttered and froze for a second or more. Cut them once into 1,024 px strips.
+const SLICE = 1024;
+function sliceWide(im) {
+  const w = im.naturalWidth, h = im.naturalHeight;
+  if (!w || w <= 2048 || im._slices) return;
+  const out = [];
+  for (let x = 0; x < w; x += SLICE) out.push({ x, w: Math.min(SLICE, w - x), c: null });
+  im._slices = out;
+  // the picture is decoded once and copied strip by strip (cropping with createImageBitmap would
+  // decode the whole JPEG again for every strip)
+  for (const s of out) {
+    try {
+      const c = document.createElement("canvas"); c.width = s.w; c.height = h;
+      c.getContext("2d").drawImage(im, s.x, 0, s.w, h, 0, 0, s.w, h); s.c = c;
+    } catch (e) { im._slices = null; return; }
+  }
+}
+// draws a whole background picture into (dx, dy, dw, dh), strip by strip when it has been cut up.
+// screenX maps a local x to the screen so strips that are off screen are skipped.
+function drawWideImage(im, dx, dy, dw, dh, screenX) {
+  const sl = im._slices;
+  if (!sl) {
+    ctx.drawImage(im, 0, 0, im.naturalWidth, im.naturalHeight, dx, dy, dw, dh);
+    return true;
+  }
+  const k = dw / im.naturalWidth;
+  for (const s of sl) {
+    const x = dx + s.x * k, w = s.w * k + 0.6;
+    const a = screenX(x), b = screenX(x + w);
+    if (Math.max(a, b) < -2 || Math.min(a, b) > W + 2) continue;
+    ctx.drawImage(s.c, 0, 0, s.w, im.naturalHeight, x, dy, w, dh);
+  }
+  return true;
 }
 function sceneList() {
   const t = themeOf(level),
@@ -1911,37 +1948,19 @@ function drawGarageBackground() {
       offset = progress % tileW;
     for (let i = -1; i < 3; i++) {
       const im = imgs[(((base + i) % imgs.length) + imgs.length) % imgs.length];
+      const tx = -offset + i * tileW;
+      if (tx > W || tx + tileW < 0) continue; // this copy is off screen
+      let drawn = false;
       if (im.complete && im.naturalWidth) {
-        const tx = -offset + i * tileW;
         if (sc.real && imgs.length === 1 && (((base + i) % 2) + 2) % 2 === 1) {
           ctx.save();
           ctx.translate(tx + tileW, 0);
           ctx.scale(-1, 1);
-          ctx.drawImage(
-            im,
-            0,
-            0,
-            im.naturalWidth,
-            im.naturalHeight,
-            0,
-            top,
-            tileW,
-            tileH,
-          );
+          drawn = drawWideImage(im, 0, top, tileW, tileH, (x) => tx + tileW - x);
           ctx.restore();
-        } else
-          ctx.drawImage(
-            im,
-            0,
-            0,
-            im.naturalWidth,
-            im.naturalHeight,
-            tx,
-            top,
-            tileW,
-            tileH,
-          );
-      } else {
+        } else drawn = drawWideImage(im, tx, top, tileW, tileH, (x) => x);
+      }
+      if (!drawn) {
         ctx.fillStyle = "#334c5d";
         ctx.fillRect(-offset + i * tileW, top, tileW, tileH);
       }

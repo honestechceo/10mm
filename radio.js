@@ -26,6 +26,11 @@
   function applyAudioSession(force) {
     const mix = mode() === "mine", type = mix ? "ambient" : "playback";
     try { if (navigator.audioSession && navigator.audioSession.type !== type) navigator.audioSession.type = type; } catch (e) {}
+    // The native session call (setCategory + setActive) restarts iOS audio under WebKit: the sound
+    // dropped, the game froze for most of a second, and the sound engine came back interrupted, so
+    // it looped. Where WebKit offers navigator.audioSession (iOS 16.4+) that alone is enough, so the
+    // native call is only a fallback for older iOS.
+    if (navigator.audioSession) return;
     if (P && (force === true || lastMix !== mix)) { lastMix = mix; P.setMix({ mix }).catch(() => {}); }
   }
   // Control Center / lock screen show the game's name instead of "localhost"

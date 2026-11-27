@@ -6,7 +6,7 @@ name: Live update
 on:
   push:
     branches: [main]
-    paths: ["index.html", "*.js", "ads-config.json", "*.svg", "*.webp", "*.png", "*.jpg", "lt/**", "scripts/prepare-web.mjs", "scripts/live-version.mjs"]
+    paths: ["index.html", "*.js", "*.css", "ads-config.json", "*.svg", "*.webp", "*.png", "*.jpg", "lt/**", "scripts/prepare-web.mjs", "scripts/live-version.mjs"]
   workflow_dispatch:
 concurrency:
   group: live-update

@@ -52,19 +52,31 @@
   const store = (s) => { try { localStorage.setItem(SAVE, JSON.stringify(s)); } catch (e) {} };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
   // Game Center: Lost Toolbox achievements and leaderboards, worked out from the save so a new phone catches up
-  function gcSync() {
-    const G = window.GC; if (!G || !G.on || tester()) return;
+  // every Lost Toolbox achievement with its progress (shared by Game Center and the trophy cabinet)
+  function achList() {
     const s = load(), n = NLV(), done = s.done.filter((i) => i < n).length, stars = starTotal(s);
     const hides = window.LT_LEVELS.filter((l) => l.hidden).length, hd = (s.hideDone || []).length;
     let ex = {}; try { ex = JSON.parse(localStorage.getItem("tenmm-lt-ach") || "{}"); } catch (e) {}
-    if (done >= 1) G.achieve("lt_first_drawer"); if (done >= 25) G.achieve("lt_drawers_25"); if (done >= n && n) G.achieve("lt_drawers_50");
-    if (s.golden) G.achieve("lt_golden");
-    if (hd >= 1) G.achieve("lt_hideout_1"); if (hides && hd >= hides) G.achieve("lt_hideouts_all");
-    if (stars >= 50) G.achieve("lt_stars_50"); if (stars >= n * 5 && n) G.achieve("lt_stars_250");
-    if ((s.rooms || []).length) G.achieve("lt_secret_room");
-    if (s.mechWin) G.achieve("lt_mech");
-    if (ex.maker) G.achieve("lt_maker"); if (ex.friend) G.achieve("lt_friend");
-    G.score("lt_stars", stars); G.score("lt_drawers", done);
+    return [
+      ["lt_first_drawer", "First Drawer", "Clear your first Lost Toolbox drawer", done, 1],
+      ["lt_drawers_25", "Halfway Down", "Clear 25 drawers", done, 25],
+      ["lt_drawers_50", "Bottom of the Box", "Clear every drawer", done, n || 50],
+      ["lt_golden", "Golden Drawer", "Open the golden drawer", s.golden ? 1 : 0, 1],
+      ["lt_hideout_1", "Hideout Found", "Beat a hidden hideout", hd, 1],
+      ["lt_hideouts_all", "Hideout Hunter", "Beat every hideout", hd, hides || 1],
+      ["lt_stars_50", "Star Collector", "Earn 50 toolbox stars", stars, 50],
+      ["lt_stars_250", "Perfect Box", "Earn every toolbox star", stars, (n || 50) * 5],
+      ["lt_secret_room", "Secret Room", "Warp into a secret room", (s.rooms || []).length ? 1 : 0, 1],
+      ["lt_mech", "Mech Mode", "Beat a boss in the mech armor", s.mechWin ? 1 : 0, 1],
+      ["lt_maker", "Level Maker", "Build and beat your own drawer", ex.maker ? 1 : 0, 1],
+      ["lt_friend", "Shop Talk", "Play a friend's drawer", ex.friend ? 1 : 0, 1],
+    ].map(([id, name, desc, have, need]) => ({ id, name, desc, have: Math.min(have, need), need, got: have >= need }));
+  }
+  function gcSync() {
+    const G = window.GC; if (!G || !G.on || tester()) return;
+    achList().forEach((a) => { if (a.got) G.achieve(a.id); });
+    const s = load(), n = NLV();
+    G.score("lt_stars", starTotal(s)); G.score("lt_drawers", s.done.filter((i) => i < n).length);
   }
   const say = (n) => { try { window.sfx && sfx(n); } catch (e) {} };
   const haptic = (n) => { try { window.buzz && buzz(n); } catch (e) {} };
@@ -1580,5 +1592,5 @@
     return { x: Math.floor(wx / T), y: Math.floor(wy / T), wx, wy };
   }
   const editPx = () => dpr / (scale * zoom); // world pixels per CSS pixel
-  window.LostBox = { _gcSync: gcSync, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { _gcSync: gcSync, achList, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
 })();

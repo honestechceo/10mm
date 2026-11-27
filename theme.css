@@ -1,0 +1,329 @@
+/* =====================================================================
+   MIDNIGHT GARAGE theme
+   Loads after the inline styles in index.html and restyles the game.
+   Palette: midnight black, gunmetal, titanium, racing gold, electric blue,
+   performance red. Glow is kept for selected items, power-ups and
+   controls that are active right now.
+   ===================================================================== */
+:root {
+  --mid: #0B1018;
+  --mid2: #121923;
+  --gun: #252D38;
+  --gun2: #313b48;
+  --ti: #9CA9B7;
+  --ti2: #d5dde5;
+  --gold: #FFC438;
+  --gold2: #ffe08a;
+  --goldd: #a8730a;
+  --blue: #35C8FF;
+  --red: #D52B36;
+  --redd: #7a1118;
+  /* brushed metal: fine horizontal grain over a gunmetal gradient */
+  --brushed: repeating-linear-gradient(0deg, #ffffff06 0 1px, transparent 1px 3px), linear-gradient(180deg, #3a4452 0%, #2a323e 45%, #1d242e 100%);
+  --rubber: radial-gradient(circle at 25% 25%, #ffffff10 0 1px, transparent 1.6px) 0 0/6px 6px, radial-gradient(circle at 75% 75%, #00000060 0 1px, transparent 1.6px) 0 0/6px 6px, linear-gradient(180deg, #262a30, #121417 60%, #0b0c0e);
+}
+
+body { background: var(--mid); }
+main { background: radial-gradient(120% 60% at 50% 0%, #1a2230 0%, var(--mid) 60%) !important; }
+
+/* ---------- shared buttons ---------- */
+button { background: linear-gradient(180deg, var(--gold2) 0%, var(--gold) 45%, #e9a412 100%); color: #15110a; }
+
+/* =====================================================================
+   MAIN MENU
+   ===================================================================== */
+#home { background: var(--mid); }
+#home .hbg { filter: saturate(.75) brightness(.3) contrast(1.15) blur(1px); }
+#home .hbg:after {
+  background:
+    radial-gradient(60% 34% at 50% 34%, #ffc43822 0%, transparent 70%),
+    linear-gradient(100deg, transparent 0 30%, #ffffff09 38%, transparent 46%),
+    linear-gradient(80deg, transparent 0 56%, #ffffff07 62%, transparent 70%),
+    radial-gradient(ellipse at 50% 38%, #0000 0, #0b1018b0 52%, var(--mid) 96%);
+}
+/* metallic 3D title: gold gradient face with a stacked extrusion */
+.htitle b {
+  background: linear-gradient(180deg, #fff6d2 0%, #ffe08a 22%, var(--gold) 46%, #c7870c 54%, #ffd768 74%, #fff1bd 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  text-shadow: none;
+  filter: drop-shadow(0 1px 0 #b77d0b) drop-shadow(0 1px 0 #8f5f06) drop-shadow(0 1px 0 #6e4703) drop-shadow(0 2px 0 #3d2700) drop-shadow(0 6px 8px #000c);
+  letter-spacing: 1px;
+}
+.htitle small { color: var(--ti); letter-spacing: 3px; white-space: nowrap; }
+.htitle small:before, .htitle small:after { content: ""; display: inline-block; width: 16px; height: 2px; vertical-align: middle; margin: 0 8px; background: linear-gradient(90deg, transparent, var(--ti)); }
+.htitle small:after { background: linear-gradient(90deg, var(--ti), transparent); }
+
+/* bigger hero socket on a lit garage floor */
+#home.home .hstage { min-height: 260px; }
+.hhero { width: min(80vw, 340px); margin-left: calc(min(80vw, 340px) / -2); filter: drop-shadow(0 18px 18px #000d) drop-shadow(0 0 22px #ffc43822); z-index: 1; }
+#home.home .hstage:after {
+  content: ""; position: absolute; left: 50%; bottom: 4%; width: min(78vw, 330px); height: 46px; transform: translateX(-50%);
+  background: radial-gradient(50% 50% at 50% 50%, #ffc43833 0%, #ffffff10 40%, transparent 72%);
+  border-radius: 50%;
+}
+
+/* machined-metal plates */
+.hstats span {
+  background: var(--brushed); border: 1px solid #4a5563; border-top-color: #6b7685; border-radius: 10px;
+  box-shadow: inset 0 1px 0 #ffffff18, 0 3px 0 #06090d;
+  color: var(--gold); font-variant-numeric: tabular-nums;
+}
+.hstats span i { color: var(--ti); }
+
+.hradio { background: var(--brushed); border: 1px solid #4a5563; color: var(--ti2); box-shadow: inset 0 1px 0 #ffffff18, 0 3px 0 #06090d; }
+.hradio.playing { border-color: var(--blue); box-shadow: inset 0 1px 0 #ffffff18, 0 0 10px #35c8ff55; }
+.hradio.mine { border-color: var(--gold); color: var(--gold2); box-shadow: inset 0 1px 0 #ffffff18, 0 0 10px #ffc43844; }
+
+#hPlay {
+  background: linear-gradient(180deg, #fff1b8 0%, var(--gold2) 14%, var(--gold) 52%, #dd980d 100%);
+  border: 1px solid #fff3c4; border-bottom: 4px solid var(--goldd); color: #17120a;
+  letter-spacing: 3px; text-shadow: 0 1px 0 #fff6;
+  box-shadow: inset 0 2px 0 #fffbe6, inset 0 -6px 10px #b2780a55, 0 6px 0 #4a3204, 0 10px 24px #000b, 0 0 22px #ffc43833;
+}
+
+.hmodes button, .hgrid button, .hlinks button {
+  background: var(--brushed); color: var(--ti2);
+  border: 1px solid #4a5563; border-top-color: #727e8d; border-bottom-color: #10151b;
+  box-shadow: inset 0 1px 0 #ffffff1c, inset 0 -2px 0 #00000040, 0 4px 0 #06090d, 0 6px 10px #0007;
+  letter-spacing: 1px; text-shadow: 0 1px 0 #000a;
+}
+.hmodes button small { color: var(--ti); }
+.hgrid button:active, .hlinks button:active, .hmodes button:active { transform: translateY(2px); box-shadow: inset 0 1px 0 #ffffff1c, 0 2px 0 #06090d; }
+.hlinks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hlinks button { min-height: 44px; font-size: 13px; }
+#hTrophy { color: var(--gold); }
+#hTrophy:before { content: ""; display: inline-block; width: 14px; height: 14px; margin-right: 7px; vertical-align: -2px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff6cf, var(--gold) 45%, #9a6406); box-shadow: 0 0 0 2px #00000055; }
+
+.hsvc { background: var(--brushed); border: 1px solid #5a4a35; border-left: 4px solid #c7893f; box-shadow: inset 0 1px 0 #ffffff1c, 0 4px 0 #06090d; }
+.hsvc.ready { border-left-color: #58b47c; }
+.hsvc.hlost {
+  background: repeating-linear-gradient(-45deg, #00000040 0 10px, transparent 10px 20px), linear-gradient(180deg, #d52b36 0%, #9c1720 55%, #5b0b11 100%);
+  border: 1px solid #000; border-left: 4px solid var(--gold); box-shadow: inset 0 1px 0 #ffffff33, 0 4px 0 #000;
+}
+.hver { color: #5d6a78; }
+
+/* =====================================================================
+   OVERLAY PANELS (menus, shop, settings)
+   ===================================================================== */
+.overlay { background: #05080ce6; }
+.panel {
+  background: linear-gradient(180deg, #1d242e 0%, #141a22 100%);
+  border: 1px solid #3b4552; border-top-color: #5b6674;
+  box-shadow: inset 0 1px 0 #ffffff14, 0 0 0 4px #0b1018, 0 0 0 5px #2b333e, 0 24px 50px #000c;
+}
+.panel h2 { color: var(--gold); text-shadow: 0 2px 0 #5a3e06, 0 4px 10px #000a; }
+.panel .eyebrow { color: var(--ti); }
+.panel p { color: #c3ccd5; }
+.panel .sub { background: var(--brushed); color: var(--ti2); border: 1px solid #4a5563; box-shadow: inset 0 1px 0 #ffffff1c, 0 3px 0 #06090d; }
+.panel .ghost { border-color: #3d4754; color: var(--ti); }
+.shoptabs { background: #171d26; }
+.shoptabs button { background: var(--gun); color: var(--ti); border: 1px solid #3b4552; }
+.shoptabs button.on { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #15110a; border-color: var(--gold); box-shadow: 0 0 12px #ffc43855; }
+.panel .lvhead { color: var(--gold); letter-spacing: 2px; }
+
+/* ---------- SHOP: premium display cases ---------- */
+.skin {
+  --rc: var(--ti);
+  position: relative; overflow: hidden;
+  background:
+    linear-gradient(160deg, #ffffff12 0%, #ffffff05 22%, transparent 23%),
+    radial-gradient(90% 55% at 50% 0%, #ffffff1a 0%, transparent 70%),
+    linear-gradient(180deg, #1a212b 0%, #0e131a 100%);
+  border: 1px solid #39424e; border-top: 3px solid var(--rc);
+  border-radius: 12px; color: var(--ti2);
+  box-shadow: inset 0 0 0 1px #ffffff08, inset 0 -18px 18px -12px color-mix(in srgb, var(--rc) 30%, transparent), 0 4px 0 #05070a;
+  padding-top: 18px;
+}
+.skin:after { /* case plinth */
+  content: ""; position: absolute; left: 12%; right: 12%; top: 64px; height: 26px; border-radius: 50%;
+  background: radial-gradient(50% 50% at 50% 50%, color-mix(in srgb, var(--rc) 28%, transparent), transparent 70%);
+  pointer-events: none;
+}
+.skin img { position: relative; z-index: 1; filter: drop-shadow(0 6px 6px #000b); }
+.skin > * { position: relative; z-index: 1; }
+.skin .rar {
+  position: absolute; z-index: 2; top: 0; left: 50%; transform: translateX(-50%);
+  font: 900 8.5px/14px system-ui; letter-spacing: 1.5px; font-style: normal;
+  padding: 0 8px; border-radius: 0 0 7px 7px; background: var(--rc); color: #0b1018;
+}
+.skin.r-common { --rc: #9CA9B7; }
+.skin.r-rare { --rc: #35C8FF; }
+.skin.r-epic { --rc: #B46CFF; }
+.skin.r-legend { --rc: #FFC438; }
+.skin.r-limited { --rc: #D52B36; }
+.skin.r-limited .rar { color: #fff; }
+.skin .lslot { color: #7f8b98; }
+.skin.eq {
+  border-color: var(--gold); border-top-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 16px #ffc43866, inset 0 -18px 18px -12px #ffc43855, 0 4px 0 #05070a;
+}
+.skin button.own { background: var(--brushed); color: var(--ti2); border: 1px solid #4a5563; }
+.skin button.buy { background: linear-gradient(180deg, var(--gold2), var(--gold)); color: #15110a; }
+.skin button.no { background: #161b22; color: #6c7886; border: 1px solid #262e38; }
+
+/* =====================================================================
+   GAMEPLAY: compact racing dashboard
+   ===================================================================== */
+header { background: linear-gradient(180deg, #05080c, #0b1018 80%, transparent) !important; padding-bottom: 2px !important; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+header h1 {
+  font-size: clamp(15px, 4.6vw, 20px) !important; white-space: nowrap; font-style: italic; letter-spacing: .5px; margin: 0;
+  background: linear-gradient(180deg, #fff3c8, var(--gold) 55%, #c7870c); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  text-shadow: none; filter: drop-shadow(0 1px 0 #6e4703) drop-shadow(0 2px 2px #000);
+}
+header small { font-size: 9px !important; color: #5f6c7a; letter-spacing: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+
+.dash {
+  margin: 2px 8px 4px; padding: 5px 8px 6px; border-radius: 12px;
+  background: repeating-linear-gradient(0deg, #ffffff05 0 1px, transparent 1px 3px), linear-gradient(180deg, #1c232d, #0d1218);
+  border: 1px solid #343d49; border-top-color: #4f5a68;
+  box-shadow: inset 0 1px 0 #ffffff14, inset 0 -8px 14px #0006, 0 3px 0 #04060a;
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "stats stats" "speed loot"; gap: 4px 10px; align-items: center;
+}
+.dash .stats { grid-area: stats; background: none !important; padding: 0 !important; gap: 5px !important; }
+.dash .stats > div {
+  background: #06090d !important; border: 1px solid #262e38 !important; border-radius: 7px !important;
+  box-shadow: inset 0 2px 6px #000c !important;
+  padding: 2px 4px 3px !important; font-size: 8.5px !important; letter-spacing: 1.5px; color: #6f7c8a; font-weight: 800;
+  display: flex; align-items: baseline; justify-content: space-between; gap: 4px;
+}
+.dash .stats strong {
+  display: inline !important; font: 800 clamp(14px, 4vw, 18px)/1.15 ui-monospace, "SF Mono", Menlo, monospace !important;
+  color: var(--gold) !important; text-shadow: 0 0 6px #ffc43840 !important; font-variant-numeric: tabular-nums; letter-spacing: 0;
+}
+.dash .loot-hud { grid-area: loot; margin: 0 !important; gap: 10px; font-size: 10px !important; color: var(--ti) !important; letter-spacing: 1px; }
+.dash .loot-hud b { font: 800 15px ui-monospace, "SF Mono", Menlo, monospace; color: var(--gold); }
+.dash .loot-hud span { white-space: nowrap; }
+/* digital speed gauge */
+.dash .speed-meter { grid-area: speed; margin: 0 !important; gap: 7px; font-size: 9px !important; color: #6f7c8a !important; letter-spacing: 1.5px; min-width: 0; }
+.dash .speed-meter span { display: flex; align-items: baseline; gap: 5px; }
+#speedLabel {
+  font: 800 14px ui-monospace, "SF Mono", Menlo, monospace; color: var(--blue); letter-spacing: 0;
+  background: #05080c; border: 1px solid #1f2731; border-radius: 5px; padding: 0 5px; box-shadow: inset 0 1px 4px #000;
+  text-shadow: 0 0 6px #35c8ff66;
+}
+.speed-track {
+  height: 10px !important; border: 1px solid #262e38 !important; border-radius: 3px !important; background: #05080c !important; box-shadow: inset 0 1px 3px #000 !important;
+  -webkit-mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px); mask: repeating-linear-gradient(90deg, #000 0 6px, transparent 6px 8px);
+}
+.speed-track div { border-radius: 0 !important; background: linear-gradient(90deg, #35c8ff 0%, #35c8ff 45%, var(--gold) 70%, var(--red) 100%) !important; background-size: var(--sw, 100vw) 100% !important; }
+
+/* playfield: thin machined bezel, no blue halo */
+#scene { border: 2px solid #2c3541 !important; border-radius: 10px !important; box-shadow: 0 0 0 1px #05080c, 0 10px 24px #000a !important; background: #0f141b; }
+.stage { padding: 0 4px !important; }
+.stage p { color: #8e9aa7; font-size: 12px !important; min-height: 16px !important; margin-top: 4px !important; }
+
+/* power-up timers keep their glow: they are live */
+#powHud .pw { box-shadow: 0 0 12px #ffc43866; }
+
+/* ---------- controls ---------- */
+.buttons { background: linear-gradient(180deg, transparent, #05080c 40%); }
+#jump, #jumpLeft {
+  background: linear-gradient(180deg, #fff1b8 0%, var(--gold2) 12%, var(--gold) 50%, #d8930b 100%) !important;
+  border: 1px solid #fff3c4 !important; border-bottom: 5px solid var(--goldd) !important; border-radius: 16px !important;
+  box-shadow: inset 0 2px 0 #fffbe6, inset 2px 0 0 #ffffff55, inset -2px 0 0 #a8730a55, inset 0 -8px 12px #b2780a55, 0 4px 0 #2a1d03, 0 8px 14px #000a !important;
+  color: #15110a !important; text-shadow: 0 1px 0 #fff8 !important; font-style: italic; letter-spacing: 2px; font-size: clamp(14px, 4vw, 19px) !important;
+}
+#jump:active, #jumpLeft:active, #jump.on, #jumpLeft.on {
+  transform: translateY(3px); border-bottom-width: 2px !important;
+  box-shadow: inset 0 2px 0 #fffbe6, inset 0 -6px 10px #b2780a55, 0 1px 0 #2a1d03, 0 0 18px #ffc43899 !important;
+}
+#pause, #restart {
+  background: var(--rubber) !important; color: var(--ti2) !important;
+  border: 1px solid #000 !important; border-top-color: #3a3f47 !important; border-bottom: 4px solid #000 !important; border-radius: 14px !important;
+  box-shadow: inset 0 1px 0 #ffffff14, 0 4px 0 #000, 0 8px 12px #0009 !important;
+  text-shadow: 0 -1px 0 #000 !important; font-style: normal !important; letter-spacing: 1.5px;
+}
+#pause:active, #restart:active { transform: translateY(2px); box-shadow: inset 0 2px 6px #000, 0 1px 0 #000 !important; color: #fff !important; }
+
+/* =====================================================================
+   THE LOST TOOLBOX: red and black industrial
+   ===================================================================== */
+#ltbox { background: repeating-linear-gradient(0deg, #ffffff04 0 1px, transparent 1px 4px), #0a0708; }
+#ltbox .lthud {
+  background: linear-gradient(180deg, #1a0d0f, #0c0708); border-bottom: 3px solid var(--red);
+  box-shadow: 0 3px 0 #000, 0 6px 0 -3px #0000;
+}
+#ltbox .lthud:after { /* hazard strip under the HUD */
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 6px; pointer-events: none;
+  background: repeating-linear-gradient(-45deg, var(--gold) 0 7px, #000 7px 14px); opacity: .55;
+}
+#ltbox #ltPause { background: var(--rubber); color: var(--ti2); border: 1px solid #000; }
+#ltbox .ltcard { background: radial-gradient(90% 50% at 50% 0%, #3a0c11cc 0%, transparent 70%), #070405ee; }
+#ltbox .ltlogo { color: var(--gold); text-shadow: 3px 3px 0 #000, 0 0 18px #d52b3655; }
+#ltbox .ltbtn { background: linear-gradient(180deg, var(--gold2), var(--gold) 55%, #d8930b); border: 2px solid #000; box-shadow: inset 0 2px 0 #fff8, 0 5px 0 #000; }
+#ltbox .ltbtn.sub { background: linear-gradient(180deg, #2b1418, #140a0c); color: #f1d6d8; border: 2px solid #000; border-left: 4px solid var(--red); box-shadow: inset 0 1px 0 #ffffff14, 0 5px 0 #000; }
+/* the drawer map: steel frame with red trim */
+#ltbox .ltmap { border: 3px solid #000; box-shadow: 0 0 0 3px var(--red), 0 0 0 6px #000, 0 14px 30px #000c; }
+/* illuminated drawers: cleared stops glow warm, the next stop glows bright */
+#ltbox .ltnode i { filter: drop-shadow(0 3px 2px #000c); }
+#ltbox .ltnode:not(.lock) i { filter: drop-shadow(0 0 8px #ffc43888) drop-shadow(0 3px 2px #000c); }
+#ltbox .ltnode.cur i { filter: drop-shadow(0 0 16px var(--gold)) drop-shadow(0 0 6px #fff8) drop-shadow(0 3px 2px #000c); }
+#ltbox .ltnode.lock i { filter: brightness(.55) drop-shadow(0 4px 2px #000c); }
+#ltbox .ltnode .nm { background: #0a0506e6; border: 1px solid #5a1219; }
+#ltbox .ltnode:not(.lock) .nm { border-color: var(--red); box-shadow: 0 0 8px #d52b3655; }
+#ltbox .ltmpart { background: #0a0506d9; border: 2px solid var(--red); color: var(--gold); box-shadow: 0 0 12px #d52b3655; }
+#ltbox .ltchar b { color: var(--gold); }
+#ltbox .ltchar button { background: linear-gradient(180deg, #24141a, #110a0c); border: 2px solid #3b1d22; }
+#ltbox .ltchar button.on { border-color: var(--gold); background: linear-gradient(180deg, #3a2a0c, #1b1305); box-shadow: 0 0 12px #ffc43866; }
+#ltbox .lthide { background: repeating-linear-gradient(-45deg, #ffffff05 0 8px, transparent 8px 16px), linear-gradient(180deg, #2a0a0e, #0c0405); border: 2px solid var(--red); }
+#ltbox .lthb { background: #120607; border-color: #7a1118; }
+#ltbox .lthb.done { border-color: var(--red); box-shadow: 0 0 10px #d52b3666; }
+/* pad: rubber arrows, beveled gold jump */
+#ltbox .ltpad button { background: var(--rubber); border: 2px solid #000; border-top-color: #3a3f47; color: var(--ti2); box-shadow: inset 0 1px 0 #ffffff14, 0 6px 0 #000; }
+#ltbox .ltpad button.on { background: var(--rubber); box-shadow: inset 0 3px 8px #000, 0 2px 0 #000, 0 0 14px #35c8ff55; color: #fff; }
+#ltbox .ltpad .ltj {
+  background: linear-gradient(180deg, #fff1b8 0%, var(--gold2) 12%, var(--gold) 50%, #d8930b 100%); color: #15110a; border-color: #000;
+  box-shadow: inset 0 2px 0 #fffbe6, inset 0 -8px 12px #b2780a55, 0 6px 0 #000;
+}
+#ltbox .ltpad .ltj.on { box-shadow: inset 0 2px 0 #fffbe6, 0 2px 0 #000, 0 0 18px #ffc43899; }
+#ltbox .ltpad.act .lta { background: linear-gradient(180deg, #d52b36, #7a1118); }
+#ltbox .ltbag { border-color: var(--red); background: #0a0506cc; }
+
+/* =====================================================================
+   TROPHY CABINET
+   ===================================================================== */
+#trophy { position: fixed; inset: 0; z-index: 40; display: flex; flex-direction: column; background: radial-gradient(80% 40% at 50% 0%, #2a2112 0%, var(--mid) 70%); color: #fff; padding: calc(env(safe-area-inset-top, 0px) + 14px) 12px calc(env(safe-area-inset-bottom, 0px) + 12px); animation: ltFadeIn .25s ease-out both; }
+#trophy.hidden { display: none; }
+#trophy .tch { text-align: center; }
+#trophy .tch b { display: block; font: italic 900 clamp(26px, 8vw, 36px)/1 system-ui; letter-spacing: 1px;
+  background: linear-gradient(180deg, #fff6d2, var(--gold) 50%, #c7870c 56%, #ffe08a); -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 1px 0 #8f5f06) drop-shadow(0 2px 0 #3d2700) drop-shadow(0 5px 8px #000c); }
+#trophy .tch small { display: block; margin-top: 6px; color: var(--ti); font: 800 12px system-ui; letter-spacing: 3px; }
+#trophy .tcount { margin: 8px auto 0; width: min(260px, 70%); height: 8px; border-radius: 4px; background: #05080c; border: 1px solid #2a323d; overflow: hidden; }
+#trophy .tcount i { display: block; height: 100%; background: linear-gradient(90deg, #c7870c, var(--gold)); }
+#trophy .tplaque { margin: 10px auto 8px; max-width: 420px; min-height: 46px; padding: 7px 12px; border-radius: 8px; text-align: center;
+  background: linear-gradient(180deg, #e8c25a, #b8871e 50%, #d9ad44); color: #2a1a00; border: 1px solid #6e4703; box-shadow: inset 0 1px 0 #fff6, 0 3px 0 #000; }
+#trophy .tplaque b { display: block; font: 900 14px system-ui; letter-spacing: 1px; }
+#trophy .tplaque span { font: 700 12px system-ui; }
+#trophy .tcab { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; max-width: 460px; width: 100%; margin: 0 auto;
+  border-radius: 14px; padding: 10px 10px 4px;
+  background: linear-gradient(90deg, #00000080, transparent 8%, transparent 92%, #00000080), linear-gradient(180deg, #2a1a10, #1b110a);
+  border: 6px solid #0f0906; box-shadow: inset 0 0 0 2px #4a3020, inset 0 0 30px #000c, 0 10px 30px #000c; position: relative; }
+#trophy .tsec { font: 900 11px system-ui; letter-spacing: 3px; color: var(--gold2); text-align: center; margin: 6px 0 2px; text-shadow: 0 1px 0 #000; }
+#trophy .tshelf { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 10px 4px 0; position: relative; margin-bottom: 14px;
+  background: radial-gradient(60% 80% at 50% 0%, #ffe9a826 0%, transparent 70%); }
+#trophy .tshelf:after { /* the wooden shelf the medals stand on */
+  content: ""; position: absolute; left: -10px; right: -10px; bottom: -10px; height: 10px;
+  background: linear-gradient(180deg, #6a4428, #3c2414 60%, #1c0f07); box-shadow: 0 4px 6px #000a; }
+#trophy .tm { background: none; border: 0; box-shadow: none; min-height: 0; padding: 0 0 6px; margin: 0; color: #fff; display: flex; flex-direction: column; align-items: center; gap: 4px; font: 800 10px/1.15 system-ui; letter-spacing: .5px; }
+#trophy .tm .md { position: relative; width: 70px; height: 70px; border-radius: 50%; display: grid; place-items: center;
+  font: italic 900 20px system-ui; color: #6e4703; text-shadow: 0 1px 0 #ffe9a8, 0 -1px 0 #8f5f06;
+  background:
+    radial-gradient(circle at 34% 26%, #ffffffee 0 6%, #fff6d200 22%),
+    radial-gradient(circle at 50% 50%, #ffd768 0 52%, #c7870c 53% 56%, #ffe08a 57% 64%, #a8730a 66% 70%, #ffd25a 72% 100%);
+  box-shadow: inset 0 -4px 8px #7a4f05aa, inset 0 3px 6px #fff8, 0 4px 6px #000c, 0 0 14px #ffc43855; }
+#trophy .tm .md:after { /* ribbon */
+  content: ""; position: absolute; top: -10px; left: 50%; width: 20px; height: 14px; margin-left: -10px; z-index: -1;
+  background: linear-gradient(90deg, var(--red) 0 40%, #fff 40% 60%, var(--red) 60%); clip-path: polygon(0 0, 100% 0, 100% 100%, 50% 70%, 0 100%); }
+#trophy .tm .md svg { width: 30px; height: 30px; }
+#trophy .tm.lock .md { color: #4a535e; text-shadow: 0 1px 0 #000;
+  background: radial-gradient(circle at 34% 26%, #ffffff22 0 6%, transparent 22%), radial-gradient(circle at 50% 50%, #2a323d 0 52%, #1a2028 53% 56%, #39434f 57% 64%, #12171d 66% 70%, #262e38 72% 100%);
+  box-shadow: inset 0 -4px 8px #000a, 0 4px 6px #000c; }
+#trophy .tm.lock .md:after { background: #39434f; }
+#trophy .tm .pr { position: absolute; inset: -4px; border-radius: 50%; background: conic-gradient(var(--gold) var(--p, 0%), #ffffff10 0); -webkit-mask: radial-gradient(circle, transparent 62%, #000 63%); mask: radial-gradient(circle, transparent 62%, #000 63%); }
+#trophy .tm span { color: #f3e3bf; text-shadow: 0 1px 0 #000; max-width: 100px; }
+#trophy .tm.lock span { color: #8a95a2; }
+#trophy .tm.sel .md { outline: 2px solid var(--gold2); outline-offset: 4px; }
+#trophy .tback { margin: 10px auto 0; width: 100%; max-width: 460px; min-height: 52px; }
+#ltbox .ltbld { background: repeating-linear-gradient(-45deg, #ffffff05 0 8px, transparent 8px 16px), linear-gradient(180deg, #1c1014, #0a0506) !important; border: 2px solid var(--gold) !important; box-shadow: inset 0 1px 0 #ffffff14, 0 0 0 1px #000; }
+#ltbox .ltbld > b { color: var(--gold) !important; }

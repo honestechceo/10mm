@@ -1,5 +1,5 @@
 // Where's My 10MM?! - hidden diagnostics for stutter and sound problems on real phones.
-// Tap the small "THE GREAT SOCKET ESCAPE • V24.2" line at the top of the game screen 5 times to open
+// Tap anywhere on the top title 5 times quickly to open a log of freezes and audio events with timestamps;
 // a log of freezes and audio events with timestamps; COPY puts it on the clipboard to send.
 "use strict";
 (() => {

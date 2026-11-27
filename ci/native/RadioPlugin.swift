@@ -18,25 +18,20 @@ public class RadioPlugin: CAPPlugin, CAPBridgedPlugin {
     private var mix = false
 
     override public func load() {
-        // keep mixing after ads, calls or Siri hand the audio back
-        NotificationCenter.default.addObserver(self, selector: #selector(reapply), name: AVAudioSession.interruptionNotification, object: nil)
-        NotificationCenter.default.addObserver(self, selector: #selector(reapply), name: UIApplication.didBecomeActiveNotification, object: nil)
+        // Nothing to do at start. This used to re-apply the audio session on every interruption and
+        // every time the app came to the front (setCategory + setActive). Under WebKit that restarts
+        // the audio the web view is playing: sound cut out, the game froze, and the next interruption
+        // did it again. WebKit manages its own session; the web side sets navigator.audioSession.
     }
-
-    @objc private func reapply() { apply() }
 
     private func apply() {
         let session = AVAudioSession.sharedInstance()
+        // .playback: heard even with the ring/silent switch on silent. MY MUSIC also mixes with
+        // Spotify / Apple Music / YouTube Music.
+        let want: AVAudioSession.CategoryOptions = mix ? [.mixWithOthers] : []
+        if session.category == .playback && session.categoryOptions == want { return } // already set: leave it alone
         do {
-            // .playback: the game is heard even when the ring/silent switch is on silent
-            // (.ambient / .soloAmbient are muted by the switch, so players heard nothing)
-            if mix {
-                // MY MUSIC: the game's effects play on top of Spotify / Apple Music / YouTube Music
-                try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
-            } else {
-                try session.setCategory(.playback, mode: .default, options: [])
-            }
-            try session.setActive(true, options: [])
+            try session.setCategory(.playback, mode: .default, options: want)
         } catch {
             NSLog("RadioPlugin: audio session error \(error)")
         }

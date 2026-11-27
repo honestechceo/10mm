@@ -3441,7 +3441,7 @@ function renderOptions() {
 // ---------- support: gift codes (coins back for players who lost them) ----------
 // Code = AMOUNT-ID-CHECK, e.g. 500-K7Q2-X9F3. Each ID works once per device. Make codes with scripts/gift_code.py.
 // tester code version: bumping it (new code) switches off tester mode that was turned on with an older code
-const TESTER_V = "3";
+const TESTER_V = "4";
 try { if (localStorage.getItem("tenmm-tester") === "1" && localStorage.getItem("tenmm-tester-v") !== TESTER_V) localStorage.setItem("tenmm-tester", "0"); } catch (e) {}
 const GIFT_SALT = "honestech-10mm-wrench-7731";
 function giftCheck(amount, id) {
@@ -3455,7 +3455,7 @@ function redeemGift() {
   const raw = (window.prompt("Enter your gift code") || "").trim().toUpperCase().replace(/\s+/g, "");
   if (!raw) return;
   // the tester code (only its fingerprint lives here) turns tester mode on or off
-  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "F3S39JE3") {
+  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "WH9SUZS4") {
     const on = localStorage.getItem("tenmm-tester") !== "1";
     localStorage.setItem("tenmm-tester", on ? "1" : "0"); localStorage.setItem("tenmm-tester-v", TESTER_V);
     $("details").textContent = on ? "Tester mode ON: every level, drawer and Service Bay kit is open." : "Tester mode OFF.";

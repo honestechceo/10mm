@@ -47,6 +47,11 @@ Free to play with ads. Remove the full-screen ads forever with a one-time purcha
 ## Keywords (100 max, comma-separated, no spaces)
 mechanic,socket,wrench,garage,runner,arcade,jump,tools,car,auto,repair,escape,casual,platformer,funny
 
+## What's New (version 1.5.1)
+• Fixed stuttering and freezing during levels, including Weightless Wednesday
+• Fixed sound effects and music cutting out or going silent
+• Smoother play on older iPhones
+
 ## What's New (version 1.5)
 MAKE YOUR OWN LEVELS
 • New Level Maker in the Lost Toolbox: build a drawer square by square with ground, pits, traps, every bad guy and any boss

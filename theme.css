@@ -327,3 +327,13 @@ header small { font-size: 9px !important; color: #5f6c7a; letter-spacing: 1px; w
 #trophy .tback { margin: 10px auto 0; width: 100%; max-width: 460px; min-height: 52px; }
 #ltbox .ltbld { background: repeating-linear-gradient(-45deg, #ffffff05 0 8px, transparent 8px 16px), linear-gradient(180deg, #1c1014, #0a0506) !important; border: 2px solid var(--gold) !important; box-shadow: inset 0 1px 0 #ffffff14, 0 0 0 1px #000; }
 #ltbox .ltbld > b { color: var(--gold) !important; }
+/* medal art (medal-01..22.webp): the art brings its own gold and ribbon */
+#trophy .tm .md.art { width: 82px; height: 84px; border-radius: 0; background: none; box-shadow: none; }
+#trophy .tm .md.art:after { display: none; }
+#trophy .tm .md.art img { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 5px 5px #000c); }
+#trophy .tm:not(.lock) .md.art img { filter: drop-shadow(0 5px 5px #000c) drop-shadow(0 0 10px #ffc43855); }
+#trophy .tm.lock .md.art img { filter: grayscale(1) brightness(.38) contrast(1.15) drop-shadow(0 5px 5px #000c); }
+#trophy .tm .md.art .pr { inset: auto; left: 50%; top: 52%; width: 82px; height: 82px; transform: translate(-50%, -50%); z-index: 1; }
+#trophy .tm.sel .md.art { outline: none; }
+#trophy .tm.sel .md.art img { filter: drop-shadow(0 5px 5px #000c) drop-shadow(0 0 14px #ffe08a); }
+#trophy .tm.lock.sel .md.art img { filter: grayscale(1) brightness(.55) drop-shadow(0 0 12px #9CA9B7aa); }

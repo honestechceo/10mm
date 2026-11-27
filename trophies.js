@@ -11,6 +11,7 @@
     lt_first_drawer: "1", lt_drawers_25: "25", lt_drawers_50: "50", lt_golden: "G", lt_hideout_1: "H", lt_hideouts_all: "HH",
     lt_stars_50: STAR, lt_stars_250: STAR, lt_secret_room: "?", lt_mech: "M", lt_maker: "LM", lt_friend: "FR",
   };
+  const ART = {first_escape: "medal-01.webp", level_25: "medal-02.webp", level_100: "medal-03.webp", level_200: "medal-04.webp", stars_100: "medal-05.webp", endless_1000: "medal-06.webp", bonus_5: "medal-07.webp", boss_1: "medal-08.webp", daily_first: "medal-09.webp", daily_streak_7: "medal-10.webp", lt_first_drawer: "medal-11.webp", lt_drawers_25: "medal-12.webp", lt_drawers_50: "medal-13.webp", lt_golden: "medal-14.webp", lt_hideout_1: "medal-15.webp", lt_hideouts_all: "medal-16.webp", lt_stars_50: "medal-17.webp", lt_stars_250: "medal-18.webp", lt_secret_room: "medal-19.webp", lt_mech: "medal-20.webp", lt_maker: "medal-21.webp", lt_friend: "medal-22.webp"};
   function adventure() {
     const b = typeof best === "number" ? best : 1, lv = b - 1;
     const F = window.Feature;
@@ -62,7 +63,7 @@
         for (const a of items.slice(i, i + 3)) {
           const m = document.createElement("button");
           m.className = "tm" + (a.got ? "" : " lock") + (sel === a.id ? " sel" : "");
-          m.innerHTML = '<div class="md">' + (a.got ? "" : '<i class="pr" style="--p:' + Math.round((100 * a.have) / a.need) + '%"></i>') + (GLYPH[a.id] || "") + "</div><span>" + a.name + "</span>";
+          m.innerHTML = '<div class="md' + (ART[a.id] ? " art" : "") + '">' + (a.got ? "" : '<i class="pr" style="--p:' + Math.round((100 * a.have) / a.need) + '%"></i>') + (ART[a.id] ? '<img src="' + ART[a.id] + '" alt="">' : GLYPH[a.id] || "") + "</div><span>" + a.name + "</span>";
           m.onclick = () => { sel = a.id; try { window.buzz && buzz("light"); } catch (e) {} plaque(a); cab.querySelectorAll(".tm.sel").forEach((x) => x.classList.remove("sel")); m.classList.add("sel"); };
           shelf.append(m);
         }

@@ -3741,6 +3741,21 @@ function showShop(tab) {
   renderShop();
   $("shop").classList.add("on");
 }
+// shop rarity: sets the display-case color (Midnight Garage theme)
+function rarityOf(it) {
+  if (!it) return ["common", "COMMON"];
+  if (it.holiday) return ["limited", "LIMITED"];
+  if (it.lock || it.bonus || it.price >= 800) return ["legend", "LEGENDARY"];
+  if (it.price > 450) return ["epic", "EPIC"];
+  if (it.price > 200) return ["rare", "RARE"];
+  return ["common", "COMMON"];
+}
+function tagRarity(card, it) {
+  const [c, t] = rarityOf(it);
+  card.classList.add("r-" + c);
+  const r = document.createElement("i"); r.className = "rar"; r.textContent = t;
+  card.prepend(r);
+}
 function renderLooks(box) {
   const own = ownedLooks(), eq = equippedLooks();
   const hd = document.createElement("div");
@@ -3769,6 +3784,7 @@ function renderLooks(box) {
       };
     } else { b.textContent = L.price + " COINS"; b.className = "no"; b.disabled = true; }
     card.append(im, nm, sl, b);
+    tagRarity(card, L);
     box.append(card);
   }
 }
@@ -3789,13 +3805,13 @@ function renderGarage(box) {
   const own = ownedSkins(), eqS = equippedSkin(), ownL = ownedLooks(), eq = equippedLooks();
   $("details").textContent = "Everything you own. Tap to equip. Looks and auras fit every finish.";
   const head = (t) => { const h = document.createElement("div"); h.className = "lvhead"; h.textContent = t; box.append(h); };
-  const card = (src, name, sub, on, btn, cls) => {
+  const card = (src, name, sub, on, btn, cls, it) => {
     const c = document.createElement("div"); c.className = "skin" + (cls || "") + (on ? " eq" : "");
     const im = document.createElement("img"); im.src = src; im.alt = name;
     const nm = document.createElement("div"); nm.textContent = name;
     c.append(im, nm);
     if (sub) { const s = document.createElement("div"); s.className = "lslot"; s.textContent = sub; c.append(s); }
-    c.append(btn); box.append(c);
+    c.append(btn); tagRarity(c, it); box.append(c);
   };
   const mk = (t, cls, fn) => { const b = document.createElement("button"); b.textContent = t; b.className = cls; if (fn) b.onclick = fn; else b.disabled = true; return b; };
   head("SOCKET FINISHES (" + own.length + ")");
@@ -3803,7 +3819,7 @@ function renderGarage(box) {
     const on = sk.id === eqS;
     card(skinFile(sk.id), sk.name, "", on, on ? mk("EQUIPPED", "own") : mk("EQUIP", "own", () => {
       localStorage.setItem("tenmm-skin", sk.id); applySkin(); setArt("hero"); buzz("light"); renderShop();
-    }));
+    }), "", sk);
   }
   const save = () => { localStorage.setItem("tenmm-looks", JSON.stringify(eq)); applySkin(); buzz("light"); renderShop(); };
   let any = false;
@@ -3815,7 +3831,7 @@ function renderGarage(box) {
     for (const L of mine) {
       const on = eq[slot] === L.id;
       card(L.img || "look-" + L.id + ".webp", L.name, LOOK_SLOTS[slot], on,
-        on ? mk("TAKE OFF", "own", () => { delete eq[slot]; save(); }) : mk("WEAR", "own", () => { eq[slot] = L.id; save(); }), " look");
+        on ? mk("TAKE OFF", "own", () => { delete eq[slot]; save(); }) : mk("WEAR", "own", () => { eq[slot] = L.id; save(); }), " look", L);
     }
   }
   if (!any) {
@@ -3913,6 +3929,7 @@ function renderShop() {
       card.append(tg);
     }
     card.append(b);
+    tagRarity(card, sk);
     box.append(card);
   }
 }

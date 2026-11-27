@@ -34,9 +34,11 @@
   try { if (navigator.audioSession) navigator.audioSession.onstatechange = () => note("audioSession " + navigator.audioSession.state); } catch (e) {}
 
   // the panel
+  document.addEventListener("DOMContentLoaded", () => { const h = document.querySelector("header small"); if (h) h.style.cursor = "pointer"; });
   let taps = 0, tapT = 0;
-  document.addEventListener("click", (e) => {
-    const h = e.target && e.target.closest && e.target.closest("header small");
+  // pointerup, not click: iOS doesn't send click for taps on plain text like this line
+  document.addEventListener("pointerup", (e) => {
+    const h = e.target && e.target.closest && e.target.closest("header");
     if (!h) return;
     const now = performance.now();
     taps = now - tapT < 800 ? taps + 1 : 1; tapT = now;

@@ -471,17 +471,44 @@
     if (window.GC) GC.achieve("daily_first");
   }
 
-  // ---------- daily gift ----------
+  // ---------- weekend events: Friday to Sunday, a different one each week ----------
+  const EVENTS = [
+    { id: "coins", name: "DOUBLE COIN WEEKEND", desc: "Lost Toolbox drawers pay double coins until Sunday night." },
+    { id: "missions", name: "MISSION MADNESS", desc: "Lost Toolbox missions pay double until Sunday night." },
+    { id: "stars", name: "STAR RUSH WEEKEND", desc: "Every 10 stars you find pays double until Sunday night." },
+  ];
+  function event() {
+    const d = new Date(), wd = d.getDay();
+    if (wd !== 5 && wd !== 6 && wd !== 0) return null;
+    // the Friday that started this weekend picks the event
+    const fri = new Date(d.getFullYear(), d.getMonth(), d.getDate() - (wd === 5 ? 0 : wd === 6 ? 1 : 2));
+    return EVENTS[Math.floor(fri.getTime() / 6048e5) % EVENTS.length];
+  }
+  // ---------- daily gift: a 7-day calendar that loops; missing a day starts it over ----------
+  const GIFTS = [{ c: 15 }, { c: 20 }, { c: 25 }, { pu: "torque", c: 30 }, { c: 35 }, { c: 40 }, { c: 100, pu: "lucky" }];
+  function giftToBag(pu) {
+    try {
+      const s = JSON.parse(localStorage.getItem("tenmm-lt") || "{}"), b = (s.bag = s.bag || []);
+      if (b.length >= 3) return false;
+      b.push(pu); localStorage.setItem("tenmm-lt", JSON.stringify(s)); return true;
+    } catch (e) { return false; }
+  }
   function giftCheck() {
-    const g = LS.get("tenmm-gift", { last: -9, streak: 0 }), t = today();
-    if (g.last === t || !$("gift")) return;
-    const streak = g.last === t - 1 ? g.streak + 1 : 1;
-    const amt = [10, 15, 20, 25, 30, 40, 60][Math.min(6, streak - 1)];
-    $("giftAmt").textContent = "+" + amt + " COINS";
-    $("giftDay").textContent = "DAY " + streak + (streak >= 7 ? " • MAX GIFT" : " • come back tomorrow for more");
+    const g0 = LS.get("tenmm-gift", { last: -9, streak: 0 }), t0 = today();
+    if (g0.last === t0 || !$("gift")) return;
+    const st = g0.last === t0 - 1 ? g0.streak + 1 : 1, day = ((st - 1) % 7) + 1, G = GIFTS[day - 1];
+    let cal = $("giftCal");
+    if (!cal) { cal = document.createElement("div"); cal.id = "giftCal"; $("giftDay").after(cal); }
+    cal.innerHTML = GIFTS.map((x, k) => '<span class="' + (k + 1 < day ? "got" : k + 1 === day ? "now" : "") + '"><small>DAY ' + (k + 1) + "</small>" + (x.pu ? '<img src="lt/pu-' + x.pu + '.webp" alt="">' : "") + "<b>" + x.c + "</b></span>").join("");
+    $("giftAmt").textContent = "+" + G.c + " COINS" + (G.pu ? " + " + (G.pu === "torque" ? "TORQUE STAR" : "LUCKY SOCKET") : "");
+    const ev = event();
+    $("giftDay").textContent = "DAY " + day + " OF 7" + (st > 7 ? " • WEEK " + Math.ceil(st / 7) : "") + (ev ? " • " + ev.name + " IS ON!" : " • come back tomorrow");
     $("gift").classList.remove("hidden");
     $("giftClaim").onclick = () => {
-      g.last = t; g.streak = streak; LS.set("tenmm-gift", g);
+      g0.last = t0; g0.streak = st; LS.set("tenmm-gift", g0);
+      // power-ups go in the Lost Toolbox tool bag; a full bag turns them into coins instead
+      let amt = G.c;
+      if (G.pu && !giftToBag(G.pu)) amt += 30;
       addCoins(amt); sfx("win"); buzz("success");
       $("gift").classList.add("hidden");
       if (window.showHome && state === "menu") { const c = $("hCoins"); if (c) c.textContent = totalCoins; }
@@ -672,7 +699,7 @@
     if (boss && runMode !== "daily") { $("rTheme").textContent = "BOSS LEVEL • " + themeOf(level).name; }
     if (window.mirrorOn && runMode !== "daily") { $("rTheme").textContent = "MIRROR LEVEL • " + $("rTheme").textContent; $("rGoal").textContent = "Everything is flipped: you're running the other way! " + $("rGoal").textContent; }
   };
-  window.Feature = { twistOfDay, debug: () => ({ boss, rocket, slick, bossImg: bossSprite.naturalWidth }), mode: () => runMode, startDaily, startEndless, showUpgrades, share, giftCheck, dailyState, today, isDailyDone: () => dailyState().last === today(), endlessBest: () => LS.get("tenmm-endless-best", 0), starsTotal: () => Object.values(LS.get("tenmm-stars", {})).reduce((a, b) => a + b, 0) };
+  window.Feature = { event, twistOfDay, debug: () => ({ boss, rocket, slick, bossImg: bossSprite.naturalWidth }), mode: () => runMode, startDaily, startEndless, showUpgrades, share, giftCheck, dailyState, today, isDailyDone: () => dailyState().last === today(), endlessBest: () => LS.get("tenmm-endless-best", 0), starsTotal: () => Object.values(LS.get("tenmm-stars", {})).reduce((a, b) => a + b, 0) };
 })();
 
 // ---------- Game Center (iPhone app only) ----------

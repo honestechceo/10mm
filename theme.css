@@ -395,3 +395,65 @@ header small { font-size: 9px !important; color: #5f6c7a; letter-spacing: 1px; w
 #ltbox .ltpad .hmbt .hmK { background-image: url(lt/hm-btn-K.webp) !important; }
 #ltbox .ltpad .hmbt .hmJ { background-image: url(lt/hm-btn-J.webp) !important; }
 #ltbox .ltpad .hmbt button.on { transform: scale(.92); filter: brightness(1.25) drop-shadow(0 0 8px #ffffffaa); box-shadow: none; }
+
+/* =====================================================================
+   LOST TOOLBOX: drawer card, missions, time attack, upgrades, events
+   ===================================================================== */
+#ltbox .ltdname { font: 900 15px system-ui; letter-spacing: 1.5px; color: #fff; margin: -6px 0 2px; }
+#ltbox .ltevt { width: min(380px, 92%); border-radius: 14px; padding: 8px 12px; background: linear-gradient(90deg, #5a1fb0, #c5141f); border: 2px solid var(--gold); box-shadow: 0 0 16px #ffc43855; display: flex; flex-direction: column; gap: 2px; }
+#ltbox .ltevt b { font: 900 14px system-ui; letter-spacing: 1.5px; color: var(--gold2, #ffe07a); }
+#ltbox .ltevt span { font: 600 12px system-ui; color: #fff; }
+#ltbox .ltmis, #ltbox .ltta { width: min(380px, 92%); border-radius: 14px; padding: 10px 12px; background: #0e131a; border: 2px solid #39424e; text-align: left; }
+#ltbox .ltmis > b, #ltbox .ltta > b { display: block; font: 900 12px system-ui; letter-spacing: 2px; color: var(--gold, #ffc438); margin-bottom: 6px; }
+#ltbox .ltmis div { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #1f2731; }
+#ltbox .ltmis div:first-of-type { border-top: 0; }
+#ltbox .ltmis i { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font: 900 12px system-ui; font-style: normal; background: #232b36; color: #9aa6b4; }
+#ltbox .ltmis span { flex: 1; font: 700 13px system-ui; color: #d8e0ea; }
+#ltbox .ltmis em { font: 900 12px system-ui; font-style: normal; color: var(--gold, #ffc438); }
+#ltbox .ltmis .ok i { background: #1f9d3a; color: #fff; }
+#ltbox .ltmis .ok span { color: #8fe39b; }
+#ltbox .ltmis .ok em { color: #8fe39b; }
+#ltbox .ltta p { margin: 6px 0 0; font: 600 12px system-ui; color: #b8c3cf; }
+#ltbox .ltmed { display: flex; gap: 6px; }
+#ltbox .ltmed span { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 5px 4px; border-radius: 10px; background: #161c24; font: 800 12px system-ui; color: #7f8b98; }
+#ltbox .ltmed span.big { font-size: 15px; padding: 8px; }
+#ltbox .ltmed i { width: 14px; height: 14px; border-radius: 50%; background: #3a434f; box-shadow: inset 0 -2px 0 #0006; }
+#ltbox .ltmed .m3 i { background: radial-gradient(circle at 35% 35%, #fff3b0, #ffc438 55%, #a8740a); }
+#ltbox .ltmed .m2 i { background: radial-gradient(circle at 35% 35%, #fff, #c9d1da 55%, #7c8794); }
+#ltbox .ltmed .m1 i { background: radial-gradient(circle at 35% 35%, #ffd9b0, #c87a3a 55%, #7a4216); }
+#ltbox .ltmed .m0 i { display: none; }
+#ltbox .ltmed span.got { color: #fff; background: #22303f; box-shadow: 0 0 0 1px #ffffff22; }
+#ltbox .ltbtn.ta { background: linear-gradient(180deg, #59a8ff, #1450b8); color: #fff; }
+#ltbox .ltbtn.up { width: min(380px, 92%); margin: 8px auto 0; background: linear-gradient(180deg, #b77bff, #5a1fb0); color: #fff; }
+#ltbox .ltnode .bd .mi { font: 900 10px system-ui; font-style: normal; color: #8fe39b; background: #0b1a10cc; border-radius: 8px; padding: 1px 5px; }
+#ltbox .ltnode .bd .md { width: 14px; height: 14px; border-radius: 50%; display: inline-block; vertical-align: middle; }
+#ltbox .ltnode .bd .md.m3 { background: radial-gradient(circle at 35% 35%, #fff3b0, #ffc438 55%, #a8740a); }
+#ltbox .ltnode .bd .md.m2 { background: radial-gradient(circle at 35% 35%, #fff, #c9d1da 55%, #7c8794); }
+#ltbox .ltnode .bd .md.m1 { background: radial-gradient(circle at 35% 35%, #ffd9b0, #c87a3a 55%, #7a4216); }
+#ltbox.ta .ltname { color: #7fe0ff; font-variant-numeric: tabular-nums; }
+/* upgrades */
+#ltbox .ltuptabs { display: flex; gap: 8px; width: min(380px, 92%); }
+#ltbox .ltuptabs button { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border-radius: 14px; border: 2px solid #3b1d22; background: linear-gradient(180deg, #24141a, #110a0c); color: #fff; font: 900 12px system-ui; letter-spacing: 1px; }
+#ltbox .ltuptabs button img { height: 36px; }
+#ltbox .ltuptabs button.on { border-color: var(--gold, #ffc438); background: linear-gradient(180deg, #3a2a0c, #1b1305); }
+#ltbox .ltup { width: min(380px, 92%); display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 14px; background: #0e131a; border: 2px solid #39424e; text-align: left; }
+#ltbox .ltupt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+#ltbox .ltupt b { font: 900 14px system-ui; letter-spacing: 1.5px; color: #fff; }
+#ltbox .ltupt span { font: 600 11px system-ui; color: #9aa6b4; }
+#ltbox .ltupt i { display: flex; gap: 4px; margin-top: 2px; }
+#ltbox .ltupt em { width: 26px; height: 8px; border-radius: 4px; background: #232b36; }
+#ltbox .ltupt em.on { background: linear-gradient(90deg, #6fe06a, #148a2a); box-shadow: 0 0 6px #6fe06a88; }
+#ltbox .ltup button { flex: none; display: flex; align-items: center; gap: 4px; min-width: 76px; justify-content: center; padding: 10px 8px; border-radius: 12px; border: 2px solid #000; background: linear-gradient(180deg, var(--gold2, #ffe07a), var(--gold, #ffc438)); color: #15110a; font: 900 14px system-ui; box-shadow: 0 4px 0 #000; }
+#ltbox .ltup button img { width: 16px; height: 16px; }
+#ltbox .ltup button:disabled { filter: grayscale(1) brightness(.55); box-shadow: 0 2px 0 #000; }
+#ltbox .ltup button.max { background: #1f9d3a; color: #fff; filter: none; }
+/* daily gift calendar */
+#giftCal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin: 0 -18px 14px; }
+#giftCal span { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 5px 2px; border-radius: 9px; background: #0f1923; border: 1px solid #2c3a48; min-width: 0; }
+#giftCal small { font: 800 8px system-ui; letter-spacing: .5px; color: #7f8b98; white-space: nowrap; }
+#giftCal b { font: 900 13px system-ui; color: #ffce49; }
+#giftCal img { width: 20px; height: 20px; object-fit: contain; }
+#giftCal span.got { opacity: .45; }
+#giftCal span.got b::after { content: " ✓"; color: #8fe39b; }
+#giftCal span.now { border-color: #ffce49; background: #3a2f0e; box-shadow: 0 0 10px #ffce4966; transform: scale(1.06); }
+#giftCal img { width: 20px !important; margin: 0 !important; animation: none !important; }

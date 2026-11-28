@@ -3920,7 +3920,7 @@ function renderShop() {
       glamHead = true;
       const hd = document.createElement("div");
       hd.className = "lvhead";
-      hd.textContent = "NEW! GLAM FINISHES";
+      hd.textContent = "NEW! FEMALE SOCKETS";
       box.append(hd);
     }
     if (sk.holiday && !headed) {

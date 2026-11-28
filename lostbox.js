@@ -47,7 +47,8 @@
   // ---------- save ----------
   const load = () => { try { return Object.assign({ done: [], coins: {}, golden: false, stars: {}, starPaid: 0, rooms: [] }, JSON.parse(localStorage.getItem(SAVE) || "{}")); } catch (e) { return { done: [], coins: {}, golden: false, stars: {}, starPaid: 0, rooms: [] }; } };
   // stars: 5 hidden in every drawer, kept for good once found. Every STAR_STEP stars pays coins into the shop wallet.
-  const STAR_STEP = 10, STAR_PAY = 250;
+  const STAR_STEP = 10, STAR_PAY = 100;
+  const HIDE_BONUS = 100, REPLAY_PAY = 0.25; // first-clear hideout bonus; share of coins paid when replaying a cleared drawer
   const starTotal = (s) => Object.values(s.stars || {}).reduce((n, a) => n + a.length, 0);
   const store = (s) => { try { localStorage.setItem(SAVE, JSON.stringify(s)); } catch (e) {} };
   const tester = () => localStorage.getItem("tenmm-tester") === "1";
@@ -627,7 +628,7 @@
     e.hp--; e.inv = 0.9; if (e.hp === 1) music("bossfast"); impact(e.x, e.y - (e.h || 78) / 2, e.hp <= 0 ? 0.22 : 0.12); shakeT = Math.max(shakeT, e.hp <= 0 ? 0.45 : 0.28); if (!ranged) { pl.vy = -P.JUMP * 0.95; pl.jumps = 1; pl.held = key.J; } say("bosshit"); haptic("heavy");
     for (let i = 0; i < 6; i++) fx.push({ k: "chip", x: e.x, y: e.y - e.h / 2, vx: (Math.random() - 0.5) * 400, vy: -200 - Math.random() * 300, t: 0.6, c: i % 2 ? "#ffd23f" : "#fff", s: 7 });
     if (e.hp <= 0) {
-      if (pow && pow.mech > 0) setTimeout(() => { gain(50); toast("MECH FINISH! +50 coins"); }, 900);
+      if (pow && pow.mech > 0) setTimeout(() => { gain(20); toast("MECH FINISH! +20 coins"); }, 900);
       e.st = "dead"; e.tt = 1.2; say("win"); haptic("success");
       for (let i = 0; i < 10; i++) ents.push({ k: "coin", x: e.x + (i - 4.5) * 20, y: e.y - 40 - (i % 3) * 18, x0: -1, y0: -1, w: 26, h: 26, alive: true, ph: 0 });
       arena.on = false; arena.done = true; toast("DRAWER UNLOCKED!"); say("win"); music("lostbox");
@@ -890,7 +891,7 @@
     s.hideDone = s.hideDone || [];
     const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
     if (first) (hid ? s.hideDone : s.done).push(lvI);
-    if (hid && first) coinsRun += 250;
+    if (hid && first) coinsRun += HIDE_BONUS;
     s.coins[lvI] = Math.max(s.coins[lvI] || 0, coinsRun);
     let golden = false;
     if (lvI === 4 && !tester() && !s.golden) {
@@ -905,9 +906,11 @@
     store(s);
     gcSync();
     if (lvI === 4 && !hid && !tester() && window.GC) GC.score("lt_golden", Math.round(t * 100)); // hundredths of a second
-    // coins go into the main wallet
-    try { totalCoins += coinsRun; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
-    clearInfo = { first, golden, coins: coinsRun, time: t };
+    // coins go into the main wallet: all of them the first time a drawer or hideout is cleared,
+    // a quarter on replays (replaying cleared drawers used to pay in full and emptied the shop too fast)
+    const pay = first ? coinsRun : Math.round(coinsRun * REPLAY_PAY);
+    try { totalCoins += pay; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
+    clearInfo = { first, golden, coins: pay, got: coinsRun, time: t };
     showClear();
   }
 
@@ -1470,7 +1473,7 @@
     card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>250 coins</b> to your shop wallet.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>100 coins</b> to your shop wallet. Clearing a drawer the first time pays every coin you grab; replays pay a quarter.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }
@@ -1505,7 +1508,7 @@
     if (window.LT_LEVELS[lvI].custom && window.LTEdit) { say("win"); haptic("success"); window.LTEdit.cleared(clearInfo); return; }
     if (window.LT_LEVELS[lvI].hidden) {
       const c = clearInfo, back = hideFrom;
-      let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +250 hideout bonus)" : "") + " added to your wallet.</p>";
+      let h = '<div class="ltlogo">HIDEOUT CLEARED!</div><img class="ltclr" src="lt/en-sbolt3.webp" alt=""><p>' + window.LT_LEVELS[lvI].name + ": the gang is down!</p><p>" + c.coins + " coins" + (c.first ? " (includes the +" + HIDE_BONUS + " hideout bonus)" : "") + " added to your wallet." + (c.first ? "" : " Replays pay a quarter of the " + c.got + " you grabbed.") + "</p>";
       h += (back != null ? '<button class="ltbtn" id="ltNext">BACK TO DRAWER ' + (back + 1) + "</button>" : "") + '<button class="ltbtn' + (back != null ? " sub" : "") + '" id="ltMenu">ALL DRAWERS</button>';
       show(h); say("win"); haptic("success");
       const nx = card.querySelector("#ltNext"); if (nx) nx.onclick = () => { hideFrom = null; play(back); };
@@ -1513,7 +1516,7 @@
       return;
     }
     const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
-    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
+    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet" + (c.first ? "" : " (replays pay a quarter of the " + c.got + " you grabbed)") + " · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
     if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';

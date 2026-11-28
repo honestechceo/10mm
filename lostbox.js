@@ -94,7 +94,10 @@
       '<div class="lthud"><span class="lthp" id="ltHp"></span><span class="ltname" id="ltName"></span><span class="ltcoin"><img src="lt/coin.webp" alt="">×<b id="ltCoins">0</b></span><span class="ltcoin ltstar"><img src="lt/star.webp" alt="">×<b id="ltStars">0/5</b></span><button id="ltPause" aria-label="Pause">II</button></div>' +
       '<div class="ltpow" id="ltPow"></div><div class="ltbag" id="ltBag"></div><div class="ltboss" id="ltBoss"></div>' +
       '<div class="ltmsg" id="ltMsg"></div>' +
-      '<div class="ltpad"><button class="ltl" data-k="L" aria-label="Move left">◀</button><button class="ltr" data-k="R" aria-label="Move right">▶</button><button class="lta" data-k="A" aria-label="Use power"><img alt=""><span>THROW</span></button><button class="ltj" data-k="J" aria-label="Jump">JUMP</button></div>' +
+      '<div class="ltpad"><button class="ltl" data-k="L" aria-label="Move left">◀</button><button class="ltr" data-k="R" aria-label="Move right">▶</button><button class="lta" data-k="A" aria-label="Use power"><img alt=""><span>THROW</span></button><button class="ltj" data-k="J" aria-label="Jump">JUMP</button>' +
+      '<div class="hmpad"><div class="hmdp" aria-label="D-pad"><i class="u">▲</i><i class="l">◀</i><i class="r">▶</i><i class="d">▼</i></div><div class="hmbt">' +
+      '<button class="hmG" data-k="G" aria-label="Impact gun"><b>GUN</b></button><button class="hmS" data-k="S" aria-label="Special"><b>SPECIAL</b></button><button class="hmB" data-k="B" aria-label="Block"><b>BLOCK</b></button>' +
+      '<button class="hmP" data-k="P" aria-label="Punch"><b>PUNCH</b></button><button class="hmK" data-k="K" aria-label="Kick"><b>KICK</b></button><button class="hmJ" data-k="J" aria-label="Jump"><b>JUMP</b></button></div></div></div>' +
       '<div class="ltcard hidden" id="ltCard"></div>';
     document.body.append(root);
     cv = root.querySelector("#ltc"); ctx = cv.getContext("2d"); card = root.querySelector("#ltCard");
@@ -103,16 +106,30 @@
     // Touch: every finger is tracked by where it is right now, so sliding a thumb from ◀ to ▶
     // switches direction, and lifting any finger can never leave a direction stuck on.
     const pad = root.querySelector(".ltpad"), btns = [...pad.querySelectorAll("button")];
+    const dp = pad.querySelector(".hmdp"), dpi = [...dp.querySelectorAll("i")];
     const zoneAt = (x, y) => {
-      for (const b of btns) { if (b.offsetParent === null) continue; const r = b.getBoundingClientRect(); if (x >= r.left - 8 && x <= r.right + 8 && y >= r.top - 30 && y <= r.bottom + 30) return b.dataset.k; }
+      for (const b of btns) { if (b.offsetParent === null) continue; const r = b.getBoundingClientRect(), m = b.closest(".hmbt") ? 4 : 8, my = b.closest(".hmbt") ? 4 : 30; if (x >= r.left - m && x <= r.right + m && y >= r.top - my && y <= r.bottom + my) return b.dataset.k; }
       return null;
     };
+    // D-pad: direction from the centre, so diagonals (up-right for an uppercut on the move, down-left...) work
+    const dpAt = (x, y, held) => {
+      if (dp.offsetParent === null) return false;
+      const r = dp.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2, R = r.width / 2, dx = x - cx, dy = y - cy;
+      if (Math.hypot(dx, dy) > R + 18) return false;
+      if (Math.hypot(dx, dy) < R * 0.18) return true;
+      const a = Math.atan2(dy, dx) * 180 / Math.PI; // 8 slices
+      if (a > -67.5 && a < 67.5) held.R = true; if (a > 112.5 || a < -112.5) held.L = true;
+      if (a > 22.5 && a < 157.5) held.D = true; if (a < -22.5 && a > -157.5) held.U = true;
+      return true;
+    };
+    const ALLK = ["L", "R", "J", "A", "U", "D", "P", "K", "G", "S", "B"];
     const syncTouches = (e) => {
       e.preventDefault();
-      const held = { L: false, R: false, J: false, A: false };
-      for (const tch of e.touches) { const k = zoneAt(tch.clientX, tch.clientY); if (k) held[k] = true; }
-      for (const k of ["L", "R", "J", "A"]) if (held[k] !== key[k]) press(k, held[k]);
+      const held = {}; ALLK.forEach((k) => (held[k] = false));
+      for (const tch of e.touches) { if (dpAt(tch.clientX, tch.clientY, held)) continue; const k = zoneAt(tch.clientX, tch.clientY); if (k) held[k] = true; }
+      for (const k of ALLK) if (held[k] !== key[k]) press(k, held[k]);
       btns.forEach((b) => b.classList.toggle("on", held[b.dataset.k]));
+      dpi.forEach((i) => i.classList.toggle("on", held[i.className.charAt(0).toUpperCase()]));
     };
     ["touchstart", "touchmove", "touchend", "touchcancel"].forEach((ev) => pad.addEventListener(ev, syncTouches, { passive: false }));
     // mouse (simulator / desktop)
@@ -122,15 +139,16 @@
       const up = () => { if (key[k]) { press(k, false); b.classList.remove("on"); } };
       b.addEventListener("mouseup", up); b.addEventListener("mouseleave", up);
     }
-    window.addEventListener("blur", () => { key.L = key.R = key.J = key.A = false; btns.forEach((b) => b.classList.remove("on")); });
+    window.addEventListener("blur", () => { for (const k in key) key[k] = false; btns.forEach((b) => b.classList.remove("on")); dpi.forEach((i) => i.classList.remove("on")); });
+    const HMKEYS = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", ArrowUp: "U", KeyW: "U", ArrowDown: "D", KeyS: "D", Space: "J", KeyZ: "J", KeyX: "P", KeyJ: "P", KeyC: "K", KeyK: "K", KeyV: "G", KeyL: "G", KeyF: "S", KeyI: "S", ShiftLeft: "B", KeyO: "B" };
     window.addEventListener("keydown", (e) => {
       if (!open) return;
-      const k = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" }[e.code];
+      const k = (hmOn() ? HMKEYS : { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" })[e.code];
       if (k) { e.preventDefault(); if (!e.repeat) press(k, true); }
       if (e.code === "Escape" || e.code === "KeyP") pauseMenu();
     });
     window.addEventListener("keyup", (e) => {
-      const k = { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" }[e.code];
+      const k = (hmOn() ? HMKEYS : { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" })[e.code];
       if (k) press(k, false);
     });
     document.addEventListener("visibilitychange", () => { if (document.hidden && open && mode === "play") pauseMenu(); });
@@ -151,11 +169,12 @@
   }
 
   // ---------- input ----------
-  const key = { L: false, R: false, J: false, A: false };
+  const key = { L: false, R: false, J: false, A: false, U: false, D: false, P: false, K: false, G: false, S: false, B: false };
   let jumpBuf = 0;
   function press(k, d) {
     if (k === "J" && d && !key.J) jumpBuf = 0.12;
     if (k === "A" && d && !key.A) action();
+    if (d && !key[k] && "PKGS".includes(k) && hmOn()) hmPress(k);
     key[k] = d;
     if (d) { try { window.audioReady && audioReady(); } catch (e) {} }
   }
@@ -319,6 +338,7 @@
   }
   function spawnPlayer() {
     pl = { x: cp.x, y: cp.y, vx: 0, vy: 0, face: 1, ground: true, coyote: 0, jumps: 0, held: false, inv: 1.0, hitT: 0, landT: 0, djT: 0, anim: 0, on: null };
+    hmReset();
     zoom = 1;
     cam = Math.max(0, Math.min(W * T - viewW, pl.x - viewW * 0.35));
     hp = maxHp;
@@ -334,7 +354,8 @@
     return null;
   }
   function stepPlayer(dt) {
-    const sp = pow.speed > 0 ? 1.35 : 1, dir = (key.R ? 1 : 0) - (key.L ? 1 : 0);
+    const sp = pow.speed > 0 ? 1.35 : 1, lock = hmLocked(), dir = lock ? 0 : (key.R ? 1 : 0) - (key.L ? 1 : 0);
+    if (lock && hm.block && (key.R || key.L)) pl.face = key.R ? 1 : -1; // turn to face what you're blocking
     const maxv = P.MAXV * sp;
     if (dir) {
       pl.face = dir;
@@ -350,7 +371,7 @@
     // jump: buffer + coyote time, double jump in the air
     jumpBuf -= dt; pl.coyote -= dt;
     const jm = pow.spring > 0 ? 1.22 : 1;
-    if (jumpBuf > 0) {
+    if (jumpBuf > 0 && !(hm && hm.mv && hmOn() && (pl.ground || hm.mv === "hammer"))) {
       if (pl.ground || pl.coyote > 0) { pl.vy = -P.JUMP * jm; pl.ground = false; pl.coyote = 0; pl.jumps = 1; pl.held = true; jumpBuf = 0; say("jump"); pl.on = null; pl.sq = -0.7; dust(pl.x, pl.y, 2); }
       else if (pl.jumps < 2) { pl.vy = -P.DJUMP * jm; pl.jumps = 2; pl.held = true; jumpBuf = 0; pl.djT = 0.4; say("flap"); puff(pl.x, pl.y, 6, "#ffffff"); }
     }
@@ -401,7 +422,7 @@
         }
         if (top !== null) {
           ny = top; const fallV = pl.vy; pl.vy = 0; pl.ground = true;
-          if (!wasGround) { pl.landT = 0.14; pl.sq = Math.min(1, Math.max(0, fallV) / 850); if (fallV > 380) dust(pl.x, ny, 2 + Math.round(fallV / 300)); else if (pl.jumps) puff(pl.x, ny, 4, "#d8dde4"); if (pl.pounding) { pl.y = ny; poundImpact(); } }
+          if (!wasGround) { pl.landT = 0.14; pl.sq = Math.min(1, Math.max(0, fallV) / 850); if (fallV > 380) dust(pl.x, ny, 2 + Math.round(fallV / 300)); else if (pl.jumps) puff(pl.x, ny, 4, "#d8dde4"); if (pl.pounding) { pl.y = ny; poundImpact(); } if (pl.hmDrop) { pl.y = ny; hmLand(); } }
           pl.jumps = 0;
         }
       }
@@ -441,6 +462,7 @@
   }
   function hurt(src) {
     if (pl.inv > 0 || mode !== "play" || pow.torque > 0) return;
+    if (hmOn() && hm) { if (hmBlocked(src)) return; hm.mv = null; hm.buf = null; pl.hmDrop = false; hmSnd("10,7", 0.7); }
     if (pow.mech > 0) {
       pow.mech--; pl.inv = 1.2; pl.hitT = 0.45; say("clank"); haptic("heavy"); shakeT = 0.2; hudKey = "";
       pl.vy = -300; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 180; pl.ground = false; pl.on = null;
@@ -474,6 +496,7 @@
     for (const e of ents) {
       if (!e.alive) continue;
       if (e.k === "wrench") { wrenchStep(e, hd); continue; }
+      if (e.k === "hmp") { hmProjStep(e, hd); continue; }
       if (e.walker && !e.dead) {
         e.vy = Math.min(900, (e.vy || 0) + 2400 * hd);
         let nx = e.x + e.vx * hd;
@@ -591,7 +614,7 @@
       case "coin": e.alive = false; collected.add((inRoom ? "r" : "") + lvI + ":" + Math.round(e.x0) + ":" + Math.round(e.y0)); addCoin(e.x, e.y); fx.push({ k: "spark", x: e.x, y: e.y - 13, t: 0.3 }); return;
       case "pu": e.alive = false; givePower(e.pu); return;
       case "star": grabStar(e); return;
-      case "mechpu": if (pow.mech > 0) return; e.alive = false; pow.mech = 3; pow.wrench = pow.pound = 0; say("power"); haptic("success"); shakeT = 0.25; fx.push({ k: "mfx", x: pl.x, y: pl.y - 50, t: 0.4 }); toast("RATCHET MECH! Tap PUNCH to fight the boss head-on"); hudKey = ""; return;
+      case "mechpu": if (hmOn()) { e.alive = false; pow.shield = 1; say("power"); haptic("success"); hudKey = ""; toast("The Mechanic fights his own way: SHIELD instead!"); return; } if (pow.mech > 0) return; e.alive = false; pow.mech = 3; pow.wrench = pow.pound = 0; say("power"); haptic("success"); shakeT = 0.25; fx.push({ k: "mfx", x: pl.x, y: pl.y - 50, t: 0.4 }); toast("RATCHET MECH! Tap PUNCH to fight the boss head-on"); hudKey = ""; return;
       case "warp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
       case "warpback": if (mode === "play" && Math.abs(pl.x - e.x) < 22) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
       case "hidewarp": if (mode === "play" && pl.ground && Math.abs(pl.x - e.x) < 18) { mode = "warp"; drawerT = 0; exitEnt = e; pl.vx = 0; say("warp"); } return;
@@ -798,6 +821,7 @@
   }
   function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp > (window.LT_LEVELS[lvI].hp || 3) : pow[k] > 0; }
   function givePower(k, fromBag) {
+    if (hmOn() && (k === "wrench" || k === "pound")) { gain(5); say("coin"); toast("The Mechanic brought his own tools: +5 coins"); return; }
     if (!fromBag && k !== "torque" && hasPower(k)) {
       const s = load(), b = (s.bag = s.bag || []);
       if (b.length < BAG_MAX) { b.push(k); store(s); bagHud(); say("power"); haptic("success"); toast(PU[k][1].split("!")[0] + " saved in your tool bag"); return; }
@@ -877,6 +901,233 @@
   function impact(x, y, stop) { hitStop = Math.max(hitStop, stop); shakeT = Math.max(shakeT, 0.08); if (fx.length < 260) fx.push({ k: "ring", x, y, t: 0.28, t0: 0.28 }); }
   function puff(x, y, n, c) { for (let i = 0; i < n; i++) fx.push({ k: "chip", x, y: y - 4, vx: (Math.random() - 0.5) * 160, vy: -60 - Math.random() * 90, t: 0.35, c, s: 5 }); }
 
+  // ---------- HONESTECH Mechanic: crossover fighter from HONESTECH Arena ----------
+  // His sprites, animations and attack boxes are the Arena character's own (lt-mech-data.js, built by
+  // tools/mechanic_assets.py). He keeps Lost Toolbox platforming: same physics, same body box, double
+  // jump and stomps all work, and adds a fighter's moveset on a D-pad + six-button pad.
+  const HMD = () => window.LT_MECH;
+  const HK = 0.43; // world pixels per sprite pixel: about 100px tall, two tiles
+  let hmChar = false; // set when a drawer starts, so the per-frame checks don't read storage
+  const hmOn = () => hmChar;
+  // Arena damage values; 100 damage knocks one hit off a boss. Regular bad guys go down in one hit.
+  const HMOVE = {
+    jab1: { a: 200, dmg: 40, snd: "1,2", hit: "2,2" }, jab2: { a: 210, dmg: 45, snd: "1,0", hit: "2,0" }, jab3: { a: 220, dmg: 50, snd: "1,4", hit: "3,2" },
+    kick1: { a: 230, dmg: 55, snd: "1,2", hit: "2,2" }, kick2: { a: 240, dmg: 60, snd: "1,0", hit: "3,0" }, kick3: { a: 250, dmg: 65, snd: "1,4", hit: "3,2" },
+    lowp: { a: 270, dmg: 35, snd: "1,0", hit: "2,0" }, sweep: { a: 262, dmg: 65, snd: "1,4", hit: "3,2" },
+    upper: { a: 1210, dmg: 90, snd: "20,2", hit: "20,3", up: 1 },
+    gun: { a: 1010, voice: "10,3", shots: [10, 15, 20], air: 1 },
+    torque: { a: 1000, voice: "10,2", shots: [10] },
+    hammer: { a: 1200, dmg: 110, snd: "20,0", hit: "20,1", air: 1 },
+    hland: { a: 1201 },
+  };
+  let hm = null;
+  function hmReset() { hm = { mv: null, fi: 0, ft: 0, T: 0, hits: new Set(), combo: 0, comboT: 0, kcombo: 0, kcomboT: 0, cdGun: 0, cdTq: 0, buf: null, bufT: 0, block: false, crouch: false, shot: 0 }; if (pl) pl.hmDrop = false; }
+  // ground attacks plant his feet; air attacks keep air control
+  const hmLocked = () => hmOn() && hm && pl.ground && ((hm.mv && !(HMOVE[hm.mv].air && !pl.ground)) || hm.block || hm.crouch);
+  function hmPress(k) {
+    if (!hm || mode !== "play" || pl.hitT > 0) return;
+    if (k === "B" || k === "U" || k === "D" || k === "L" || k === "R") return; // held, read every tick
+    if (hm.mv && hm.mv !== "hland") { hm.buf = k; hm.bufT = 0.22; return; } // queue the next button for combos
+    if (hm.mv === "hland") return;
+    hmDo(k);
+  }
+  function hmStart(name) {
+    hm.mv = name; hm.fi = 0; hm.ft = 0; hm.T = 0; hm.hits = new Set(); hm.shot = 0;
+    const m = HMOVE[name];
+    if (m.snd) hmSnd(m.snd);
+    if (m.voice && Math.random() < 0.6) hmSnd(m.voice, 0.7);
+    if (name === "hammer") { pl.vx *= 0.3; pl.jumps = 2; }
+  }
+  function hmDo(k) {
+    const air = !pl.ground;
+    if (k === "P") {
+      if (key.U && !air) return hmStart("upper");
+      if (air) return hmStart(key.D ? "hammer" : "jab2");
+      if (key.D) return hmStart("lowp");
+      hm.combo = hm.comboT > 0 ? (hm.combo + 1) % 3 : 0; hm.comboT = 0.6;
+      return hmStart(["jab1", "jab2", "jab3"][hm.combo]);
+    }
+    if (k === "K") {
+      if (air) return hmStart(key.D ? "hammer" : "kick2");
+      if (key.D) return hmStart("sweep");
+      hm.kcombo = hm.kcomboT > 0 ? (hm.kcombo + 1) % 3 : 0; hm.kcomboT = 0.6;
+      return hmStart(["kick1", "kick2", "kick3"][hm.kcombo]);
+    }
+    if (k === "G") { if (hm.cdGun > 0) return; hm.cdGun = 0.75; return hmStart("gun"); }
+    if (k === "S") {
+      if (air) return hmStart("hammer");
+      if (key.U) return hmStart("upper");
+      if (hm.cdTq > 0) return; hm.cdTq = 1.0; return hmStart("torque");
+    }
+  }
+  function hmStep(dt) {
+    hm.comboT -= dt; hm.kcomboT -= dt; hm.cdGun -= dt; hm.cdTq -= dt; hm.bufT -= dt;
+    hm.block = key.B && pl.ground && !hm.mv && pl.hitT <= 0;
+    hm.crouch = key.D && pl.ground && !hm.mv && !hm.block && pl.hitT <= 0;
+    if (hm.block || hm.crouch) jumpBuf = key.J ? jumpBuf : 0;
+    if (!hm.mv) { if (hm.bufT > 0 && hm.buf) { const b = hm.buf; hm.buf = null; hmDo(b); } else hm.buf = null; if (!hm.mv) return; }
+    const m = HMOVE[hm.mv], A = HMD().anims[m.a];
+    if (hm.mv === "hammer") {
+      if (pl.ground && hm.T > 2) { hmLand(); return; }
+      if (pl.vy < -50 && hm.T > 8) { hm.mv = null; pl.hmDrop = false; return; } // bounced off something: drop cancelled
+      if (hm.T < 8) { pl.vy = 0; pl.vx *= 0.85; } else { pl.vy = 950; pl.vx = pl.face * 110; pl.hmDrop = true; }
+    } else if (!m.air && !pl.ground && hm.mv !== "hland") {
+      // walked off a ledge mid-swing: let the swing finish in the air
+    }
+    hm.T += dt * 60; hm.ft += dt * 60;
+    let f = A.f[hm.fi];
+    while (f[3] > 0 && hm.ft >= f[3]) {
+      hm.ft -= f[3];
+      if (hm.fi + 1 >= A.f.length) { if (hm.mv === "hammer") { hm.ft = 0; break; } hm.mv = null; return; }
+      hm.fi++; f = A.f[hm.fi];
+    }
+    if (m.shots) while (hm.shot < m.shots.length && hm.T >= m.shots[hm.shot]) { hmFire(hm.mv, hm.shot); hm.shot++; }
+    if (m.dmg && f[5] && f[5].length && (hm.mv !== "hammer" || hm.T >= 8)) for (const c of f[5]) hmSwing(c, m);
+  }
+  // a clsn1 attack box from the Arena files, placed in the world in front of him
+  function hmSwing(c, m) {
+    const xa = pl.x + pl.face * c[0] * HK, xb = pl.x + pl.face * c[2] * HK;
+    const x0 = Math.min(xa, xb), x1 = Math.max(xa, xb), y0 = pl.y + Math.min(c[1], c[3]) * HK, y1 = pl.y + Math.max(c[1], c[3]) * HK;
+    let any = false;
+    for (const o of ents) {
+      if (!o.alive || o.dead || hm.hits.has(o) || o.k === "hmp") continue;
+      const b = box(o);
+      if (b.x1 < x0 || b.x0 > x1 || b.y1 < y0 || b.y0 > y1) continue;
+      if (hmHit(o, m.dmg, m.hit)) { hm.hits.add(o); any = true; }
+    }
+    // crates break; the pry bar also knocks open ? blocks above him
+    for (let cx = Math.floor(x0 / T); cx <= Math.floor(x1 / T); cx++) for (let cy = Math.floor(y0 / T); cy <= Math.floor((y1 - 1) / T); cy++) {
+      const ch = cell(cx, cy), id = cx + "," + cy;
+      if (hm.hits.has(id)) continue;
+      if (ch === "C" || (m.up && (ch === "?" || ch === "U" || ch === "H"))) { hm.hits.add(id); bonk(cx, cy, ch); any = true; }
+    }
+    if (any) { haptic("medium"); shakeT = Math.max(shakeT, 0.1); }
+  }
+  function hmHit(o, dmg, snd) {
+    const hx = o.x, hy = o.y - (o.h || 40) / 2;
+    if (o.k === "boss") {
+      if (o.st === "wait" || o.st === "dead" || (o.inv || 0) > 0 || !bossStompable(o)) return false;
+      o.chip = (o.chip || 0) + dmg; hmSnd(snd || "7,1"); fx.push({ k: "hmspark", x: hx - pl.face * o.w * 0.25, y: hy, t: 0.18 });
+      if (o.chip >= 100) { o.chip -= 100; bossHit(o, true); } else { impact(hx, hy, 0.04); o.flash = 0.12; }
+      return true;
+    }
+    if (o.k === "bolt" && o.str) { o.alive = false; puff(o.x, o.y - 8, 4, "#fff"); hmSnd("4,0"); return true; } // knock bullets out of the air
+    if (o.stomp || o.walker || o.fly || o.bounce) {
+      o.dead = 0.6; o.vx = 0; gain(1); hmSnd(snd || "7,1"); fx.push({ k: "hmspark", x: hx, y: hy, t: 0.18 }); impact(hx, hy, 0.05);
+      return true;
+    }
+    return false;
+  }
+  // air hammer drop lands: shockwave both ways
+  function hmLand() {
+    pl.hmDrop = false; hmStart("hland"); hmSnd("20,1"); shakeT = 0.3; haptic("heavy"); dust(pl.x, pl.y, 6);
+    fx.push({ k: "pound", x: pl.x, y: pl.y, t: 0.45 });
+    for (const o of ents) {
+      if (!o.alive || o.dead || o.k === "hmp" || hm.hits.has(o)) continue;
+      if (Math.abs(o.x - pl.x) < 2.6 * T && Math.abs(o.y - pl.y) < 1.3 * T) hmHit(o, 110, "20,1");
+    }
+    const cy = Math.floor(pl.y / T), cx = Math.floor(pl.x / T);
+    for (let x = cx - 1; x <= cx + 1; x++) for (const y of [cy, cy - 1]) { const ch = cell(x, y); if (ch === "C") bonk(x, y, ch); }
+  }
+  // impact gun bolts (3-round burst) and the spinning torque wrench slash
+  function hmFire(mv, n) {
+    const tq = mv === "torque", off = tq ? [42, -53] : n === 2 ? [83, -76] : [58, -74];
+    hmSnd(tq ? "6,0" : "5," + n, 0.7);
+    // drawn at the muzzle, but the hit box reaches down to the floor so short bad guys can't duck under it
+    ents.push({ k: "hmp", tq, a: tq ? 1100 : n === 1 ? 1111 : 1110, x: pl.x + pl.face * off[0], y: pl.y - 4, dy: off[1] * 0.85 + 4, face: pl.face, vx: pl.face * (tq ? 380 : 600), w: tq ? 46 : 34, h: tq ? 74 : 70, x0: 0, y0: 0, alive: true, life: tq ? 1.4 : 0.8, t: 0, dmg: tq ? 85 : 28, hits: new Set() });
+  }
+  function hmProjStep(e, dt) {
+    e.t += dt; e.life -= dt; e.x += e.vx * dt;
+    const cx = Math.floor((e.x + e.face * e.w * 0.3) / T), cy = Math.floor((e.y - 24) / T), ch = cell(cx, cy); // walls at waist height, so a low ceiling never eats the shot
+    if (ch === "C") { bonk(cx, cy, ch); if (!e.tq) e.alive = false; }
+    else if (isSolid(ch) || e.life <= 0) { e.alive = false; fx.push({ k: "hmspark", x: e.x, y: e.y + e.dy, t: 0.15 }); return; }
+    const b = box(e);
+    for (const o of ents) {
+      if (!o.alive || o.dead || o === e || o.k === "hmp" || e.hits.has(o)) continue;
+      const q = box(o);
+      if (q.x1 < b.x0 || q.x0 > b.x1 || q.y1 < b.y0 || q.y0 > b.y1) continue;
+      if (hmHit(o, e.dmg, e.tq ? "7,0" : "7,1")) { e.hits.add(o); if (!e.tq || o.k === "boss") { e.alive = false; return; } }
+    }
+  }
+  // blocking stops bad guys, bullets and bosses in front of him (not traps)
+  function hmBlocked(src) {
+    if (!hm || !hm.block || !src) return false;
+    if (!(src.crew || src.k === "bolt" || src.walker || src.fly || src.k === "boss" || src.stomp || src.bounce)) return false;
+    if (Math.sign(src.x - pl.x) !== pl.face && Math.abs(src.x - pl.x) > 6) return false;
+    pl.inv = 0.35; pl.vx = -pl.face * 200; hmSnd("4,0"); haptic("light"); fx.push({ k: "hmspark", x: pl.x + pl.face * 22, y: pl.y - 50, t: 0.15 });
+    if (src.k === "bolt") src.alive = false;
+    return true;
+  }
+  // his voice and hits are the Arena sound files; everything else stays on the game's synth
+  const HSB = {};
+  function hmSnd(k, v) {
+    try {
+      if (typeof soundOn !== "undefined" && !soundOn) return;
+      const ac = typeof audioCtx !== "undefined" ? audioCtx : null;
+      if (!ac || ac.state !== "running") return;
+      const b = HSB[k];
+      if (b === undefined) { hmLoadSnd(k); return; }
+      if (!b || b.ctx !== ac) { if (b && b.ctx !== ac) { delete HSB[k]; hmLoadSnd(k); } return; }
+      const s = ac.createBufferSource(), g = ac.createGain();
+      g.gain.value = (v || 0.85) * (typeof settings !== "undefined" && typeof settings.sfxVol === "number" ? settings.sfxVol : 1);
+      s.buffer = b.buf; s.connect(g).connect(ac.destination); s.start();
+    } catch (e) {}
+  }
+  function hmLoadSnd(k) {
+    const ac = typeof audioCtx !== "undefined" ? audioCtx : null;
+    if (!ac || HSB[k] !== undefined) return;
+    HSB[k] = null;
+    fetch("lt/hm-s" + k.replace(",", "_") + ".m4a").then((r) => r.arrayBuffer()).then((a) => new Promise((ok, no) => ac.decodeAudioData(a, ok, no))).then((buf) => { HSB[k] = { buf, ctx: ac }; }).catch(() => { delete HSB[k]; });
+  }
+  const hmPreload = () => { if (!window.LT_MECH) return; img(HMD().atlas); for (const k of HMD().snd) hmLoadSnd(k); };
+  // draw one sprite from the atlas with its Arena axis on (x, y)
+  function hmBlit(fk, x, y, face, s, ox, oy, flipH) {
+    const fr = HMD().frames[fk], im = img(HMD().atlas);
+    if (!fr || !ready(im)) return false;
+    ctx.save(); ctx.translate(x, y); ctx.scale(face * (flipH ? -1 : 1) * s * HK, s * HK);
+    ctx.drawImage(im, fr[0], fr[1], fr[2], fr[3], (ox || 0) - fr[4], (oy || 0) - fr[5], fr[2], fr[3]);
+    ctx.restore(); return true;
+  }
+  const hmFrame = (a, i) => { const A = HMD().anims[a]; return A.f[Math.max(0, Math.min(A.f.length - 1, i))]; };
+  // looping anim frame by elapsed seconds
+  function hmLoop(a, sec) {
+    const A = HMD().anims[a], tot = A.f.reduce((s, f) => s + Math.max(1, f[3]), 0);
+    let tk = (sec * 60) % tot;
+    for (const f of A.f) { tk -= Math.max(1, f[3]); if (tk < 0) return f; }
+    return A.f[0];
+  }
+  function drawHM() {
+    if (mode === "drawer" && drawerT > 0.5) return true;
+    if (pl.inv > 0 && mode === "play" && !(hm && hm.block) && Math.floor(pl.inv * 14) % 2) return true;
+    const D = HMD(); if (!D || !ready(img(D.atlas))) return true; // still loading: draw nothing rather than the socket
+    pl.anim += 1 / 60;
+    let f;
+    if (mode === "intro") f = hmLoop(0, drawerT);
+    else if (mode === "drawer") f = hmFrame(40, 2);
+    else if (pl.hitT > 0) f = hmFrame(5100, 0);
+    else if (hm && hm.mv) f = hmFrame(HMOVE[hm.mv].a, hm.fi);
+    else if (hm && hm.block) f = hmFrame(120, 2);
+    else if (hm && hm.crouch) f = hmFrame(10, 1);
+    else if (!pl.ground) f = hmFrame(40, pl.vy < -380 ? 0 : pl.vy < -60 ? 1 : pl.vy < 260 ? 2 : 3);
+    else if (pl.landT > 0) f = hmFrame(10, 0);
+    else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + Math.abs(pl.vx) / 60 / 30; f = hmFrame(Math.abs(pl.vx) > 200 ? 21 : 20, Math.floor(pl.rp) % 4); }
+    else f = hmLoop(0, pl.anim);
+    let s = 1;
+    if (mode === "intro") s = Math.min(1, drawerT * 2.2);
+    if (mode === "warp") s = Math.max(0.05, 1 - drawerT * 1.5);
+    const x = pl.x, y = pl.y + 3;
+    if (pow.torque > 0) { ctx.save(); ctx.globalAlpha = 0.45 + 0.25 * Math.sin(t * 14); ctx.fillStyle = "hsl(" + ((t * 360) % 360) + ",100%,60%)"; ctx.beginPath(); ctx.ellipse(x, y - 50, 40, 58, 0, 0, 7); ctx.fill(); ctx.restore(); }
+    if (pow.shield) { ctx.save(); ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 6); ctx.strokeStyle = "#6fd3ff"; ctx.lineWidth = 4; ctx.beginPath(); ctx.ellipse(x, y - 50, 40, 56, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+    if (pl.gliding) { const iy = img("fx-air"); if (ready(iy)) { ctx.save(); ctx.globalAlpha = 0.85; ctx.drawImage(iy, x - 42, y - 8 + Math.sin(t * 20) * 2, 84, 84 * iy.naturalHeight / iy.naturalWidth); ctx.restore(); } }
+    if (pow.speed > 0) { ctx.globalAlpha = 0.3; hmBlit(f[0], x - pl.face * 14, y, pl.face, s, f[1], f[2], f[4].includes("H")); ctx.globalAlpha = 1; }
+    hmBlit(f[0], x, y, pl.face, s, f[1], f[2], f[4].includes("H"));
+    return true;
+  }
+  function drawHMProj(e) {
+    const A = HMD().anims[e.a], f = A.f[Math.floor(e.t * 20) % A.f.length];
+    hmBlit(f[0], e.x, e.y + e.dy, e.face, 1, f[1], f[2], false);
+  }
+
   // ---------- drawer sequence ----------
   let exitEnt = null;
   function enterDrawer(e) {
@@ -891,6 +1142,8 @@
     s.hideDone = s.hideDone || [];
     const first = hid ? !s.hideDone.includes(lvI) : !s.done.includes(lvI);
     if (first) (hid ? s.hideDone : s.done).push(lvI);
+    let hmNew = false;
+    if (!hid && !tester() && !s.hmUnlocked && window.LT_MECH && [...Array(NLV()).keys()].every((i) => s.done.includes(i))) { s.hmUnlocked = true; hmNew = true; }
     if (hid && first) coinsRun += HIDE_BONUS;
     s.coins[lvI] = Math.max(s.coins[lvI] || 0, coinsRun);
     let golden = false;
@@ -910,7 +1163,7 @@
     // a quarter on replays (replaying cleared drawers used to pay in full and emptied the shop too fast)
     const pay = first ? coinsRun : Math.round(coinsRun * REPLAY_PAY);
     try { totalCoins += pay; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
-    clearInfo = { first, golden, coins: pay, got: coinsRun, time: t };
+    clearInfo = { first, golden, coins: pay, got: coinsRun, time: t, hm: hmNew };
     showClear();
   }
 
@@ -955,6 +1208,7 @@
     { const TL = window.LT_LEVELS[lvI]; if (TL && TL.tips && !inRoom && mode === "play") for (const [tx, tt] of TL.tips) if (!tipsSeen.has(tx) && pl.x > tx * T) { tipsSeen.add(tx); toast(tt, 3.2); } }
     if (pl.sq) { pl.sq -= pl.sq * Math.min(1, dt * 13); if (Math.abs(pl.sq) < 0.01) pl.sq = 0; }
     if (pl.ground && Math.abs(pl.vx) > P.MAXV * 0.85 && mode === "play") { pl.dustT = (pl.dustT || 0) - dt; if (pl.dustT <= 0) { pl.dustT = 0.13; dust(pl.x - Math.sign(pl.vx) * 12, pl.y, 1); } }
+    if (hmOn() && hm) hmStep(dt);
     stepPlayer(dt);
     stepEnts(dt);
     // camera: follow, but don't drift back unless the player really heads back.
@@ -1246,6 +1500,7 @@
         ctx.save(); ctx.globalAlpha = 0.2 + 0.2 * pulse; ctx.fillStyle = "#5fb8ff"; ctx.beginPath(); ctx.ellipse(e.x, e.y - 50, 50, 60, 0, 0, 7); ctx.fill(); ctx.restore();
         fitImg("mech-pickup", e.x, e.y - 4 + Math.sin(t * 3) * 4, 64);
         ctx.fillStyle = "#cfe8ff"; ctx.font = "900 12px system-ui,sans-serif"; ctx.textAlign = "center"; ctx.fillText("MECH", e.x, e.y - 98 - pulse * 4); return; }
+      case "hmp": drawHMProj(e); return;
       case "wrench": { const im = img("wrench"); if (!ready(im)) return; ctx.save(); ctx.translate(e.x, e.y); ctx.rotate(e.rot); ctx.drawImage(im, -24, -16, 48, 32); ctx.restore(); return; }
       case "pu": { const y = e.y - e.rise * 34; fitImg("pu-" + e.pu, e.x, y + Math.sin(t * 4) * 2, 36); return; }
       case "check": fitImg(e.on ? "ob-flag-green" : "ob-flag-red", e.x + 14, e.y + 2, 62); return;
@@ -1327,7 +1582,9 @@
     return true;
   }
   // character pick for the Lost Toolbox: the upright 10mm (default) or the classic rolling socket
-  const ltChar = () => (localStorage.getItem("tenmm-lt-char") === "roller" ? "roller" : "runner");
+  const ltChar = () => { const c = localStorage.getItem("tenmm-lt-char"); return c === "roller" ? "roller" : c === "mechanic" && hmUnlocked() ? "mechanic" : "runner"; };
+  // the HONESTECH Mechanic unlocks once every main drawer has been cleared (tester mode opens him early)
+  function hmUnlocked() { if (!window.LT_MECH) return false; if (tester()) return true; const s = load(); return !!s.hmUnlocked || (NLV() > 0 && [...Array(NLV()).keys()].every((i) => s.done.includes(i))); }
   function drawRoller(s) {
     const hero = typeof heroSprites !== "undefined" && heroSprites.socket;
     if (!hero || !hero.complete || !hero.naturalWidth) return false;
@@ -1344,6 +1601,7 @@
   }
   function drawPlayer() {
     if (mode === "drawer" && drawerT > 0.5) return;
+    if (hmOn() && drawHM()) return;
     if (pl.inv > 0 && mode === "play" && Math.floor(pl.inv * 14) % 2) return;
     let set = "idle", fi = 0;
     pl.anim += 1 / 60;
@@ -1403,6 +1661,7 @@
     if (f.k === "chip") { ctx.fillStyle = f.c; const s = f.s || 9; ctx.fillRect(f.x - s / 2, f.y - s / 2, s, s); }
     if (f.k === "coinpop") { ctx.globalAlpha = Math.min(1, f.t * 3); fitImg("coin", f.x, f.y, 26); ctx.globalAlpha = 1; }
     if (f.k === "pound") { ctx.globalAlpha = Math.min(1, f.t / 0.25); const w = 150 * (1.25 - f.t * 0.6); fitImg("fx-pound", f.x, f.y + 14, w); ctx.globalAlpha = 1; }
+    if (f.k === "hmspark") { ctx.globalAlpha = Math.min(1, f.t / 0.12); hmBlit("1120,0", f.x, f.y, 1, 0.6 + (0.18 - f.t) * 3, 0, 0, false); ctx.globalAlpha = 1; }
     if (f.k === "mfx") { ctx.globalAlpha = Math.min(1, f.t / 0.2); const w = 90 * (1.3 - f.t); fitImg("mech-impact", f.x, f.y + w * 0.3, w); ctx.globalAlpha = 1; }
     if (f.k === "mbreak") { const im = img("mech-break"); if (ready(im)) { ctx.save(); ctx.globalAlpha = Math.min(1, f.t / 0.4); ctx.translate(f.x, f.y + 3); if (f.f < 0) ctx.scale(-1, 1); const h = 171, w = h * im.naturalWidth / im.naturalHeight; ctx.drawImage(im, -w / 2, -h * 0.985 - (0.8 - f.t) * 30, w, h); ctx.restore(); } }
     if (f.k === "spark") { ctx.globalAlpha = f.t / 0.35; fitImg("star", f.x, f.y + 14, 30 * (1.4 - f.t)); ctx.globalAlpha = 1; }
@@ -1438,9 +1697,10 @@
         '<span class="nm">' + (i === 4 ? "GOLDEN DRAWER" : nm) + "</span>" +
         (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<img class="bg" src="lt/map-secret.webp" alt="secret room found">' : "") + (done ? '<em class="ok"><img src="lt/coin.webp" alt="">' + (s.coins[i] || 0) + "</em>" : '<img class="bg" src="lt/map-boss.webp" alt="boss">') + "</span>") + "</button>";
     });
-    h += '<img class="ltmhero" src="lt/u-idle_01.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
+    h += '<img class="ltmhero" src="lt/' + (ltChar() === "mechanic" ? "hm-idle" : "u-idle_01") + '.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
     const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
-    h += '</div><div class="ltchar"><b>CHARACTER</b><button data-c="runner" class="' + (ltChar() === "runner" ? "on" : "") + '"><img src="lt/u-idle_01.webp" alt="">RUNNER</button><button data-c="roller" class="' + (ltChar() === "roller" ? "on" : "") + '"><img src="' + (typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp") + '" alt="">ROLLER</button></div>';
+    h += '</div><div class="ltchar"><b>CHARACTER</b><button data-c="runner" class="' + (ltChar() === "runner" ? "on" : "") + '"><img src="lt/u-idle_01.webp" alt="">RUNNER</button><button data-c="roller" class="' + (ltChar() === "roller" ? "on" : "") + '"><img src="' + (typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp") + '" alt="">ROLLER</button>' +
+      '<button data-c="mechanic" class="hmc' + (ltChar() === "mechanic" ? " on" : "") + (hmUnlocked() ? "" : " lock") + '"><img src="lt/hm-idle.webp" alt="">' + (hmUnlocked() ? "MECHANIC" : "LOCKED") + "</button></div>";
     h += "<p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.filter((i) => i < n).length + "/" + n + " drawers cleared</p>";
     // hideouts: secret bad-guy levels behind red toolboxes, one per part
     const hides = window.LT_LEVELS.map((l, i) => [l, i]).filter(([l]) => l.hidden);
@@ -1470,10 +1730,16 @@
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
     const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTEdit.list(); };
-    card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => { localStorage.setItem("tenmm-lt-char", b.dataset.c); say("grab"); haptic("light"); menu(); }));
+    card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => {
+      if (b.dataset.c === "mechanic" && !hmUnlocked()) {
+        say("grab");
+        show('<div class="ltlogo">HONESTECH MECHANIC</div><img class="ltclr" src="lt/hm-idle.webp" alt="" style="width:110px"><p>The fighter from <b>HONESTECH Arena</b> is locked in the toolbox.</p><p>Clear all ' + NLV() + ' drawers with the 10MM to unlock him. You\'re at ' + s.done.filter((i) => i < NLV()).length + "/" + NLV() + '.</p><p class="ltbnote">He plays the same drawers with punches, kicks, an impact gun, a torque wrench, a pry bar uppercut, the air hammer drop, a sweep and a block.</p><button class="ltbtn" id="ltBack">BACK</button>');
+        card.querySelector("#ltBack").onclick = menu; return;
+      }
+      localStorage.setItem("tenmm-lt-char", b.dataset.c); if (b.dataset.c === "mechanic") hmPreload(); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li><li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>100 coins</b> to your shop wallet. Clearing a drawer the first time pays every coin you grab; replays pay a quarter.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li>' + (hmUnlocked() ? '<li><b>HONESTECH MECHANIC</b>: D-pad to move, crouch and aim. PUNCH and KICK (tap again for combos), <b>▼+KICK</b> sweep, <b>▲+PUNCH</b> pry bar uppercut (also opens ? blocks above), GUN fires a 3-bolt burst, SPECIAL throws the torque wrench, and in the air <b>SPECIAL</b> or <b>▼+PUNCH</b> is the air hammer drop. Hold BLOCK to stop bad guys and bullets in front of you. He still stomps and double jumps.</li>' : "") + '<li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>100 coins</b> to your shop wallet. Clearing a drawer the first time pays every coin you grab; replays pay a quarter.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }
@@ -1484,6 +1750,9 @@
   function play(i) {
     music("lostbox");
     if (!mechSet) pickMech();
+    hmChar = ltChar() === "mechanic"; if (hmChar) hmPreload();
+    if (root) root.querySelector(".ltpad").classList.toggle("hm", hmChar);
+    for (const k in key) key[k] = false;
     hideCard(); collected = new Set(); pow = null; stash = null; inRoom = false; hitStop = 0; fit();
     startLevel(i); coinsRun = 0; hud.Coins.textContent = 0;
     mode = "intro"; drawerT = 0;
@@ -1491,7 +1760,7 @@
   }
   function pauseMenu() {
     if (mode !== "play") return;
-    mode = "pause"; key.L = key.R = key.J = false;
+    mode = "pause"; for (const k in key) key[k] = false;
     show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.pauseLabel() : "ALL DRAWERS") + "</button>");
     card.querySelector("#ltRes").onclick = () => { hideCard(); mode = "play"; last = performance.now(); };
     card.querySelector("#ltRe").onclick = () => play(lvI);
@@ -1517,6 +1786,7 @@
     }
     const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
     let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet" + (c.first ? "" : " (replays pay a quarter of the " + c.got + " you grabbed)") + " · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
+    if (c.hm) h += '<div class="ltreward"><img src="lt/hm-idle.webp" alt="HONESTECH Mechanic" style="width:120px"><b>HONESTECH MECHANIC UNLOCKED!</b><span>The fighter from HONESTECH Arena joins the Lost Toolbox. Pick him under CHARACTER and replay any drawer with punches, kicks, the impact gun and more.</span></div>';
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
     if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';
@@ -1595,5 +1865,5 @@
     return { x: Math.floor(wx / T), y: Math.floor(wy / T), wx, wy };
   }
   const editPx = () => dpr / (scale * zoom); // world pixels per CSS pixel
-  window.LostBox = { _gcSync: gcSync, achList, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); } };
+  window.LostBox = { _gcSync: gcSync, achList, _edit: { show: editShow, cell: editCell, px: editPx, root: () => root, fit: () => fit(), cam: () => cam, setCam: (x) => { cam = Math.max(0, Math.min(Math.max(0, W * T - VW()), x)); return cam; }, vw: () => VW(), img: (k) => img(k), ready: (im) => ready(im) }, drawUpright, _ui: { show, hideCard, menu, play, card: () => card, say: (k) => say(k), haptic: (k) => haptic(k), idle: () => { mode = "menu"; } }, _run: (n) => { for (let i = 0; i < n; i++) tick(STEP); }, _probeBlock: probeBlock, _probe: probe, _probeSetup: probeSetup, open: openLostBox, close, _dbg: () => ({ pl, ents, movers, cam, mode, hp, pow, lvI, coinsRun, grid, chase, cp, viewW, zoom, scale, cvh: cv.height, cvw: cv.width }), _play: play, _press: press, _key: key, _hurt: (s) => hurt(s), _mech: (a) => { mechSet = new Set(a); }, _hm: () => ({ hm, boss, arena, hmOn: hmOn(), unlocked: hmUnlocked() }) };
 })();

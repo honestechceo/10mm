@@ -1113,7 +1113,7 @@
     else if (!pl.ground) f = hmFrame(40, pl.vy < -380 ? 0 : pl.vy < -60 ? 1 : pl.vy < 260 ? 2 : 3);
     else if (pl.landT > 0) f = hmFrame(10, 0);
     else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + (4 + Math.abs(pl.vx) / 30) / 60; f = hmFrame(20, Math.floor(pl.rp) % 4); } // 20 = walk forward (21 in the Arena files walks backwards)
-    else f = hmLoop(0, pl.anim);
+    else f = hmFrame(120, 0); // side-on fighting stance, same angle as his walk (the Arena idle faces the camera)
     let s = 1;
     if (mode === "intro") s = Math.min(1, drawerT * 2.2);
     if (mode === "warp") s = Math.max(0.05, 1 - drawerT * 1.5);

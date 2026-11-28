@@ -119,7 +119,8 @@
       if (Math.hypot(dx, dy) < R * 0.18) return true;
       const a = Math.atan2(dy, dx) * 180 / Math.PI; // 8 slices
       if (a > -67.5 && a < 67.5) held.R = true; if (a > 112.5 || a < -112.5) held.L = true;
-      if (a > 22.5 && a < 157.5) held.D = true; if (a < -22.5 && a > -157.5) held.U = true;
+      // up jumps and down crouches (which stops him), so they need a clear press: 50 degree wedges
+      if (a > 65 && a < 115) held.D = true; if (a < -65 && a > -115) held.U = true;
       return true;
     };
     const ALLK = ["L", "R", "J", "A", "U", "D", "P", "K", "G", "S", "B"];
@@ -1111,7 +1112,7 @@
     else if (hm && hm.crouch) f = hmFrame(10, 1);
     else if (!pl.ground) f = hmFrame(40, pl.vy < -380 ? 0 : pl.vy < -60 ? 1 : pl.vy < 260 ? 2 : 3);
     else if (pl.landT > 0) f = hmFrame(10, 0);
-    else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + Math.abs(pl.vx) / 60 / 30; f = hmFrame(Math.abs(pl.vx) > 200 ? 21 : 20, Math.floor(pl.rp) % 4); }
+    else if (Math.abs(pl.vx) > 25) { pl.rp = (pl.rp || 0) + (4 + Math.abs(pl.vx) / 30) / 60; f = hmFrame(20, Math.floor(pl.rp) % 4); } // 20 = walk forward (21 in the Arena files walks backwards)
     else f = hmLoop(0, pl.anim);
     let s = 1;
     if (mode === "intro") s = Math.min(1, drawerT * 2.2);
@@ -1513,7 +1514,9 @@
         if (near && mode !== "drawer") { ctx.save(); ctx.globalCompositeOperation = "lighter"; ctx.fillStyle = "rgba(255,200,60," + (0.12 + 0.08 * Math.sin(t * 5)) + ")"; ctx.beginPath(); ctx.arc(e.x, e.y - 40, 90, 0, 7); ctx.fill(); ctx.restore(); }
         const locked = arena && !arena.done;
         if (locked) k = "drawer0";
-        fitImg(k, e.x, e.y, 112);
+        const hmDive = hmOn() && k === "drawer2";
+        fitImg(hmDive ? "drawer1" : k, e.x, e.y, 112);
+        if (hmDive) { const q = Math.max(0, 1 - (drawerT - 0.5) / 0.6); if (q > 0.05) hmBlit("40,2", e.x, e.y - 34 + (1 - q) * 10, pl.face, q * 0.75, 0, 0, false); }
         if (locked && ready(img("ob-chain"))) fitImg("ob-chain", e.x, e.y - 22, 118);
         else if (locked) { ctx.strokeStyle = "#2b2f35"; ctx.lineWidth = 7; ctx.beginPath(); ctx.moveTo(e.x - 52, e.y - 90); ctx.lineTo(e.x + 52, e.y - 20); ctx.moveTo(e.x + 52, e.y - 90); ctx.lineTo(e.x - 52, e.y - 20); ctx.stroke(); ctx.strokeStyle = "#c9ced4"; ctx.lineWidth = 3; ctx.setLineDash([8, 5]); ctx.stroke(); ctx.setLineDash([]); ctx.fillStyle = "#ffd23f"; ctx.fillRect(e.x - 12, e.y - 64, 24, 20); ctx.strokeStyle = "#000"; ctx.lineWidth = 2; ctx.strokeRect(e.x - 12, e.y - 64, 24, 20); ctx.beginPath(); ctx.arc(e.x, e.y - 64, 8, Math.PI, 0); ctx.stroke(); }
         ctx.fillStyle = "#000"; ctx.font = "900 15px system-ui,sans-serif"; ctx.textAlign = "center";

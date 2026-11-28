@@ -1207,7 +1207,7 @@
     if (ev) h += '<div class="ltevt"><b>' + ev.name + "</b><span>" + ev.desc + "</span></div>";
     h += '<div class="ltmis"><b>MISSIONS</b>' + ms.map((m, k) => '<div class="' + (done[k] ? "ok" : "") + '"><i>' + (done[k] ? "✓" : k + 1) + "</i><span>" + m.txt + "</span><em>" + (done[k] ? "DONE" : "+" + MIS_PAY * (evt() === "missions" ? 2 : 1)) + "</em></div>").join("") + "</div>";
     h += '<div class="ltta"><b>TIME ATTACK</b><div class="ltmed">' + [3, 2, 1].map((m) => '<span class="m' + m + (med >= m ? " got" : "") + '"><i></i>' + fmtT(inf.med[3 - m]).slice(0, -2) + "</span>").join("") + "</div><p>" + (best ? "Your best: <b>" + fmtT(best) + "</b>" + (med ? " · " + MEDAL[med] : "") : "No time yet. Medals pay 20 / 30 / 50 coins the first time.") + "</p></div>";
-    h += '<button class="ltbtn" id="ltGo">PLAY</button><button class="ltbtn ta" id="ltTA">⏱ TIME ATTACK</button><button class="ltbtn sub" id="ltBk">ALL DRAWERS</button>';
+    h += '<button class="ltbtn" id="ltGo">PLAY</button><button class="ltbtn ta" id="ltTA">TIME ATTACK</button><button class="ltbtn sub" id="ltBk">ALL DRAWERS</button>';
     show(h);
     card.querySelector("#ltGo").onclick = () => { say("grab"); play(i); };
     card.querySelector("#ltTA").onclick = () => { say("grab"); play(i, true); };
@@ -1310,7 +1310,7 @@
     }
     pl.inv -= dt; pl.hitT -= dt; pl.landT -= dt; pl.djT -= dt;
     run.time += dt;
-    if (run.ta) { const tx = "⏱ " + fmtT(run.time); if (hud.Name.textContent !== tx) hud.Name.textContent = tx; }
+    if (run.ta) { const tx = "" + fmtT(run.time); if (hud.Name.textContent !== tx) hud.Name.textContent = tx; }
     { const TL = window.LT_LEVELS[lvI]; if (TL && TL.tips && !inRoom && mode === "play") for (const [tx, tt] of TL.tips) if (!tipsSeen.has(tx) && pl.x > tx * T) { tipsSeen.add(tx); toast(tt, 3.2); } }
     if (pl.sq) { pl.sq -= pl.sq * Math.min(1, dt * 13); if (Math.abs(pl.sq) < 0.01) pl.sq = 0; }
     if (pl.ground && Math.abs(pl.vx) > P.MAXV * 0.85 && mode === "play") { pl.dustT = (pl.dustT || 0) - dt; if (pl.dustT <= 0) { pl.dustT = 0.13; dust(pl.x - Math.sign(pl.vx) * 12, pl.y, 1); } }
@@ -1911,7 +1911,7 @@
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
     if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';
-    if (run.ta) h += '<button class="ltbtn ta" id="ltAgain">⏱ TRY AGAIN</button>';
+    if (run.ta) h += '<button class="ltbtn ta" id="ltAgain">TRY AGAIN</button>';
     h += fin ? '<button class="ltbtn' + (run.ta ? " sub" : "") + '" id="ltNext">ALL DRAWERS</button>' : '<button class="ltbtn' + (run.ta ? " sub" : "") + '" id="ltNext">' + (run.ta ? "NEXT DRAWER" : "OPEN DRAWER " + (lvI + 2)) + '</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>';
     show(h);
     say("win"); haptic("success");

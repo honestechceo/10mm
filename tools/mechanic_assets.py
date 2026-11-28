@@ -94,6 +94,11 @@ for k, (ax_, ay_, cw, ch, ox, oy) in pos.items():
     im, sx, sy = spr[k]
     atlas.paste(im.crop((ox, oy, ox + cw, oy + ch)), (ax_, ay_))
     # [atlas x, atlas y, w, h, axis x, axis y] with the axis moved into the cropped frame
+    # the walk frames' axis sits mid-image, so his body jumped ~25px back and forth between steps.
+    # Re-anchor them on his head so he glides forward smoothly.
+    if k[0] == 20:
+        al = np.asarray(im)[..., 3] > 0; top = np.where(al.any(1))[0][0]; xs = np.where(al[top + 10:top + 60].any(0))[0]
+        sx = int(round((xs[0] + xs[-1]) / 2))
     frames["%d,%d" % k] = [ax_, ay_, cw, ch, sx - ox, sy - oy]
 atlas.save(os.path.join(OUT, "lt/hm-atlas.webp"), quality=90, method=6)
 # a stand-alone standing pose for menus and the map

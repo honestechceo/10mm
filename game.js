@@ -3460,16 +3460,19 @@ function redeemGift() {
     const on = localStorage.getItem("tenmm-tester") !== "1";
     localStorage.setItem("tenmm-tester", on ? "1" : "0"); localStorage.setItem("tenmm-tester-v", TESTER_V);
     $("details").textContent = on ? "Tester mode ON: every level, drawer and Service Bay kit is open." : "Tester mode OFF.";
+    // say it out loud too: the details line can sit off screen, and entering the code twice turns it back off
+    toast(on ? "TESTER MODE ON: everything is open. Enter the code again to turn it off." : "TESTER MODE OFF", on);
     buzz("success"); return;
   }
   const m = raw.match(/^(\d{1,5})-([A-Z0-9]{4})-([A-Z0-9]{4})$/);
   let used = []; try { used = JSON.parse(localStorage.getItem("tenmm-redeemed") || "[]"); } catch (e) {}
-  if (!m || giftCheck(+m[1], m[2]) !== m[3] || +m[1] > 20000) { $("details").textContent = "That code doesn't look right. Check it and try again."; buzz("heavy"); return; }
-  if (used.includes(m[2])) { $("details").textContent = "That code was already used on this phone."; return; }
+  if (!m || giftCheck(+m[1], m[2]) !== m[3] || +m[1] > 20000) { $("details").textContent = "That code doesn't look right. Check it and try again."; toast("That code doesn't look right. Check it and try again.", false); buzz("heavy"); return; }
+  if (used.includes(m[2])) { $("details").textContent = "That code was already used on this phone."; toast("That code was already used on this phone.", false); return; }
   used.push(m[2]); localStorage.setItem("tenmm-redeemed", JSON.stringify(used));
   totalCoins += +m[1]; localStorage.setItem("tenmm-coins", totalCoins);
   $("coinsCount").textContent = totalCoins;
   $("details").textContent = "Gift code accepted: +" + m[1] + " coins! You now have " + totalCoins + ".";
+  toast("Gift code accepted: +" + m[1] + " coins!", true);
   sfx("win"); buzz("success");
 }
 async function showOlderSaves() {

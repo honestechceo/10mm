@@ -342,6 +342,7 @@ function showHome(intro) {
     let ls = {}; try { ls = JSON.parse(localStorage.getItem("tenmm-lt") || "{}"); } catch (e) {}
     const d = (ls.done || []).length;
     $("hLostSub").textContent = ls.golden ? "Golden 10MM earned! Replay any drawer" : d ? d + " of " + ((window.LT_LEVELS || []).filter((l) => !l.hidden && !l.custom && !l.train).length || 50) + " drawers cleared" : "NEW! 50 drawers, a bad-guy crew and hidden hideouts";
+    { const ev = window.Feature && Feature.event && Feature.event(); if (ev) $("hLostSub").textContent = "★ " + ev.name + " is on!"; }
     lb.onclick = () => { audioReady(); stopMusic(); window.LostBox.open(); };
   }
   $("hShop").onclick = run(() => showShop("shop"));

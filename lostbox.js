@@ -190,7 +190,7 @@
   function startLevel(i, fromCheckpoint, roomRows) {
     const L = window.LT_LEVELS[i];
     lvI = i;
-    if (!roomRows) maxHp = L.hp || 3; // custom levels can set 1-3 hearts
+    if (!roomRows) maxHp = baseHp(i); // custom levels can set 1-3 hearts; DEFENSE upgrades add hearts in the real drawers
     grid = (roomRows || L.rows).map((r) => r.split(""));
     W = grid[0].length;
     ents = []; movers = []; fx = [];
@@ -272,12 +272,13 @@
   }
   function grabStar(e) {
     e.alive = false; fx.push({ k: "spark", x: e.x, y: e.y - 17, t: 0.45 });
+    if (!inRoom) run.stars.add(e.sid);
     if (e.ghost) { say("coin"); return; }
     const s = load(); s.stars = s.stars || {}; const a = (s.stars[lvI] = s.stars[lvI] || []);
     if (!a.includes(e.sid)) a.push(e.sid);
     const tot = starTotal(s), due = Math.floor(tot / STAR_STEP);
     let paid = 0;
-    if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY; s.starPaid = due; }
+    if (due > (s.starPaid || 0)) { paid = (due - (s.starPaid || 0)) * STAR_PAY * (evt() === "stars" ? 2 : 1); s.starPaid = due; }
     store(s); gcSync();
     say("star"); haptic("success"); starHud();
     if (paid) {
@@ -358,7 +359,7 @@
   function stepPlayer(dt) {
     const sp = pow.speed > 0 ? 1.35 : 1, lock = hmLocked(), dir = lock ? 0 : (key.R ? 1 : 0) - (key.L ? 1 : 0);
     if (lock && hm.block && (key.R || key.L)) pl.face = key.R ? 1 : -1; // turn to face what you're blocking
-    const maxv = P.MAXV * sp;
+    const maxv = P.MAXV * sp * (1 + 0.04 * upLv("speed"));
     if (dir) {
       pl.face = dir;
       const a = (pl.ground ? P.ACC * (pl.wasSlick ? 0.35 : 1) : P.ACC_AIR) * sp * (Math.sign(pl.vx) === -dir ? (pl.wasSlick ? 1 : 1.6) : 1);
@@ -375,7 +376,7 @@
     const jm = pow.spring > 0 ? 1.22 : 1;
     if (jumpBuf > 0 && !(hm && hm.mv && hmOn() && (pl.ground || hm.mv === "hammer"))) {
       if (pl.ground || pl.coyote > 0) { pl.vy = -P.JUMP * jm; pl.ground = false; pl.coyote = 0; pl.jumps = 1; pl.held = true; jumpBuf = 0; say("jump"); pl.on = null; pl.sq = -0.7; dust(pl.x, pl.y, 2); }
-      else if (pl.jumps < 2) { pl.vy = -P.DJUMP * jm; pl.jumps = 2; pl.held = true; jumpBuf = 0; pl.djT = 0.4; say("flap"); puff(pl.x, pl.y, 6, "#ffffff"); }
+      else if (pl.jumps < (!hmChar && upLv("special") >= 5 ? 3 : 2)) { pl.vy = -P.DJUMP * jm * (hmChar ? 1 : 1 + 0.04 * upLv("special")); pl.jumps = Math.max(2, pl.jumps + 1); pl.held = true; jumpBuf = 0; pl.djT = 0.4; say("flap"); puff(pl.x, pl.y, 6, "#ffffff"); }
     }
     if (!key.J) pl.held = false;
     const g = pl.held && pl.vy < 0 ? P.G_HOLD : P.G;
@@ -474,13 +475,14 @@
     }
     if (pow.shield) { pow.shield = 0; pl.inv = 1.2; say("clank"); haptic("medium"); toast("Shield saved you! It's used up."); return; }
     for (const k of HITS) if (pow[k] > 0) { pow[k]--; if (!pow[k]) toast(PU[k][1].split("!")[0] + " is used up"); }
-    hp--; pl.inv = 1.4; pl.hitT = 0.45; say("hurt"); haptic("heavy");
+    run.hits++;
+    hp--; pl.inv = 1.4 + 0.1 * upLv("defense"); pl.hitT = 0.45; say("hurt"); haptic("heavy");
     pl.vy = -420; pl.vx = (pl.x < (src ? src.x : pl.x) ? -1 : 1) * 220; pl.ground = false; pl.on = null;
     if (hp <= 0) die("hp");
   }
   function die(why) {
     if (mode !== "play") return;
-    mode = "respawn"; drawerT = 0.9; say("miss"); haptic("heavy");
+    mode = "respawn"; drawerT = 0.9; say("miss"); haptic("heavy"); run.hits++;
     toast(why === "pit" ? "Down the service pit! Back to the checkpoint." : "Ouch! Back to the checkpoint.");
   }
 
@@ -512,7 +514,7 @@
         if (e.y > ROWS * T + 100) e.alive = false;
       }
       if (e.crew && !e.dead) crewStep(e, hd);
-      if (e.dead) { e.dead -= dt; e.y += 300 * dt; if (e.dead <= 0) e.alive = false; continue; }
+      if (e.dead) { if (!e.kc) { e.kc = 1; run.kills++; } e.dead -= dt; e.y += 300 * dt; if (e.dead <= 0) e.alive = false; continue; }
       if (e.k === "piston") e.y = e.y0 - (0.5 - 0.5 * Math.cos((t * timeScale * 2.4 + e.ph * 6.28))) * 2.6 * T;
       if (e.k === "gear") { e.rot = (e.rot || 0) + 3 * hd; e.y = e.y0 - 4 + Math.sin(t * 2 + e.ph * 6) * 6; }
       if (e.k === "crusher") {
@@ -821,7 +823,7 @@
     if (hasPower(k)) { toast("You already have that one on"); return; }
     b.splice(i, 1); s.bag = b; store(s); bagHud(); givePower(k, true);
   }
-  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp > (window.LT_LEVELS[lvI].hp || 3) : pow[k] > 0; }
+  function hasPower(k) { return k === "shield" ? !!pow.shield : k === "heart" ? maxHp > baseHp(lvI) : pow[k] > 0; }
   function givePower(k, fromBag) {
     if (hmOn() && (k === "wrench" || k === "pound")) { gain(5); say("coin"); toast("The Mechanic brought his own tools: +5 coins"); return; }
     if (!fromBag && k !== "torque" && hasPower(k)) {
@@ -831,11 +833,11 @@
     }
     say("power"); haptic("success");
     if (k === "shield") pow.shield = 1;
-    else if (k === "heart") { maxHp = (window.LT_LEVELS[lvI].hp || 3) + 1; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
+    else if (k === "heart") { maxHp = baseHp(lvI) + 1; hp = Math.min(maxHp, hp + 1); hudKey = ""; }
     else {
       // only one action power at a time: the button does one thing
       if (k === "wrench") pow.pound = 0; if (k === "pound") pow.wrench = 0;
-      pow[k] = PU[k][0];
+      pow[k] = PU[k][0] * (TIMED.includes(k) && !hmChar ? 1 + 0.15 * upLv("power") : 1);
     }
     toast(PU[k][1] + (PU[k][1].includes("!") ? "" : "!"));
   }
@@ -955,11 +957,11 @@
       hm.kcombo = hm.kcomboT > 0 ? (hm.kcombo + 1) % 3 : 0; hm.kcomboT = 0.6;
       return hmStart(["kick1", "kick2", "kick3"][hm.kcombo]);
     }
-    if (k === "G") { if (hm.cdGun > 0) return; hm.cdGun = 0.75; return hmStart("gun"); }
+    if (k === "G") { if (hm.cdGun > 0) return; hm.cdGun = 0.75 * (1 - 0.1 * upLv("special")); return hmStart("gun"); }
     if (k === "S") {
       if (air) return hmStart("hammer");
       if (key.U) return hmStart("upper");
-      if (hm.cdTq > 0) return; hm.cdTq = 1.0; return hmStart("torque");
+      if (hm.cdTq > 0) return; hm.cdTq = 1.0 * (1 - 0.1 * upLv("special")); return hmStart("torque");
     }
   }
   function hmStep(dt) {
@@ -1009,7 +1011,7 @@
     const hx = o.x, hy = o.y - (o.h || 40) / 2;
     if (o.k === "boss") {
       if (o.st === "wait" || o.st === "dead" || (o.inv || 0) > 0 || !bossStompable(o)) return false;
-      o.chip = (o.chip || 0) + dmg; hmSnd(snd || "7,1"); fx.push({ k: "hmspark", x: hx - pl.face * o.w * 0.25, y: hy, t: 0.18 });
+      o.chip = (o.chip || 0) + dmg * (1 + 0.15 * upLv("power")); hmSnd(snd || "7,1"); fx.push({ k: "hmspark", x: hx - pl.face * o.w * 0.25, y: hy, t: 0.18 });
       if (o.chip >= 100) { o.chip -= 100; bossHit(o, true); } else { impact(hx, hy, 0.04); o.flash = 0.12; }
       return true;
     }
@@ -1130,6 +1132,104 @@
     hmBlit(f[0], e.x, e.y + e.dy, e.face, 1, f[1], f[2], false);
   }
 
+  // ---------- run stats, missions, time attack, upgrades, weekend events ----------
+  // run: what happened since the drawer started (kept across secret rooms and checkpoints)
+  let run = { hits: 0, kills: 0, stars: new Set(), time: 0, ta: false };
+  const evt = () => { try { const e = window.Feature && Feature.event && Feature.event(); return e ? e.id : ""; } catch (x) { return ""; } };
+  const mainDrawer = (i) => { const L = window.LT_LEVELS[i]; return !!L && !L.custom && !L.train && !L.hidden; };
+  // ---- upgrades: one set for the 10MM (Runner and Roller share it), one for the Mechanic ----
+  const UPK = "tenmm-lt-up", UP_COST = [100, 200, 300, 400, 500], UP_MAX = 5;
+  const UPS = [
+    { id: "power", name: "POWER", sock: "Power-ups last 15% longer per level", mech: "+15% damage per level" },
+    { id: "speed", name: "SPEED", sock: "+4% top speed per level", mech: "+4% top speed per level" },
+    { id: "defense", name: "DEFENSE", sock: "+1 heart at levels 2 and 4, longer safe time after a hit", mech: "+1 heart at levels 2 and 4, longer safe time after a hit" },
+    { id: "special", name: "SPECIAL", sock: "Higher double jump. Level 5: TRIPLE JUMP", mech: "Gun and torque wrench recharge 10% faster per level" },
+  ];
+  const upAll = () => { try { return Object.assign({ sock: {}, mech: {} }, JSON.parse(localStorage.getItem(UPK) || "{}")); } catch (e) { return { sock: {}, mech: {} }; } };
+  // custom (Level Maker) drawers are played as built: no upgrades there
+  const upLv = (id, who) => { const L = window.LT_LEVELS[lvI]; if (!who && L && L.custom) return 0; return Math.max(0, Math.min(UP_MAX, +(upAll()[who || (hmChar ? "mech" : "sock")][id] || 0))); };
+  const baseHp = (i) => { const L = window.LT_LEVELS[i] || {}; return (L.hp || 3) + (L.custom ? 0 : Math.floor(upLv("defense") / 2)); };
+  function upgrades(back) {
+    let who = hmChar || (ltChar() === "mechanic" && hmUnlocked()) ? "mech" : "sock";
+    const draw = () => {
+      const a = upAll(), cur = a[who];
+      let h = '<div class="ltlogo">UPGRADES</div><p class="ltbnote">Spend coins to power up your character in every drawer. You have <b class="ltupc">' + totalCoins + "</b> coins.</p>";
+      h += '<div class="ltuptabs"><button data-w="sock" class="' + (who === "sock" ? "on" : "") + '"><img src="lt/u-idle_01.webp" alt="">10MM</button>' + (hmUnlocked() ? '<button data-w="mech" class="' + (who === "mech" ? "on" : "") + '"><img src="lt/hm-idle.webp" alt="">MECHANIC</button>' : "") + "</div>";
+      for (const u of UPS) {
+        const lv = Math.max(0, Math.min(UP_MAX, +(cur[u.id] || 0))), cost = UP_COST[lv];
+        h += '<div class="ltup"><div class="ltupt"><b>' + u.name + '</b><span>' + (who === "mech" ? u.mech : u.sock) + '</span><i>' + Array.from({ length: UP_MAX }, (_, k) => '<em class="' + (k < lv ? "on" : "") + '"></em>').join("") + "</i></div>" +
+          (lv >= UP_MAX ? '<button class="max" disabled>MAX</button>' : '<button data-u="' + u.id + '"' + (totalCoins < cost ? " disabled" : "") + '><img src="lt/coin.webp" alt="">' + cost + "</button>") + "</div>";
+      }
+      h += '<button class="ltbtn sub" id="ltUpBack">BACK</button>';
+      show(h);
+      card.querySelectorAll(".ltuptabs button").forEach((b) => (b.onclick = () => { who = b.dataset.w; say("grab"); draw(); }));
+      card.querySelectorAll(".ltup button[data-u]").forEach((b) => (b.onclick = () => {
+        const a2 = upAll(), id = b.dataset.u, lv = +(a2[who][id] || 0), cost = UP_COST[lv];
+        if (lv >= UP_MAX || totalCoins < cost) return;
+        totalCoins -= cost; a2[who][id] = lv + 1;
+        try { localStorage.setItem("tenmm-coins", totalCoins); localStorage.setItem(UPK, JSON.stringify(a2)); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
+        say("power"); haptic("success"); draw();
+      }));
+      card.querySelector("#ltUpBack").onclick = back || menu;
+    };
+    draw();
+  }
+  // ---- time attack: medal times from the drawer's length (+ boss) ----
+  const linfo = {};
+  function levelInfo(i) {
+    if (linfo[i]) return linfo[i];
+    const L = window.LT_LEVELS[i], rows = L.rows, Wd = rows[0].length;
+    const has = (c) => rows.some((r) => r.includes(c));
+    // starting the level once is the only reliable way to count its bad guys and stars
+    const keepMode = mode; startLevel(i); mode = keepMode;
+    const foes = ents.filter((e) => (e.stomp || e.crew) && e.k !== "boss").length, stars = ents.filter((e) => e.k === "star").length;
+    const gold = Math.round((Wd * T) / P.MAXV * 1.5 + (has("B") ? 14 : 0) + 4);
+    return (linfo[i] = { foes, stars, boss: has("B"), med: [gold, Math.round(gold * 1.35), Math.round(gold * 1.8)] });
+  }
+  const fmtT = (s) => Math.floor(s / 60) + ":" + String(Math.floor(s % 60)).padStart(2, "0") + "." + Math.floor((s * 10) % 10);
+  const MEDAL = ["", "BRONZE", "SILVER", "GOLD"], MEDAL_PAY = [0, 20, 30, 50];
+  const medalFor = (i, sec) => { const m = levelInfo(i).med; return sec <= m[0] ? 3 : sec <= m[1] ? 2 : sec <= m[2] ? 1 : 0; };
+  // ---- missions: three per drawer, 25 coins each the first time ----
+  const MIS_PAY = 25;
+  function missions(i) {
+    const inf = levelInfo(i), n = Math.min(10, Math.max(3, Math.round(inf.foes * 0.6)));
+    return [
+      { id: "nohit", txt: "Clear it without losing a heart", ok: (r) => r.hits === 0 },
+      inf.stars >= 5 ? { id: "stars", txt: "Grab all 5 stars in one run", ok: (r) => r.stars.size >= 5 } : { id: "silver", txt: "Clear it under " + fmtT(inf.med[1]).slice(0, -2), ok: (r) => r.time <= inf.med[1] },
+      inf.foes >= 3 ? { id: "kills", txt: "Defeat " + n + " bad guys in one run", ok: (r) => r.kills >= n } : { id: "bronze", txt: "Clear it under " + fmtT(inf.med[2]).slice(0, -2), ok: (r) => r.time <= inf.med[2] },
+    ];
+  }
+  // the card before a drawer: best time, medal targets, missions, PLAY / TIME ATTACK
+  function drawerCard(i) {
+    const s = load(), inf = levelInfo(i), ms = missions(i), done = (s.mis && s.mis[i]) || [], best = s.best && s.best[i], med = (s.medal && s.medal[i]) || 0;
+    let h = '<div class="ltlogo">DRAWER ' + (i + 1) + '</div><p class="ltdname">' + window.LT_LEVELS[i].name + "</p>";
+    const ev = window.Feature && Feature.event && Feature.event();
+    if (ev) h += '<div class="ltevt"><b>' + ev.name + "</b><span>" + ev.desc + "</span></div>";
+    h += '<div class="ltmis"><b>MISSIONS</b>' + ms.map((m, k) => '<div class="' + (done[k] ? "ok" : "") + '"><i>' + (done[k] ? "✓" : k + 1) + "</i><span>" + m.txt + "</span><em>" + (done[k] ? "DONE" : "+" + MIS_PAY * (evt() === "missions" ? 2 : 1)) + "</em></div>").join("") + "</div>";
+    h += '<div class="ltta"><b>TIME ATTACK</b><div class="ltmed">' + [3, 2, 1].map((m) => '<span class="m' + m + (med >= m ? " got" : "") + '"><i></i>' + fmtT(inf.med[3 - m]).slice(0, -2) + "</span>").join("") + "</div><p>" + (best ? "Your best: <b>" + fmtT(best) + "</b>" + (med ? " · " + MEDAL[med] : "") : "No time yet. Medals pay 20 / 30 / 50 coins the first time.") + "</p></div>";
+    h += '<button class="ltbtn" id="ltGo">PLAY</button><button class="ltbtn ta" id="ltTA">⏱ TIME ATTACK</button><button class="ltbtn sub" id="ltBk">ALL DRAWERS</button>';
+    show(h);
+    card.querySelector("#ltGo").onclick = () => { say("grab"); play(i); };
+    card.querySelector("#ltTA").onclick = () => { say("grab"); play(i, true); };
+    card.querySelector("#ltBk").onclick = menu;
+  }
+  // called when a real drawer is cleared: best time, medals, missions. Returns what was earned.
+  function scoreRun(i) {
+    const s = load(); s.best = s.best || {}; s.medal = s.medal || {}; s.mis = s.mis || {};
+    const out = { time: run.time, newBest: !s.best[i] || run.time < s.best[i], medal: 0, medalPay: 0, mis: [], misPay: 0 };
+    if (out.newBest) s.best[i] = Math.round(run.time * 10) / 10;
+    if (run.ta) {
+      out.medal = medalFor(i, run.time);
+      const had = s.medal[i] || 0;
+      for (let m = had + 1; m <= out.medal; m++) out.medalPay += MEDAL_PAY[m];
+      s.medal[i] = Math.max(had, out.medal);
+    }
+    const ms = missions(i), d = (s.mis[i] = s.mis[i] || []);
+    ms.forEach((m, k) => { if (!d[k] && m.ok(run)) { d[k] = true; out.mis.push(m.txt); out.misPay += MIS_PAY * (evt() === "missions" ? 2 : 1); } });
+    store(s);
+    return out;
+  }
+
   // ---------- drawer sequence ----------
   let exitEnt = null;
   function enterDrawer(e) {
@@ -1163,9 +1263,11 @@
     if (lvI === 4 && !hid && !tester() && window.GC) GC.score("lt_golden", Math.round(t * 100)); // hundredths of a second
     // coins go into the main wallet: all of them the first time a drawer or hideout is cleared,
     // a quarter on replays (replaying cleared drawers used to pay in full and emptied the shop too fast)
-    const pay = first ? coinsRun : Math.round(coinsRun * REPLAY_PAY);
+    const sc = hid ? null : scoreRun(lvI);
+    const base = first ? coinsRun : Math.round(coinsRun * REPLAY_PAY);
+    const pay = base * (evt() === "coins" ? 2 : 1) + (sc ? sc.medalPay + sc.misPay : 0);
     try { totalCoins += pay; localStorage.setItem("tenmm-coins", totalCoins); const cc = document.getElementById("coinsCount"); if (cc) cc.textContent = totalCoins; } catch (e) {}
-    clearInfo = { first, golden, coins: pay, got: coinsRun, time: t, hm: hmNew };
+    clearInfo = { first, golden, coins: pay, got: coinsRun, time: run.time, hm: hmNew, sc, dbl: evt() === "coins" };
     showClear();
   }
 
@@ -1191,7 +1293,7 @@
     for (const f of fx) { f.t -= dt; if (f.vx !== undefined) { f.x += f.vx * dt; f.y += f.vy * dt; f.vy += 900 * dt; } if (f.k === "coinpop") f.y -= 120 * dt; if (f.k === "dust") { f.x += f.dx * dt; f.dx *= 0.9; f.y -= 18 * dt; } }
     fx = fx.filter((f) => f.t > 0);
     if (mode === "intro") { drawerT += dt; stepEnts(dt); if (drawerT > 1.1) { mode = "play"; pl.inv = 0.6; } updHud(); return; }
-    if (mode === "respawn") { drawerT -= dt; if (drawerT <= 0) { mode = "play"; const s = pow.shield; spawnPlayer(); pow.shield = s; resetHazards(); } updHud(); return; }
+    if (mode === "respawn") { run.time += dt; drawerT -= dt; if (drawerT <= 0) { mode = "play"; const s = pow.shield; spawnPlayer(); pow.shield = s; resetHazards(); } updHud(); return; }
     if (mode === "warp") {
       drawerT += dt;
       const e = exitEnt;
@@ -1207,6 +1309,8 @@
       updHud(); return;
     }
     pl.inv -= dt; pl.hitT -= dt; pl.landT -= dt; pl.djT -= dt;
+    run.time += dt;
+    if (run.ta) { const tx = "⏱ " + fmtT(run.time); if (hud.Name.textContent !== tx) hud.Name.textContent = tx; }
     { const TL = window.LT_LEVELS[lvI]; if (TL && TL.tips && !inRoom && mode === "play") for (const [tx, tt] of TL.tips) if (!tipsSeen.has(tx) && pl.x > tx * T) { tipsSeen.add(tx); toast(tt, 3.2); } }
     if (pl.sq) { pl.sq -= pl.sq * Math.min(1, dt * 13); if (Math.abs(pl.sq) < 0.01) pl.sq = 0; }
     if (pl.ground && Math.abs(pl.vx) > P.MAXV * 0.85 && mode === "play") { pl.dustT = (pl.dustT || 0) - dt; if (pl.dustT <= 0) { pl.dustT = 0.13; dust(pl.x - Math.sign(pl.vx) * 12, pl.y, 1); } }
@@ -1681,6 +1785,7 @@
     const open = (i) => tester() || i === 0 || s.done.includes(i - 1);
     const names = window.LT_LEVELS.slice(0, n).map((l) => l.name);
     let h = '<img class="ltlogoimg" src="lt/logo.webp" alt="Where\'s My 10MM?! The Lost Toolbox"><p>Beat the boss guarding each drawer, then jump in. Tap a stop on the map to play.</p>';
+    { const ev = window.Feature && Feature.event && Feature.event(); if (ev) h += '<div class="ltevt"><b>' + ev.name + "</b><span>" + ev.desc + "</span></div>"; }
     // ---- stage map: drawer 1 at the bottom, stops sit on the bolt path painted in map-bg (724x2172) ----
     const BOLTS = [[280,2000],[317,1924],[455,1869],[410,1811],[280,1771],[325,1713],[455,1637],[360,1559],[317,1469],[452,1401],[400,1340],[319,1241],[465,1163],[409,1104],[328,1010],[470,931],[409,870],[274,817],[323,754],[479,671],[407,590],[331,494],[474,412],[305,326],[307,237],[428,172]];
     // one copy of the toolbox art per 10 drawers, stacked; the bolt path continues up through each copy
@@ -1699,12 +1804,13 @@
       h += '<button class="ltnode' + (done ? " done" : "") + (lock ? " lock" : "") + (i === cur ? " cur" : "") + (i === 4 ? " gold" : "") + '" data-i="' + i + '" style="left:' + X(i) + "%;top:" + Yp(i) + '%"' + (lock ? " disabled" : "") + ">" +
         "<i>" + (lock ? '<img src="lt/map-lock.webp" alt="locked">' : i + 1) + (done ? '<img class="ck" src="lt/map-done.webp" alt="cleared">' : "") + "</i>" +
         '<span class="nm">' + (i === 4 ? "GOLDEN DRAWER" : nm) + "</span>" +
-        (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<img class="bg" src="lt/map-secret.webp" alt="secret room found">' : "") + (done ? '<em class="ok"><img src="lt/coin.webp" alt="">' + (s.coins[i] || 0) + "</em>" : '<img class="bg" src="lt/map-boss.webp" alt="boss">') + "</span>") + "</button>";
+        (lock ? "" : '<span class="bd"><em class="st">★ ' + st + "/5</em>" + (room ? '<img class="bg" src="lt/map-secret.webp" alt="secret room found">' : "") + (done ? '<em class="ok"><img src="lt/coin.webp" alt="">' + (s.coins[i] || 0) + "</em>" : '<img class="bg" src="lt/map-boss.webp" alt="boss">') + ((s.mis && s.mis[i] || []).filter(Boolean).length ? '<em class="mi">✓' + (s.mis[i] || []).filter(Boolean).length + "/3</em>" : "") + (s.medal && s.medal[i] ? '<em class="md m' + s.medal[i] + '"></em>' : "") + "</span>") + "</button>";
     });
     h += '<img class="ltmhero" src="lt/' + (ltChar() === "mechanic" ? "hm-idle" : "u-idle_01") + '.webp" alt="" style="left:' + X(cur) + "%;top:calc(" + Yp(cur) + '% - 34px)">';
     const tot = names.reduce((t, _, i) => t + ((s.stars && s.stars[i]) || []).length, 0);
     h += '</div><div class="ltchar"><b>CHARACTER</b><button data-c="runner" class="' + (ltChar() === "runner" ? "on" : "") + '"><img src="lt/u-idle_01.webp" alt="">RUNNER</button><button data-c="roller" class="' + (ltChar() === "roller" ? "on" : "") + '"><img src="' + (typeof skinSrc === "function" ? skinSrc() : "socket-chrome.webp") + '" alt="">ROLLER</button>' +
       '<button data-c="mechanic" class="hmc' + (ltChar() === "mechanic" ? " on" : "") + (hmUnlocked() ? "" : " lock") + '"><img src="lt/hm-idle.webp" alt="">' + (hmUnlocked() ? "MECHANIC" : "LOCKED") + "</button></div>";
+    h += '<button class="ltbtn up" id="ltUp">⚙ UPGRADES</button>';
     h += "<p class=\"ltmtot\">★ " + tot + "/" + n * 5 + " stars · " + s.done.filter((i) => i < n).length + "/" + n + " drawers cleared</p>";
     // hideouts: secret bad-guy levels behind red toolboxes, one per part
     const hides = window.LT_LEVELS.map((l, i) => [l, i]).filter(([l]) => l.hidden);
@@ -1730,9 +1836,10 @@
         card.querySelector("#ltT1").onclick = () => { say("grab"); play(TI); };
         card.querySelector("#ltT2").onclick = () => { const s2 = load(); s2.trained = true; store(s2); say("grab"); play(0); };
         return;
-      } const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => play(+b.dataset.i), 420); }));
+      } const hero = card.querySelector(".ltmhero"); hero.style.left = b.style.left; hero.style.top = "calc(" + b.style.top + " - 34px)"; hero.classList.add("hop"); say("grab"); setTimeout(() => drawerCard(+b.dataset.i), 420); }));
     const cn = card.querySelector(".ltnode.cur"); if (cn) setTimeout(() => cn.scrollIntoView({ block: "center" }), 30);
     card.querySelector("#ltQuit").onclick = close;
+    card.querySelector("#ltUp").onclick = () => { say("grab"); upgrades(); };
     const bb = card.querySelector("#ltBuild"); if (bb) bb.onclick = () => { say("grab"); window.LTEdit.list(); };
     card.querySelectorAll(".ltchar button").forEach((b) => (b.onclick = () => {
       if (b.dataset.c === "mechanic" && !hmUnlocked()) {
@@ -1751,8 +1858,11 @@
   let mechSet = null;
   function pickMech() { const a = [...Array(NLV()).keys()].sort(() => Math.random() - 0.5); mechSet = new Set(a.slice(0, 3)); }
   const music = (w) => { try { window.startMusic && startMusic(w); } catch (e) {} };
-  function play(i) {
+  function play(i, ta) {
     music("lostbox");
+    if (mainDrawer(i)) levelInfo(i); // counted now, never in the middle of a run
+    run = { hits: 0, kills: 0, stars: new Set(), time: 0, ta: !!ta && mainDrawer(i) };
+    if (root) root.classList.toggle("ta", run.ta);
     if (!mechSet) pickMech();
     hmChar = ltChar() === "mechanic"; if (hmChar) hmPreload();
     if (root) root.querySelector(".ltpad").classList.toggle("hm", hmChar);
@@ -1767,7 +1877,7 @@
     mode = "pause"; for (const k in key) key[k] = false;
     show('<div class="ltlogo">PAUSED</div><button class="ltbtn" id="ltRes">RESUME</button><button class="ltbtn sub" id="ltRe">RESTART DRAWER</button><button class="ltbtn sub" id="ltMenu">' + (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.pauseLabel() : "ALL DRAWERS") + "</button>");
     card.querySelector("#ltRes").onclick = () => { hideCard(); mode = "play"; last = performance.now(); };
-    card.querySelector("#ltRe").onclick = () => play(lvI);
+    card.querySelector("#ltRe").onclick = () => play(lvI, run.ta);
     card.querySelector("#ltMenu").onclick = () => (window.LT_LEVELS[lvI].custom && window.LTEdit ? window.LTEdit.fromPause() : menu());
   }
   function showClear() {
@@ -1789,15 +1899,24 @@
       return;
     }
     const c = clearInfo, last5 = lvI === 4, fin = lvI === NLV() - 1;
-    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet" + (c.first ? "" : " (replays pay a quarter of the " + c.got + " you grabbed)") + " · " + Math.floor(c.time / 60) + ":" + String(Math.floor(c.time % 60)).padStart(2, "0") + "</p>";
+    let h = '<div class="ltlogo">' + (fin ? "ALL " + NLV() + " DRAWERS CLEARED!" : last5 ? "THE LOST TOOLBOX IS YOURS!" : "DRAWER " + (lvI + 1) + " CLEAR!") + '</div><img class="ltclr" src="lt/' + (last5 ? "golden-racer" : fin ? "u-victory" : "drawer3") + '.webp" alt=""><p>' + c.coins + (c.coins === 1 ? " coin" : " coins") + " added to your wallet" + (c.first ? "" : " (replays pay a quarter of the " + c.got + " you grabbed)") + " · " + fmtT(c.time) + "</p>";
+    if (c.dbl) h += '<p class="ltbnote">DOUBLE COIN WEEKEND: drawer coins doubled!</p>';
+    if (c.sc) {
+      const sc = c.sc;
+      if (run.ta) h += '<div class="ltta res"><b>TIME ATTACK · ' + fmtT(sc.time) + (sc.newBest ? " · NEW BEST!" : "") + '</b><div class="ltmed"><span class="m' + (sc.medal || 0) + ' got big"><i></i>' + (sc.medal ? MEDAL[sc.medal] + " MEDAL" : "NO MEDAL · gold is " + fmtT(levelInfo(lvI).med[0]).slice(0, -2)) + "</span></div>" + (sc.medalPay ? "<p>+" + sc.medalPay + " medal coins</p>" : "") + "</div>";
+      else if (sc.newBest) h += '<p class="ltbnote">New best time! Try TIME ATTACK to earn medals.</p>';
+      if (sc.mis.length) h += '<div class="ltmis res"><b>MISSIONS COMPLETE</b>' + sc.mis.map((m) => '<div class="ok"><i>✓</i><span>' + m + "</span><em>+" + MIS_PAY * (evt() === "missions" ? 2 : 1) + "</em></div>").join("") + "</div>";
+    }
     if (c.hm) h += '<div class="ltreward"><img src="lt/hm-idle.webp" alt="HONESTECH Mechanic" style="width:120px"><b>HONESTECH MECHANIC UNLOCKED!</b><span>The fighter from HONESTECH Arena joins the Lost Toolbox. Pick him under CHARACTER and replay any drawer with punches, kicks, the impact gun and more.</span></div>';
     if (c.golden) h += '<div class="ltreward"><img src="socket-golden10.webp" alt="Golden 10MM"><b>GOLDEN 10MM UNLOCKED!</b><span>Equip it in the Socket Shop. It\'s yours for good.</span></div>';
     else if (last5 && tester()) h += '<p class="lttest">Tester mode: the Golden 10MM is only awarded on a real run.</p>';
     if (last5) h += '<p>Part 2 is open: 5 deeper drawers with tougher bosses.</p>';
-    h += fin ? '<button class="ltbtn" id="ltNext">ALL DRAWERS</button>' : '<button class="ltbtn" id="ltNext">OPEN DRAWER ' + (lvI + 2) + '</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>';
+    if (run.ta) h += '<button class="ltbtn ta" id="ltAgain">⏱ TRY AGAIN</button>';
+    h += fin ? '<button class="ltbtn' + (run.ta ? " sub" : "") + '" id="ltNext">ALL DRAWERS</button>' : '<button class="ltbtn' + (run.ta ? " sub" : "") + '" id="ltNext">' + (run.ta ? "NEXT DRAWER" : "OPEN DRAWER " + (lvI + 2)) + '</button><button class="ltbtn sub" id="ltMenu">ALL DRAWERS</button>';
     show(h);
     say("win"); haptic("success");
-    card.querySelector("#ltNext").onclick = () => (fin ? menu() : play(lvI + 1));
+    card.querySelector("#ltNext").onclick = () => (fin ? menu() : run.ta ? drawerCard(lvI + 1) : play(lvI + 1));
+    const ag = card.querySelector("#ltAgain"); if (ag) ag.onclick = () => play(lvI, true);
     const m = card.querySelector("#ltMenu"); if (m) m.onclick = menu;
   }
   function openLostBox() {

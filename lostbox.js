@@ -127,6 +127,7 @@
       e.preventDefault();
       const held = {}; ALLK.forEach((k) => (held[k] = false));
       for (const tch of e.touches) { if (dpAt(tch.clientX, tch.clientY, held)) continue; const k = zoneAt(tch.clientX, tch.clientY); if (k) held[k] = true; }
+      if (held.U && hmOn()) held.J = true; // up on the D-pad jumps too
       for (const k of ALLK) if (held[k] !== key[k]) press(k, held[k]);
       btns.forEach((b) => b.classList.toggle("on", held[b.dataset.k]));
       dpi.forEach((i) => i.classList.toggle("on", held[i.className.charAt(0).toUpperCase()]));
@@ -144,12 +145,12 @@
     window.addEventListener("keydown", (e) => {
       if (!open) return;
       const k = (hmOn() ? HMKEYS : { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" })[e.code];
-      if (k) { e.preventDefault(); if (!e.repeat) press(k, true); }
+      if (k) { e.preventDefault(); if (!e.repeat) { press(k, true); if (k === "U" && hmOn()) press("J", true); } }
       if (e.code === "Escape" || e.code === "KeyP") pauseMenu();
     });
     window.addEventListener("keyup", (e) => {
       const k = (hmOn() ? HMKEYS : { ArrowLeft: "L", KeyA: "L", ArrowRight: "R", KeyD: "R", Space: "J", ArrowUp: "J", KeyW: "J", KeyZ: "J", KeyX: "A", ArrowDown: "A", KeyF: "A" })[e.code];
-      if (k) press(k, false);
+      if (k) { press(k, false); if (k === "U" && hmOn()) press("J", false); }
     });
     document.addEventListener("visibilitychange", () => { if (document.hidden && open && mode === "play") pauseMenu(); });
     window.addEventListener("resize", fit);
@@ -941,7 +942,7 @@
   function hmDo(k) {
     const air = !pl.ground;
     if (k === "P") {
-      if (key.U && !air) return hmStart("upper");
+      if (key.U) return hmStart("upper");
       if (air) return hmStart(key.D ? "hammer" : "jab2");
       if (key.D) return hmStart("lowp");
       hm.combo = hm.comboT > 0 ? (hm.combo + 1) % 3 : 0; hm.comboT = 0.6;
@@ -1739,7 +1740,7 @@
       localStorage.setItem("tenmm-lt-char", b.dataset.c); if (b.dataset.c === "mechanic") hmPreload(); say("grab"); haptic("light"); menu(); }));
     card.querySelectorAll(".lthb").forEach((b) => (b.onclick = () => { if (b.disabled) return; say("grab"); hideFrom = null; play(+b.dataset.i); }));
     card.querySelector("#ltHow").onclick = () => {
-      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li>' + (hmUnlocked() ? '<li><b>HONESTECH MECHANIC</b>: D-pad to move, crouch and aim. PUNCH and KICK (tap again for combos), <b>▼+KICK</b> sweep, <b>▲+PUNCH</b> pry bar uppercut (also opens ? blocks above), GUN fires a 3-bolt burst, SPECIAL throws the torque wrench, and in the air <b>SPECIAL</b> or <b>▼+PUNCH</b> is the air hammer drop. Hold BLOCK to stop bad guys and bullets in front of you. He still stomps and double jumps.</li>' : "") + '<li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>100 coins</b> to your shop wallet. Clearing a drawer the first time pays every coin you grab; replays pay a quarter.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
+      show('<div class="ltlogo">HOW TO PLAY</div><ul class="lthow"><li><b>◀ ▶</b> walk and run. Hold to pick up speed.</li><li><b>JUMP</b>: hold for a higher jump, tap again in the air for a double jump.</li>' + (hmUnlocked() ? '<li><b>HONESTECH MECHANIC</b>: D-pad to move and crouch; ▲ also jumps. PUNCH and KICK (tap again for combos), <b>▼+KICK</b> sweep, <b>▲+PUNCH</b> pry bar uppercut (also opens ? blocks above), GUN fires a 3-bolt burst, SPECIAL throws the torque wrench, and in the air <b>SPECIAL</b> or <b>▼+PUNCH</b> is the air hammer drop. Hold BLOCK to stop bad guys and bullets in front of you. He still stomps and double jumps.</li>' : "") + '<li>Bonk <b>? blocks</b> and <b>crates</b> from below. Some blocks are invisible.</li><li>Stomp rolling tires, floor jacks and creepers. Pistons, gears, chains and falling parts can\'t be stomped.</li><li>Flying nuts and meters can be stomped. Hanging screws drop when you walk under them, so keep moving.</li><li>Shiny floors are slippery, cracked wood ledges crumble, and blue floor strips zap when they spark.</li><li>A <b>boss</b> guards every drawer. Stomp it to unlock the drawer.</li><li>Touch the <b>red flag</b> to save a checkpoint.</li><li>3 hits or a fall sends you back to your last checkpoint.</li><li>Jump into the <b>open drawer</b> to finish the level.</li><li>Some drawers hide a glowing <b>ratchet</b> before the boss. Grab it to ride the <b>Ratchet Mech</b>: tap PUNCH to hit the boss head-on. It has 3 armor plates, and beating the boss in it pays a bonus.</li><li><b>Wrench Toss</b>, <b>Ground Pound</b> and <b>Air Compressor</b> stay with you until you take 2 hits.</li><li>Grab a power you already have and it goes in your <b>tool bag</b> (top right, holds 3, kept between drawers). Tap it to use it when you need it, like at a boss.</li><li>New power-ups: <b>Wrench Toss</b> and <b>Ground Pound</b> add a button next to JUMP. <b>Air Compressor</b>: hold JUMP while falling to float. <b>Lucky Socket</b> doubles coins. <b>Extra Heart</b> gives a 4th hit point for that drawer.</li><li>The <b>shield</b> has no timer. It stays on until it blocks one hit, and it shows next to your hearts.</li><li>Every drawer hides <b>5 stars</b>. Every 10 stars you find pays <b>100 coins</b> to your shop wallet. Clearing a drawer the first time pays every coin you grab; replays pay a quarter.</li><li>Walk into a <b>blue toolbox</b> to drop into a secret room. Open the gold chest for a <b>Torque Star</b>. It starts when you climb back up: 10 seconds of smashing through anything.</li></ul><button class="ltbtn" id="ltBack">GOT IT</button>');
       card.querySelector("#ltBack").onclick = menu;
     };
   }

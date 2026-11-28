@@ -382,3 +382,16 @@ header small { font-size: 9px !important; color: #5f6c7a; letter-spacing: 1px; w
 #ltbox .ltchar b { width: 100%; text-align: center; margin: 0; }
 #ltbox .ltchar button { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 3px; padding: 6px 4px; font-size: 11px; }
 #ltbox .ltchar button img { height: 44px; max-width: 100%; object-fit: contain; }
+/* Juan's art for the Mechanic pad: chrome D-pad and six tool buttons */
+#ltbox .hmdp { background: url(lt/hm-dpad.webp) center / contain no-repeat; border: 0; box-shadow: none; border-radius: 50%; }
+#ltbox .hmdp i { background: radial-gradient(circle, #6fe3ffcc 0%, #35c8ff55 45%, transparent 70%); border: 0; box-shadow: none; color: transparent; opacity: 0; transition: opacity .06s; border-radius: 50%; }
+#ltbox .hmdp i.on { opacity: 1; background: radial-gradient(circle, #6fe3ffcc 0%, #35c8ff55 45%, transparent 70%); transform: none; box-shadow: none; }
+#ltbox .ltpad .hmbt button { background: center / contain no-repeat !important; border: 0; box-shadow: none; border-radius: 22%; }
+#ltbox .ltpad .hmbt button b { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+#ltbox .ltpad .hmbt .hmG { background-image: url(lt/hm-btn-G.webp) !important; }
+#ltbox .ltpad .hmbt .hmS { background-image: url(lt/hm-btn-S.webp) !important; }
+#ltbox .ltpad .hmbt .hmB { background-image: url(lt/hm-btn-B.webp) !important; }
+#ltbox .ltpad .hmbt .hmP { background-image: url(lt/hm-btn-P.webp) !important; }
+#ltbox .ltpad .hmbt .hmK { background-image: url(lt/hm-btn-K.webp) !important; }
+#ltbox .ltpad .hmbt .hmJ { background-image: url(lt/hm-btn-J.webp) !important; }
+#ltbox .ltpad .hmbt button.on { transform: scale(.92); filter: brightness(1.25) drop-shadow(0 0 8px #ffffffaa); box-shadow: none; }

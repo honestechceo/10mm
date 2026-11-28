@@ -3455,7 +3455,8 @@ function redeemGift() {
   const raw = (window.prompt("Enter your gift code") || "").trim().toUpperCase().replace(/\s+/g, "");
   if (!raw) return;
   // the tester code (only its fingerprint lives here) turns tester mode on or off
-  if (giftCheck("tester", raw) + giftCheck("tester2", raw) === "WH9SUZS4") {
+  const tfp = giftCheck("tester", raw) + giftCheck("tester2", raw);
+  if (tfp === "WH9SUZS4" || tfp === "LNPYJEUC") { // App Review code, Juan's own code
     const on = localStorage.getItem("tenmm-tester") !== "1";
     localStorage.setItem("tenmm-tester", on ? "1" : "0"); localStorage.setItem("tenmm-tester-v", TESTER_V);
     $("details").textContent = on ? "Tester mode ON: every level, drawer and Service Bay kit is open." : "Tester mode OFF.";

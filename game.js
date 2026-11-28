@@ -3763,7 +3763,10 @@ function rarityOf(it) {
   return ["common", "COMMON"];
 }
 function tagRarity(card, it) {
+  // everything in the shop can simply be bought, so COMMON/RARE/EPIC labels meant nothing.
+  // Only seasonal finishes get a tag, because those really are limited-time.
   const [c, t] = rarityOf(it);
+  if (c !== "limited") return;
   card.classList.add("r-" + c);
   const r = document.createElement("i"); r.className = "rar"; r.textContent = t;
   card.prepend(r);

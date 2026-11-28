@@ -129,6 +129,8 @@ button { background: linear-gradient(180deg, var(--gold2) 0%, var(--gold) 45%, #
 .shop.on > *, .shop .charrow > * { flex: 0 0 100%; min-width: 0; }
 .shop.on > .skin, .shop .charrow > .skin { flex: 0 0 calc(50% - 4px); }
 .shop .skin { flex-shrink: 0; }
+.shop .skin { min-height: 150px; box-sizing: border-box; } /* never let a row shrink below a card */
+.shop .skin:not(.look):not(.char) img { aspect-ratio: 900 / 430; }
 .shop .skin { isolation: isolate; } /* keep the rarity tags inside their card */
 .shop .shoptabs { z-index: 5; } /* tabs stay on top while the list scrolls under them */
 .skin {

@@ -3856,12 +3856,28 @@ function renderGarage(box) {
     box.append(b);
   }
 }
+// iPhone (WebKit) laid the shop's cards out as if they had no height, so they piled on top of each
+// other. Once they're built, measure each card and pin its height so the rows can't collapse.
+function pinCards(box) {
+  const pin = () => {
+    for (const c of box.querySelectorAll(".skin")) {
+      c.style.height = "";
+      const h = Math.max(c.offsetHeight, c.scrollHeight);
+      if (h > 60) c.style.height = h + "px";
+    }
+  };
+  requestAnimationFrame(() => {
+    pin();
+    for (const im of box.querySelectorAll(".skin img")) if (!im.complete) im.addEventListener("load", () => requestAnimationFrame(pin), { once: true });
+  });
+}
 function renderShop() {
   const box = $("shop"),
     own = ownedSkins(),
     eq = equippedSkin();
   box.innerHTML = "";
   shopTabs(box);
+  pinCards(box);
   if (shopTab === "garage") return renderGarage(box);
   if (window.Runner) Runner.shopRow(box);
   renderLooks(box);

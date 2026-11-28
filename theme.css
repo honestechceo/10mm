@@ -122,9 +122,15 @@ button { background: linear-gradient(180deg, var(--gold2) 0%, var(--gold) 45%, #
 .panel .lvhead { color: var(--gold); letter-spacing: 2px; }
 
 /* ---------- SHOP: premium display cases ---------- */
+/* iPhone (WebKit) squeezed the grid rows to fit the 50dvh scroll box, stacking the cards on top of
+   each other; rows must always be as tall as their cards */
+.shop { grid-auto-rows: max-content; align-content: start; }
+.shop > * { min-height: max-content; }
+.shop .skin { isolation: isolate; } /* keep the rarity tags inside their card */
+.shop .shoptabs { z-index: 5; } /* tabs stay on top while the list scrolls under them */
 .skin {
   --rc: var(--ti);
-  position: relative; overflow: hidden;
+  position: relative;
   background:
     linear-gradient(160deg, #ffffff12 0%, #ffffff05 22%, transparent 23%),
     radial-gradient(90% 55% at 50% 0%, #ffffff1a 0%, transparent 70%),
